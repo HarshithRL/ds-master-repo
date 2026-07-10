@@ -1,0 +1,23 @@
+variables:
+  - name: ENV_LONG
+    value: acc
+  - name: ENV_SHORT
+    value: A
+  - name: ENV_catalog
+    value: a
+  - name: SUBSCRIPTION_NAME
+    value: etex.spoke.mdp.automation.azdevops.acc
+  - name: KEYVAULT_NAME
+    value: WE-SPOKE-MDP-FDN-A-KV
+  - name: DBX_PROFILE
+    value: automation-acc
+  - name: PIPELINE_ENV
+    value: automation-acc
+  - name: SPN_ID_SECRET_NAME
+    value: etex-spoke-mdp-automation-devops-acc-id
+  - name: SPN_SECRET_SECRET_NAME
+    value: etex-spoke-mdp-automation-devops-acc-secret
+  - name: TENANT_SECRET_NAME
+    value: etex-tenant-id
+  - name: ADB_HOST_SECRET_NAME
+    value: etex-spoke-mdp-adb-a-hostname

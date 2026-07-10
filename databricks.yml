@@ -1,0 +1,20 @@
+# =============================================================================
+# ⚠️  DEPRECATED — DO NOT USE THIS FILE
+# =============================================================================
+# This root-level databricks.yml is no longer active.
+#
+# Each project is now an independent bundle in its own top-level folder:
+#   hello-world/databricks.yml   ← example project
+#   <your-project>/databricks.yml
+#
+# To deploy a specific bundle locally:
+#   cd hello-world/
+#   databricks bundle validate --target D
+#   databricks bundle deploy --target D
+#
+# The CI/CD pipeline (Azure DevOps) automatically discovers and deploys
+# all top-level folders containing a databricks.yml.
+#
+# DELETE THIS FILE and the old test/ and "example project/" folders
+# once you've confirmed the new structure works.
+# =============================================================================
