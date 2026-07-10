@@ -182,4 +182,3 @@ predictions.write.mode("overwrite").saveAsTable(gold_table("my_project_predictio
 |------|-------|
 | Pierre de Laguiche | pierre.delaguiche@etexgroup.com |
 | Mustafa Arda Bicakci | mustafaarda.bicakci@etexgroup.com |
-| Mindaugas Mazelis | mindaugas.mazelis@etexgroup.com |

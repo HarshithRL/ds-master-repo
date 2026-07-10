@@ -18,3 +18,9 @@
 # DELETE THIS FILE and the old test/ and "example project/" folders
 # once you've confirmed the new structure works.
 # =============================================================================
+
+# Minimal valid bundle block to prevent parse errors.
+# This deploys nothing — it exists only to avoid "missing bundle.name" errors
+# until this file is deleted.
+bundle:
+  name: ds-master-repo-deprecated

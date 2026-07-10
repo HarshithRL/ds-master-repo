@@ -4,7 +4,7 @@ Step-by-step guide for the one-time repo setup and for adding new DS projects.
 
 ---
 
-## Quick Start (TL;DR)
+## Quick Start 
 
 **One-time setup (already done):**
 1. Repo exists in Azure DevOps (`Etex Portfolio 2.0` project)
