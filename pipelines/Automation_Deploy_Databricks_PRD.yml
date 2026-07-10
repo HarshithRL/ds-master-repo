@@ -1,0 +1,29 @@
+name: "Automation_Deploy_Databricks_PRD"
+
+resources:
+  repositories:
+    - repository: da-mdp-foundations-deployments
+      type: git
+      name: Modern data platform/da-mdp-foundations-deployments
+      ref: refs/heads/main
+
+trigger:
+  branches:
+    include:
+      - main    # Automatically triggered when merged to main
+
+variables:
+  - template: variables/databricks_variables_prd.yml
+
+stages:
+  - template: pipelines/templates/deploy_databricks.yml@da-mdp-foundations-deployments
+    parameters:
+      env: ${{ variables.PIPELINE_ENV }}
+      envLong: ${{ variables.ENV_LONG }}
+      subscriptionName: ${{ variables.SUBSCRIPTION_NAME }}
+      keyVaultName: ${{ variables.KEYVAULT_NAME }}
+      spnIdSecretName: ${{ variables.SPN_ID_SECRET_NAME }}
+      spnSecretSecretName: ${{ variables.SPN_SECRET_SECRET_NAME }}
+      tenantIdSecretName: ${{ variables.TENANT_SECRET_NAME }}
+      adbHostnameSecretName: ${{ variables.ADB_HOST_SECRET_NAME }}
+      dbxProfile: ${{ variables.DBX_PROFILE }}
