@@ -4,7 +4,7 @@ resources:
   repositories:
     - repository: da-mdp-foundations-deployments
       type: git
-      name: Modern data platform/da-mdp-foundations-deployments
+      name: da-mdp-foundations-deployments
       ref: refs/heads/main
 
 trigger:
