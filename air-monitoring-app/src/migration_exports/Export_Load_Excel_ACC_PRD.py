@@ -44,13 +44,13 @@ BRONZE_SCHEMA  = "bronze"
 GOLD_SCHEMA    = "gold"
 VOLUME_NAME    = "bronze_volume"
 
-SOURCE_OUTPUT  = f"{SOURCE_CATALOG}.{GOLD_SCHEMA}.air_monitoring_output"
-SOURCE_SITES   = f"{SOURCE_CATALOG}.{GOLD_SCHEMA}.air_monitoring_sites"
+SOURCE_OUTPUT  = f"{SOURCE_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_output"
+SOURCE_SITES   = f"{SOURCE_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_sites"
 EXPORT_VOLUME  = f"/Volumes/{SOURCE_CATALOG}/{BRONZE_SCHEMA}/{VOLUME_NAME}/migration_exports"
 
 LOAD_VOLUME    = f"/Volumes/{TARGET_CATALOG}/{BRONZE_SCHEMA}/{VOLUME_NAME}/migration_exports"
-TARGET_OUTPUT  = f"{TARGET_CATALOG}.{GOLD_SCHEMA}.air_monitoring_output"
-TARGET_SITES   = f"{TARGET_CATALOG}.{GOLD_SCHEMA}.air_monitoring_sites"
+TARGET_OUTPUT  = f"{TARGET_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_output"
+TARGET_SITES   = f"{TARGET_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_sites"
 TARGET_UPLOADS = f"{TARGET_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_upload_log"
 
 print(f"Export source:  {SOURCE_CATALOG}")
