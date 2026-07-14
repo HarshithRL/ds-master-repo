@@ -1,0 +1,68 @@
+# Databricks asset bundle definition for DS-cicd-Lead-Time-AI
+# See https://docs.databricks.com/dev-tools/bundles/index.html
+bundle:
+  name: ds-cicd-lead-time-ai
+
+include:
+  - resources/*.yml
+  - resources/*/*.yml
+
+variables:
+  policy_id:
+    description: cluster policy id to use
+  catalog:
+    description: The catalog to use
+  schema:
+    description: The schema to use
+
+targets:
+  D:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/Users/${workspace.current_user.userName}/${bundle.name}/${bundle.target}
+    variables:
+      policy_id: 306312B9730019AB
+      catalog: general_d
+      schema: lead_time_with_ai
+
+  T:
+    mode: production
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      policy_id: 306312B9730019AB
+      catalog: general_d
+      schema: lead_time_with_ai
+
+  A:
+    mode: production
+    workspace:
+      host: https://adb-4796304964978539.19.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      policy_id: 306312B973005677
+      catalog: general_a
+      schema: lead_time_with_ai
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: mindaugas.mazelis@etexgroup.com
+        level: CAN_MANAGE
+
+  P:
+    mode: production
+    workspace:
+      host: https://adb-4844910598668398.18.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      policy_id: 306312B973005150
+      catalog: general_p
+      schema: lead_time_with_ai
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: mindaugas.mazelis@etexgroup.com
+        level: CAN_MANAGE
