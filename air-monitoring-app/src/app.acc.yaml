@@ -1,0 +1,28 @@
+# Air Monitoring V2 App — ACC environment (automation_a)
+# Workspace: https://adb-4796304964978539.19.azuredatabricks.net/
+command:
+  - streamlit
+  - run
+  - app.py
+  - --server.port
+  - "8000"
+  - --server.address
+  - "0.0.0.0"
+
+env:
+  - name: DATABRICKS_WAREHOUSE_ID
+    value: "fe5f9b40ac3a9b6e"
+  - name: UNITY_CATALOG
+    value: "automation_a"
+  - name: BRONZE_SCHEMA
+    value: "bronze"
+  - name: VOLUME_NAME
+    value: "bronze_volume"
+  - name: AUTH_MODE
+    value: "user"
+
+resources:
+  - name: "sql-warehouse"
+    sql_warehouse:
+      id: "fe5f9b40ac3a9b6e"
+      permission: "CAN_USE"
