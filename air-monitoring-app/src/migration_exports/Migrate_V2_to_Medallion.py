@@ -9,6 +9,7 @@
 # MAGIC
 # MAGIC Migrates V1 pipeline tables to the new CI/CD app's Medallion schema.
 # MAGIC
+# MAGIC
 # MAGIC ## Source → Target Tables
 # MAGIC
 # MAGIC | Source (V1 Pipeline) | Target (New App) | Notes |
