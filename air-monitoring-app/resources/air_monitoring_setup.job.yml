@@ -26,7 +26,7 @@ resources:
             spark_conf:
               spark.master: "local[*]"
             policy_id: ${var.policy_id}
-            data_security_mode: SINGLE_USER
+            data_security_mode: USER_ISOLATION
 
       permissions:
         - user_name: "mustafaarda.bicakci@etexgroup.com"

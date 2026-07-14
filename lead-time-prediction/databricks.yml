@@ -1,8 +1,11 @@
+# Databricks asset bundle definition for DS-cicd-Lead-Time-AI
+# See https://docs.databricks.com/dev-tools/bundles/index.html
 bundle:
   name: ds-cicd-lead-time-ai
 
 include:
   - resources/*.yml
+  - resources/*/*.yml
 
 variables:
   policy_id:

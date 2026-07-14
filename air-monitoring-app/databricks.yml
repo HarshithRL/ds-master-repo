@@ -1,3 +1,5 @@
+# Databricks asset bundle definition for Air Monitoring App
+# See https://docs.databricks.com/dev-tools/bundles/index.html
 bundle:
   name: ds-air-monitoring-app
 
