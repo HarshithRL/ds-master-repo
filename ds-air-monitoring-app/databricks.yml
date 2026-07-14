@@ -1,0 +1,61 @@
+# Databricks asset bundle definition for Air Monitoring App
+# See https://docs.databricks.com/dev-tools/bundles/index.html
+bundle:
+  name: ds-air-monitoring-app
+
+include:
+  - resources/*.yml
+
+variables:
+  policy_id:
+    description: cluster policy id to use
+  catalog:
+    description: The catalog to use
+
+targets:
+  D:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/Users/${workspace.current_user.userName}/${bundle.name}/${bundle.target}
+    variables:
+      policy_id: 306312B9730019AB
+      catalog: automation_d
+
+  T:
+    mode: production
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      policy_id: 306312B9730019AB
+      catalog: automation_d
+
+  A:
+    mode: production
+    workspace:
+      host: https://adb-4796304964978539.19.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      policy_id: 306312B973005677
+      catalog: automation_a
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+
+  P:
+    mode: production
+    workspace:
+      host: https://adb-4844910598668398.18.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      policy_id: 306312B973005150
+      catalog: automation_p
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
