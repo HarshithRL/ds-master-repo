@@ -4,10 +4,10 @@ resources:
   repositories:
     - repository: da-mdp-foundations-deployments
       type: git
-      name: Modern data platform/da-mdp-foundations-deployments
+      name: da-mdp-foundations-deployments
       ref: refs/heads/main
 
-trigger: none    # ACC is triggered by build validation (PR to main)
+trigger: none
 
 variables:
   - template: variables/databricks_variables_acc.yml
