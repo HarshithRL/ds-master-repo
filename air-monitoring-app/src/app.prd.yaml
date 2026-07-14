@@ -1,0 +1,28 @@
+# Air Monitoring V2 App — PRD environment (automation_p)
+# Workspace: https://adb-4844910598668398.18.azuredatabricks.net/
+command:
+  - streamlit
+  - run
+  - app.py
+  - --server.port
+  - "8000"
+  - --server.address
+  - "0.0.0.0"
+
+env:
+  - name: DATABRICKS_WAREHOUSE_ID
+    value: "83294e3f6b44f138"
+  - name: UNITY_CATALOG
+    value: "automation_p"
+  - name: BRONZE_SCHEMA
+    value: "bronze"
+  - name: VOLUME_NAME
+    value: "bronze_volume"
+  - name: AUTH_MODE
+    value: "user"
+
+resources:
+  - name: "sql-warehouse"
+    sql_warehouse:
+      id: "83294e3f6b44f138"
+      permission: "CAN_USE"

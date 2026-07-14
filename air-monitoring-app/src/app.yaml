@@ -18,10 +18,6 @@ env:
     value: "automation_d"
   - name: BRONZE_SCHEMA
     value: "bronze"
-  - name: SILVER_SCHEMA
-    value: "silver"
-  - name: GOLD_SCHEMA
-    value: "gold"
   - name: VOLUME_NAME
     value: "bronze_volume"
   - name: AUTH_MODE
