@@ -74,5 +74,4 @@ targets:
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
-      - user_name: mindaugas.mazelis@etexgroup.com
-        level: CAN_MANAGE
+  
