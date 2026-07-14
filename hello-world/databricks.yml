@@ -40,6 +40,8 @@ targets:
       policy_id: 306312B9730019AB
       catalog: automation_d
     permissions:
+      - service_principal_name: 411192f6-c183-4f1d-89e1-2c26c5e04631
+        level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
@@ -70,6 +72,8 @@ targets:
       policy_id: 306312B973005150
       catalog: automation_p
     permissions:
+      - service_principal_name: 411192f6-c183-4f1d-89e1-2c26c5e04631
+        level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
