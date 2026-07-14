@@ -32,7 +32,6 @@ resources:
             num_workers: 1
             policy_id: "${var.policy_id}"
             data_security_mode: "USER_ISOLATION"
-            autotermination_minutes: 60
 
       email_notifications:
         on_failure:
