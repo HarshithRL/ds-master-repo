@@ -1,4 +1,4 @@
-# DS-Master-Repo
+# Data Science Master Repository
 
 Single shared repository for all Data Science projects at Etex. Each project is an **independent Databricks Asset Bundle** (its own `databricks.yml`, resources, and source code) living in a top-level folder — deployed by **one shared CI/CD pipeline** (Azure DevOps). No need to create a new repo, configure new pipelines, or request new permissions for each project.
 
@@ -6,7 +6,7 @@ Single shared repository for all Data Science projects at Etex. Each project is 
 
 ## Why a Single Repo?
 
-Setting up CI/CD per project is painful:
+Setting up CI/CD per project is inefficient:
 - Permission requests for each new repo and pipeline
 - Duplicated pipeline YAMLs and variable groups
 - Inconsistent configurations across projects
