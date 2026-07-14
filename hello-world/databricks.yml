@@ -39,6 +39,11 @@ targets:
     variables:
       policy_id: 306312B9730019AB
       catalog: automation_d
+    permissions:
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
 
   A:
     mode: production
@@ -48,6 +53,11 @@ targets:
     variables:
       policy_id: 306312B973005677
       catalog: automation_a
+    permissions:
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
 
   P:
     mode: production
@@ -57,3 +67,8 @@ targets:
     variables:
       policy_id: 306312B973005150
       catalog: automation_p
+    permissions:
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
