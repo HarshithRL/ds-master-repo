@@ -48,11 +48,6 @@ targets:
     variables:
       policy_id: 306312B973005677
       catalog: automation_a
-    permissions:
-      - user_name: pierre.delaguiche@etexgroup.com
-        level: CAN_MANAGE
-      - user_name: mindaugas.mazelis@etexgroup.com
-        level: CAN_MANAGE
 
   P:
     mode: production
@@ -62,8 +57,3 @@ targets:
     variables:
       policy_id: 306312B973005150
       catalog: automation_p
-    permissions:
-      - user_name: pierre.delaguiche@etexgroup.com
-        level: CAN_MANAGE
-      - user_name: mindaugas.mazelis@etexgroup.com
-        level: CAN_MANAGE
