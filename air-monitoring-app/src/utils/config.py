@@ -32,8 +32,8 @@ IMAGES_SUBFOLDER = "images"  # static assets (logo, etc.)
 # ============================================================
 # Table references (fully qualified)
 # ============================================================
-SITES_TABLE = f"{UNITY_CATALOG}.{GOLD_SCHEMA}.air_monitoring_sites"
-OUTPUT_TABLE = f"{UNITY_CATALOG}.{GOLD_SCHEMA}.air_monitoring_output"
+SITES_TABLE = f"{UNITY_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_sites"
+OUTPUT_TABLE = f"{UNITY_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_output"
 UPLOAD_LOG_TABLE = f"{UNITY_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_upload_log"
 
 # Volume path for PDF storage
@@ -89,4 +89,4 @@ DEDUP_GRAIN = ["Code", "Sample_no", "Sample_Date", "Volume", "Concentration_resu
 # Legacy compatibility aliases
 # (used in older code paths — prefer explicit BRONZE/GOLD references)
 # ============================================================
-SCHEMA = GOLD_SCHEMA  # backward compat for any old references
+SCHEMA = BRONZE_SCHEMA  # all tables now in bronze

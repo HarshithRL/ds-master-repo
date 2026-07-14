@@ -119,7 +119,7 @@ print(f"  ✓ {CATALOG}.{BRONZE_SCHEMA}.{VOLUME_NAME}")
 print("\n[3/6] Creating tables...")
 
 spark.sql(f"""
-    CREATE TABLE IF NOT EXISTS {CATALOG}.{GOLD_SCHEMA}.air_monitoring_sites (
+    CREATE TABLE IF NOT EXISTS {CATALOG}.{BRONZE_SCHEMA}.air_monitoring_sites (
         site_name STRING,
         site_code STRING,
         address STRING,
@@ -127,10 +127,10 @@ spark.sql(f"""
     ) USING delta
     COMMENT 'Sites dimension — RLS via allowed_users (slash-separated emails)'
 """)
-print(f"  ✓ {CATALOG}.{GOLD_SCHEMA}.air_monitoring_sites")
+print(f"  ✓ {CATALOG}.{BRONZE_SCHEMA}.air_monitoring_sites")
 
 spark.sql(f"""
-    CREATE TABLE IF NOT EXISTS {CATALOG}.{GOLD_SCHEMA}.air_monitoring_output (
+    CREATE TABLE IF NOT EXISTS {CATALOG}.{BRONZE_SCHEMA}.air_monitoring_output (
         row_id STRING NOT NULL,
         Site_name STRING,
         Code STRING,
@@ -164,7 +164,7 @@ spark.sql(f"""
     ) USING delta
     COMMENT 'Main output — one row per air sample measurement'
 """)
-print(f"  ✓ {CATALOG}.{GOLD_SCHEMA}.air_monitoring_output")
+print(f"  ✓ {CATALOG}.{BRONZE_SCHEMA}.air_monitoring_output")
 
 spark.sql(f"""
     CREATE TABLE IF NOT EXISTS {CATALOG}.{BRONZE_SCHEMA}.air_monitoring_upload_log (
@@ -197,7 +197,7 @@ try:
     sites_count = df_sites.count()
     
     df_sites.createOrReplaceTempView("_mig_sites")
-    target = f"{CATALOG}.{GOLD_SCHEMA}.air_monitoring_sites"
+    target = f"{CATALOG}.{BRONZE_SCHEMA}.air_monitoring_sites"
     
     spark.sql(f"""
         MERGE INTO {target} AS t
@@ -271,7 +271,7 @@ try:
     df_excel = spark.createDataFrame(df_pd)
     
     # Get target table columns (for correct column ordering)
-    target_table = f"{CATALOG}.{GOLD_SCHEMA}.air_monitoring_output"
+    target_table = f"{CATALOG}.{BRONZE_SCHEMA}.air_monitoring_output"
     target_cols = [f.name for f in spark.table(target_table).schema]
     
     # Select matching columns in target order
@@ -332,8 +332,8 @@ print(f"\n[6/6] Final state")
 print(f"{'='*70}")
 
 tables = [
-    (f"{CATALOG}.{GOLD_SCHEMA}.air_monitoring_sites", "sites"),
-    (f"{CATALOG}.{GOLD_SCHEMA}.air_monitoring_output", "output"),
+    (f"{CATALOG}.{BRONZE_SCHEMA}.air_monitoring_sites", "sites"),
+    (f"{CATALOG}.{BRONZE_SCHEMA}.air_monitoring_output", "output"),
     (f"{CATALOG}.{BRONZE_SCHEMA}.air_monitoring_upload_log", "upload_log"),
 ]
 for t, name in tables:
