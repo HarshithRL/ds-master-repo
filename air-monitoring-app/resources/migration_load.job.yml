@@ -1,0 +1,41 @@
+# ==============================================================
+# Air Monitoring — Migration Load Job
+#
+# Reads Excel files from the target volume and smart-merges them
+# into the medallion tables (append-only for output, MERGE for
+# sites, create-if-missing for upload_log).
+#
+# Triggered manually (or via CI/CD pipeline) after placing Excel
+# files in:
+#   /Volumes/<catalog>/bronze/bronze_volume/migration_exports/
+#
+# Deploy:   bundle deploy --target A
+# Run:      bundle run migration_load --target A
+# ==============================================================
+
+resources:
+  jobs:
+    migration_load:
+      name: "air-monitoring-migration-load-${bundle.target}"
+
+      tasks:
+        - task_key: load_excel_to_tables
+          notebook_task:
+            notebook_path: ../migration_exports/Export_Load_Excel_ACC_PRD.py
+            base_parameters:
+              TARGET_CATALOG: "${var.catalog}"
+              OUTPUT_EXCEL:   "auto"   # picks latest output_table*.xlsx in volume
+              SITES_EXCEL:    "auto"   # picks latest sites*.xlsx in volume
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id:  "Standard_DS3_v2"
+            num_workers: 1
+            policy_id: "${var.policy_id}"
+            data_security_mode: "USER_ISOLATION"
+
+      email_notifications:
+        on_failure:
+          - mustafaarda.bicakci@etexgroup.com
+
+      # No recurring schedule — run on demand only.
+      # To trigger from CI/CD: databricks bundle run migration_load --target A

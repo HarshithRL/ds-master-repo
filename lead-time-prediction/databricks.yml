@@ -1,11 +1,11 @@
-# This is a Databricks asset bundle definition for DS-Lead-Time-Prediction.
-# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
+# Databricks asset bundle definition for DS-cicd-Lead-Time-AI
+# See https://docs.databricks.com/dev-tools/bundles/index.html
 bundle:
-  name: ds-lead-time-prediction
+  name: ds-cicd-lead-time-ai
 
 include:
-  - test/resources/*.yml
-  - test/resources/*/*.yml
+  - resources/*.yml
+  - resources/*/*.yml
 
 variables:
   policy_id:
@@ -14,8 +14,6 @@ variables:
     description: The catalog to use
   schema:
     description: The schema to use
-  synapse_catalog:
-    description: The Synapse catalog to use
 
 targets:
   D:
@@ -26,9 +24,8 @@ targets:
       root_path: /Workspace/Users/${workspace.current_user.userName}/${bundle.name}/${bundle.target}
     variables:
       policy_id: 306312B9730019AB
-      catalog: automation_d
+      catalog: general_d
       schema: lead_time_with_ai
-      synapse_catalog: synapse-prd
 
   T:
     mode: production
@@ -37,9 +34,8 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       policy_id: 306312B9730019AB
-      catalog: automation_d
+      catalog: general_d
       schema: lead_time_with_ai
-      synapse_catalog: synapse-prd
 
   A:
     mode: production
@@ -48,12 +44,9 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       policy_id: 306312B973005677
-      catalog: automation_a
+      catalog: general_a
       schema: lead_time_with_ai
-      synapse_catalog: synapse-acc
     permissions:
-      - user_name: pierre.delaguiche@etexgroup.com
-        level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
       - user_name: mindaugas.mazelis@etexgroup.com
@@ -66,12 +59,10 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       policy_id: 306312B973005150
-      catalog: automation_p
+      catalog: general_p
       schema: lead_time_with_ai
-      synapse_catalog: synapse-prd
     permissions:
-      - user_name: pierre.delaguiche@etexgroup.com
-        level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
-  
+      - user_name: mindaugas.mazelis@etexgroup.com
+        level: CAN_MANAGE
