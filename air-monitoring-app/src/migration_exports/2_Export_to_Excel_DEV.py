@@ -25,10 +25,12 @@ from datetime import datetime
 import warnings
 warnings.filterwarnings("ignore")
 
-# Source: always general_d (V1 pipeline)
+# Source: general_d
+# output_table  ← V1 pipeline (air_monitoring schema)
+# sites         ← V2 app    (air_monitoring_v2 schema — correct: site_code, site_name, address, allowed_users)
 SOURCE_CATALOG  = "general_d"
 SOURCE_OUTPUT   = f"{SOURCE_CATALOG}.air_monitoring.output_table"
-SOURCE_SITES    = f"{SOURCE_CATALOG}.Air_Monitoring.sites"
+SOURCE_SITES    = f"{SOURCE_CATALOG}.air_monitoring_v2.sites"
 
 # Export destination: DEV volume
 EXPORT_CATALOG  = "automation_d"
