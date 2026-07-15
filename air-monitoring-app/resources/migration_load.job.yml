@@ -20,7 +20,7 @@ resources:
       tasks:
         - task_key: load_excel_to_tables
           notebook_task:
-            notebook_path: ../src/migration_exports/Export_Load_Excel_ACC_PRD.py
+            notebook_path: ../src/migration_exports/3_Load_from_Excel_ACC_PRD.py
             base_parameters:
               TARGET_CATALOG: "${var.catalog}"
               OUTPUT_EXCEL:   "auto"
