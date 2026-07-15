@@ -49,7 +49,7 @@ targets:
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
-      - user_name: mindaugas.mazelis@etexgroup.com
+      - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
 
   P:
@@ -64,5 +64,5 @@ targets:
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
-      - user_name: mindaugas.mazelis@etexgroup.com
+      - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
