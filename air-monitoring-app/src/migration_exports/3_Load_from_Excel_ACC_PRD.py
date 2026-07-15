@@ -11,8 +11,8 @@
 # MAGIC
 # MAGIC | Excel File | Target Table | Mode |
 # MAGIC |---|---|---|
-# MAGIC | `output_table_*.xlsx` | `automation_*.gold.air_monitoring_output` | APPEND (new rows only, row_id dedup) |
-# MAGIC | `sites_*.xlsx` | `automation_*.gold.air_monitoring_sites` | OVERWRITE |
+# MAGIC | `output_table_*.xlsx` | `automation_*.bronze.air_monitoring_output` | APPEND (new rows only, row_id dedup) |
+# MAGIC | `sites_*.xlsx` | `automation_*.bronze.air_monitoring_sites` | OVERWRITE |
 # MAGIC | — | `automation_*.bronze.air_monitoring_upload_log` | CREATE if not exists |
 
 # COMMAND ----------
@@ -25,22 +25,23 @@
 # ============================================================
 try:
     dbutils.widgets.text("TARGET_CATALOG", "automation_a")
-    dbutils.widgets.text("OUTPUT_EXCEL",   "auto")  # 'auto' = pick latest file
-    dbutils.widgets.text("SITES_EXCEL",    "auto")  # 'auto' = pick latest file, '' = skip
+    dbutils.widgets.text("OUTPUT_EXCEL",   "auto")   # 'auto' = pick latest file
+    dbutils.widgets.text("SITES_EXCEL",    "auto")   # 'auto' = pick latest file, '' = skip
+    dbutils.widgets.dropdown("LOAD_WHAT",  "both", ["both", "output", "sites"])
 except Exception:
     pass
 
 TARGET_CATALOG = dbutils.widgets.get("TARGET_CATALOG")  # automation_a or automation_p
-OUTPUT_EXCEL   = dbutils.widgets.get("OUTPUT_EXCEL")     # e.g. 'output_table_20260715_1030.xlsx'
-SITES_EXCEL    = dbutils.widgets.get("SITES_EXCEL")      # e.g. 'sites_20260715_1030.xlsx' or '' to skip
+OUTPUT_EXCEL   = dbutils.widgets.get("OUTPUT_EXCEL")
+SITES_EXCEL    = dbutils.widgets.get("SITES_EXCEL")
+LOAD_WHAT      = dbutils.widgets.get("LOAD_WHAT")       # both | output | sites
 
 BRONZE_SCHEMA  = "bronze"
-GOLD_SCHEMA    = "gold"
 VOLUME_NAME    = "bronze_volume"
 
 LOAD_VOLUME    = f"/Volumes/{TARGET_CATALOG}/{BRONZE_SCHEMA}/{VOLUME_NAME}/migration_exports"
-TARGET_OUTPUT  = f"{TARGET_CATALOG}.{GOLD_SCHEMA}.air_monitoring_output"
-TARGET_SITES   = f"{TARGET_CATALOG}.{GOLD_SCHEMA}.air_monitoring_sites"
+TARGET_OUTPUT  = f"{TARGET_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_output"
+TARGET_SITES   = f"{TARGET_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_sites"
 TARGET_UPLOADS = f"{TARGET_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_upload_log"
 
 print(f"Target catalog : {TARGET_CATALOG}")
@@ -49,6 +50,7 @@ print(f"Target output  : {TARGET_OUTPUT}")
 print(f"Target sites   : {TARGET_SITES}")
 print(f"OUTPUT_EXCEL   : {OUTPUT_EXCEL}")
 print(f"SITES_EXCEL    : {SITES_EXCEL}")
+print(f"LOAD_WHAT      : {LOAD_WHAT}")
 
 # COMMAND ----------
 
@@ -98,35 +100,36 @@ else:
 print()
 
 # --- output_table : APPEND new rows only -------------------
-df_excel = pd.read_excel(f"{LOAD_VOLUME}/{_out_file}", engine="openpyxl")
-df_spark = spark.createDataFrame(df_excel.astype(str).where(df_excel.notna(), other=None))
-n_excel  = df_spark.count()
-
-try:
-    existing_ids = spark.table(TARGET_OUTPUT).select("row_id")
-    df_to_write  = df_spark.join(existing_ids, "row_id", "left_anti")
-    n_skip       = n_excel - df_to_write.count()
-except Exception:
-    df_to_write = df_spark
-    n_skip      = 0
-
-n_write = df_to_write.count()
-if n_write == 0:
-    print(f"[output]  All {n_excel:,} rows already present — skipped.")
+if LOAD_WHAT in ("both", "output"):
+    df_excel = pd.read_excel(f"{LOAD_VOLUME}/{_out_file}", engine="openpyxl")
+    df_spark = spark.createDataFrame(df_excel.astype(str).where(df_excel.notna(), other=None))
+    n_excel  = df_spark.count()
+    try:
+        existing_ids = spark.table(TARGET_OUTPUT).select("row_id")
+        df_to_write  = df_spark.join(existing_ids, "row_id", "left_anti")
+        n_skip       = n_excel - df_to_write.count()
+    except Exception:
+        df_to_write = df_spark
+        n_skip      = 0
+    n_write = df_to_write.count()
+    if n_write == 0:
+        print(f"[output]  All {n_excel:,} rows already present — skipped.")
+    else:
+        df_to_write.write.mode("append").option("mergeSchema", "true").saveAsTable(TARGET_OUTPUT)
+        print(f"[output]  APPEND: {n_write:,} new rows → {TARGET_OUTPUT}")
+        if n_skip:
+            print(f"          ({n_skip:,} rows already existed — skipped by row_id check)")
 else:
-    df_to_write.write.mode("append").option("mergeSchema", "true").saveAsTable(TARGET_OUTPUT)
-    print(f"[output]  APPEND: {n_write:,} new rows → {TARGET_OUTPUT}")
-    if n_skip:
-        print(f"          ({n_skip:,} rows already existed — skipped by row_id check)")
+    print("[output]  Skipped (LOAD_WHAT=sites).")
 
 # --- sites : OVERWRITE -------------------------------------
-if _sites_file and SITES_EXCEL != "":
+if LOAD_WHAT in ("both", "sites") and _sites_file and SITES_EXCEL != "":
     df_sites_pd = pd.read_excel(f"{LOAD_VOLUME}/{_sites_file}", engine="openpyxl")
     df_sites_sp = spark.createDataFrame(df_sites_pd.astype(str).where(df_sites_pd.notna(), other=None))
     df_sites_sp.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(TARGET_SITES)
     print(f"[sites]   OVERWRITE: {df_sites_sp.count():,} rows → {TARGET_SITES}")
 else:
-    print("[sites]   Skipped.")
+    print("[sites]   Skipped (LOAD_WHAT=output).")
 
 # --- upload_log : CREATE if not exists ---------------------
 upload_log_schema = StructType([
