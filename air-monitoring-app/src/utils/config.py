@@ -3,10 +3,8 @@ Configuration for Air Monitoring V2 App.
 All environment-specific values read from environment variables (set in app.yaml).
 This enables the same source code to run in dev/acc/prd without changes.
 
-Medallion Architecture:
-  - Bronze: upload_log (raw ingest events), PDF volume storage
-  - Silver: (reserved for future transformations)
-  - Gold: output_table (curated measurements), sites (dimension/RLS)
+Architecture:
+  - Bronze: all tables (output, sites, upload_log) + PDF volume storage
 
 Environments:
   - TEST: automation_d (https://adb-7181820732839861.1.azuredatabricks.net/)
@@ -16,7 +14,7 @@ Environments:
 import os
 
 # ============================================================
-# Unity Catalog — Medallion Architecture
+# Unity Catalog — All tables in Bronze
 # Env vars set per environment in app.yaml (automation_d / automation_a / automation_p)
 # ============================================================
 UNITY_CATALOG = os.environ.get("UNITY_CATALOG", "automation_d")

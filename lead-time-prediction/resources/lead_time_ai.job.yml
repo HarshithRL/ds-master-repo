@@ -5,25 +5,32 @@ resources:
       schedule:
         quartz_cron_expression: 0 0 7 * * ?
         timezone_id: Europe/Brussels
-        pause_status: UNPAUSED
+        pause_status: PAUSED
       tasks:
         - task_key: Ingest_MDP_Tables
           notebook_task:
-            notebook_path: ../src/Notebooks/Ingest MDP Tables.ipynb
+            notebook_path: ../src/Notebooks/Ingest MDP Tables.py
+          job_cluster_key: lead_time_ai_cluster
+
+        - task_key: Clean_Enrich_PO_Data
+          depends_on:
+            - task_key: Ingest_MDP_Tables
+          notebook_task:
+            notebook_path: ../src/Notebooks/Clean Enrich PO Data.py
           job_cluster_key: lead_time_ai_cluster
 
         - task_key: Lead_Time_With_AI
           depends_on:
-            - task_key: Ingest_MDP_Tables
+            - task_key: Clean_Enrich_PO_Data
           notebook_task:
-            notebook_path: ../src/Notebooks/Lead Time with AI.ipynb
+            notebook_path: ../src/Notebooks/Lead Time with AI.py
           job_cluster_key: lead_time_ai_cluster
 
       job_clusters:
         - job_cluster_key: lead_time_ai_cluster
           new_cluster:
             cluster_name: ""
-            spark_version: 15.4.x-scala2.12
+            spark_version: 17.3.x-scala2.13
             azure_attributes:
               first_on_demand: 1
               availability: SPOT_WITH_FALLBACK_AZURE
