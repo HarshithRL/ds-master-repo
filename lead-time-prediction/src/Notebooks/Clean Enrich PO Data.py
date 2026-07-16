@@ -8,6 +8,7 @@
 
 # DBTITLE 1,Load config
 # MAGIC %run ./config_file
+# MAGIC
 
 # COMMAND ----------
 
