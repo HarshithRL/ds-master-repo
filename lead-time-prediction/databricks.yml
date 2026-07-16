@@ -47,6 +47,8 @@ targets:
       catalog: general_a
       schema: lead_time_with_ai
     permissions:
+      - service_principal_name: ${workspace.current_user.userName}
+        level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
@@ -62,6 +64,8 @@ targets:
       catalog: general_p
       schema: lead_time_with_ai
     permissions:
+      - service_principal_name: ${workspace.current_user.userName}
+        level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
