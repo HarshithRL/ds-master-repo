@@ -45,6 +45,7 @@ targets:
         level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
+        
 
   P:
     mode: production
