@@ -45,8 +45,6 @@ targets:
         level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
-      - user_name: SEC.RBAC.MDP.RD.DATAENGINEER.DEFAULT
-        level: CAN_MANAGE
         
 
   P:
