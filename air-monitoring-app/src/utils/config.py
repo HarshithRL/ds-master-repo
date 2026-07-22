@@ -1,7 +1,7 @@
 """
 Configuration for Air Monitoring V2 App.
 All environment-specific values read from environment variables (set in app.yaml).
-This enables the same source code to run in dev/acc/prd without changes.
+Secrets are fetched at runtime from Azure Key Vault (no hardcoded keys).
 
 Architecture:
   - Bronze: all tables (output, sites, upload_log) + PDF volume storage
@@ -10,8 +10,77 @@ Environments:
   - TEST: automation_d (https://adb-7181820732839861.1.azuredatabricks.net/)
   - ACC:  automation_a (https://adb-4796304964978539.19.azuredatabricks.net/)
   - PRD:  automation_p (https://adb-4844910598668398.18.azuredatabricks.net/)
+
+Secret Management:
+  - Secrets stored in Azure Key Vault (WE-SPOKE-MDP-AUT-{T,A,P}-KV)
+  - App authenticates via DefaultAzureCredential (service principal or managed identity)
+  - AZURE_KEYVAULT_URL env var points to the correct vault per environment
+  - Fallback: env vars for local development (never commit real values)
 """
 import os
+import logging
+from functools import lru_cache
+
+logger = logging.getLogger(__name__)
+
+
+# ============================================================
+# Key Vault Secret Retrieval
+# ============================================================
+@lru_cache(maxsize=1)
+def _get_keyvault_client():
+    """Lazily initialise the Key Vault SecretClient (cached for app lifetime)."""
+    try:
+        from azure.identity import DefaultAzureCredential
+        from azure.keyvault.secrets import SecretClient
+    except ImportError:
+        logger.warning(
+            "azure-identity or azure-keyvault-secrets not installed. "
+            "Falling back to environment variables for secrets."
+        )
+        return None
+
+    vault_url = os.environ.get("AZURE_KEYVAULT_URL")
+    if not vault_url:
+        logger.warning(
+            "AZURE_KEYVAULT_URL not set. Falling back to environment variables for secrets."
+        )
+        return None
+
+    try:
+        credential = DefaultAzureCredential()
+        client = SecretClient(vault_url=vault_url, credential=credential)
+        return client
+    except Exception as e:
+        logger.error(f"Failed to initialise Key Vault client: {e}")
+        return None
+
+
+def get_secret(secret_name: str, env_var_fallback: str, default: str = "") -> str:
+    """
+    Retrieve a secret from Azure Key Vault, falling back to an env var.
+
+    Priority:
+      1. Azure Key Vault (via AZURE_KEYVAULT_URL)
+      2. Environment variable (env_var_fallback)
+      3. default (empty string — forces explicit configuration)
+
+    Args:
+        secret_name: Name of the secret in Key Vault (e.g. 'openai-api-key')
+        env_var_fallback: Environment variable name to check if Key Vault is unavailable
+        default: Last-resort default (should be empty for secrets, URL for endpoints)
+    """
+    # Try Key Vault first
+    client = _get_keyvault_client()
+    if client:
+        try:
+            secret = client.get_secret(secret_name)
+            return secret.value
+        except Exception as e:
+            logger.warning(f"Could not fetch '{secret_name}' from Key Vault: {e}")
+
+    # Fallback to environment variable
+    return os.environ.get(env_var_fallback, default)
 
 # ============================================================
 # Unity Catalog — All tables in Bronze
@@ -44,22 +113,26 @@ WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID", "69ada62b2fb9b9e2")
 
 # ============================================================
 # Azure Document Intelligence
+# Secrets fetched from Key Vault at runtime; env var as fallback.
+# Key Vault secret names: doc-intelligence-endpoint, doc-intelligence-key
 # ============================================================
-DOC_INTELLIGENCE_ENDPOINT = os.environ.get(
-    "DOC_INTELLIGENCE_ENDPOINT",
-    "https://we-spoke-mdp-t-formrecogniser.cognitiveservices.azure.com/"
+DOC_INTELLIGENCE_ENDPOINT = get_secret(
+    "doc-intelligence-endpoint",
+    "DOC_INTELLIGENCE_ENDPOINT"
 )
-DOC_INTELLIGENCE_KEY = os.environ.get(
-    "DOC_INTELLIGENCE_KEY",
-    "1bdb532656d248bda3c6b58a9b75441f"
+DOC_INTELLIGENCE_KEY = get_secret(
+    "doc-intelligence-key",
+    "DOC_INTELLIGENCE_KEY"
 )
 
 # ============================================================
 # Azure OpenAI
+# Secrets fetched from Key Vault at runtime; env var as fallback.
+# Key Vault secret names: openai-endpoint, openai-api-key
 # ============================================================
 OPENAI_CONFIG = {
-    "endpoint": os.environ.get("OPENAI_ENDPOINT", "https://musta-m830len4-eastus2.cognitiveservices.azure.com/"),
-    "api_key": os.environ.get("OPENAI_API_KEY", "CqKjJbBku9Uf2PQLxKvDgaXF5xt3BU5u8yvQJsev3cwfycMxVosuJQQJ99BCACHYHv6XJ3w3AAAAACOGmDfg"),
+    "endpoint": get_secret("openai-endpoint", "OPENAI_ENDPOINT"),
+    "api_key": get_secret("openai-api-key", "OPENAI_API_KEY"),
     "api_version": os.environ.get("OPENAI_API_VERSION", "2024-12-01-preview"),
     "model_name": os.environ.get("OPENAI_MODEL_NAME", "EPD_Pulse_gpt-5.4"),
 }
