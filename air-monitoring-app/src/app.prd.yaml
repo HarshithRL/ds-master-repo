@@ -20,6 +20,8 @@ env:
     value: "bronze_volume"
   - name: AUTH_MODE
     value: "user"
+  - name: AZURE_KEYVAULT_URL
+    value: "https://WE-SPOKE-MDP-AUT-P-KV.vault.azure.net/"
 
 resources:
   - name: "sql-warehouse"
