@@ -1,7 +1,7 @@
 # Databricks asset bundle definition for DS-cicd-Lead-Time-AI
 # See https://docs.databricks.com/dev-tools/bundles/index.html
 bundle:
-  name: ds-cicd-lead-time-ai
+  name: ds-cicd-lead-time-prediction
 
 include:
   - resources/*.yml
@@ -25,7 +25,7 @@ targets:
     variables:
       policy_id: 306312B9730019AB
       catalog: general_d
-      schema: lead_time_with_ai
+      schema: lead_time_prediction
 
   T:
     mode: production
@@ -35,7 +35,7 @@ targets:
     variables:
       policy_id: 306312B9730019AB
       catalog: general_d
-      schema: lead_time_with_ai
+      schema: lead_time_prediction
 
   A:
     mode: production
@@ -45,7 +45,7 @@ targets:
     variables:
       policy_id: 306312B973005677
       catalog: general_a
-      schema: lead_time_with_ai
+      schema: lead_time_prediction
     permissions:
       - service_principal_name: ${workspace.current_user.userName}
         level: CAN_MANAGE
@@ -62,7 +62,7 @@ targets:
     variables:
       policy_id: 306312B973005150
       catalog: general_p
-      schema: lead_time_with_ai
+      schema: lead_time_prediction
     permissions:
       - service_principal_name: ${workspace.current_user.userName}
         level: CAN_MANAGE

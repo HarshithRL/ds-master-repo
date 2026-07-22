@@ -12,8 +12,8 @@
 # MAGIC
 # MAGIC | Source | Target Excel |
 # MAGIC |---|---|
-# MAGIC | `general_d.air_monitoring.output_table` | `output_table_TIMESTAMP.xlsx` |
-# MAGIC | `general_d.Air_Monitoring.sites` | `sites_TIMESTAMP.xlsx` |
+# MAGIC | `general_d.air_monitoring_v2.output_table` | `output_table_TIMESTAMP.xlsx` |
+# MAGIC | `general_d.air_monitoring_v2.sites` | `sites_TIMESTAMP.xlsx` |
 
 # COMMAND ----------
 
@@ -25,11 +25,11 @@ from datetime import datetime
 import warnings
 warnings.filterwarnings("ignore")
 
-# Source: general_d
-# output_table  ← V1 pipeline (air_monitoring schema)
-# sites         ← V2 app    (air_monitoring_v2 schema — correct: site_code, site_name, address, allowed_users)
+# Source: general_d — BOTH from V2 app tables (correct schema)
+# output_table  ← V2 (row_status, status_updated_at, removal_reason, row_id)
+# sites         ← V2 (site_code, site_name, address, allowed_users)
 SOURCE_CATALOG  = "general_d"
-SOURCE_OUTPUT   = f"{SOURCE_CATALOG}.air_monitoring.output_table"
+SOURCE_OUTPUT   = f"{SOURCE_CATALOG}.air_monitoring_v2.output_table"
 SOURCE_SITES    = f"{SOURCE_CATALOG}.air_monitoring_v2.sites"
 
 # Export destination: DEV volume
@@ -48,10 +48,12 @@ print(f"Export sites  : {EXPORT_SITES}")
 
 # DBTITLE 1,Cell 2 — Export to Excel
 # ============================================================
-# CELL 2 — Export
-# Reads V1 tables and saves as .xlsx to the DEV volume.
-# UC Volumes don't support random writes (xlsx = zip) so we
-# write to /tmp/ first, then copy to the volume.
+# CELL 2 — Export (ACC / PRD için hazırlık)
+# general_d.air_monitoring_v2 V2 tablolarını Excel'e yazar.
+# UC Volumes random write desteklemiyor (xlsx = zip)
+# → /tmp/'a yaz, sonra volume'a kopyala.
+#
+# DEV için bu cell'e gerek yok — Cell 4 ve Cell 5 yeterli.
 # ============================================================
 %pip install openpyxl --quiet
 
@@ -110,4 +112,16 @@ if EXPORT_SITES:
 
 # COMMAND ----------
 
+# DBTITLE 1,Fix: Overwrite sites table with correct V2 schema
+# MAGIC %sql
+# MAGIC
+# MAGIC CREATE OR REPLACE TABLE automation_d.bronze.air_monitoring_sites
+# MAGIC AS SELECT * FROM general_d.air_monitoring_v2.sites
 
+# COMMAND ----------
+
+# DBTITLE 1,Fix: Overwrite output table with correct V2 schema
+# MAGIC %sql
+# MAGIC -- DEV ONLY: T workspace general_d'ye direkt erisebilir, Excel'e gerek yok.
+# MAGIC CREATE OR REPLACE TABLE automation_d.bronze.air_monitoring_output
+# MAGIC AS SELECT * FROM general_d.air_monitoring_v2.output_table
