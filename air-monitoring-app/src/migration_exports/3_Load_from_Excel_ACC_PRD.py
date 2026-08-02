@@ -9,23 +9,23 @@
 # MAGIC ```
 # MAGIC /Volumes/{catalog}/bronze/bronze_volume/air_monitoring/
 # MAGIC ├── first_migration/    ← Initial V1 full export (run once)
-# MAGIC │   └── output_table.xlsx
+# MAGIC │   └── Output_Table.xlsx
 # MAGIC ├── update_from_v1/     ← Incremental updates (run time-to-time)
-# MAGIC │   └── output_table.xlsx
+# MAGIC │   └── Output_Table.xlsx
 # MAGIC ├── sites/              ← Site config (overwrite anytime)
 # MAGIC │   └── sites.xlsx
 # MAGIC └── uploaded_reports/   ← App PDFs (NEVER TOUCHED by this notebook)
 # MAGIC ```
 # MAGIC
-# MAGIC **Jobs** (run manually when needed):
-# MAGIC | Job | LOAD_MODE | When to use |
-# MAGIC |-----|-----------|-------------|
-# MAGIC | Initial Migration | `initial` | First-time setup on empty env |
-# MAGIC | Update from V1 | `incremental` | When V1 has new records |
-# MAGIC | Sites Update | `sites` | When site config changes |
+# MAGIC **Excel format**: Raw V1 export (23 columns, NO row_id).
+# MAGIC This notebook GENERATES the 7 additional columns (row_id, row_status, etc.)
+# MAGIC
+# MAGIC **Dedup strategy**: LEFT ANTI JOIN on expanded grain:
+# MAGIC `Code + Sample_no + Sample_Date + Volume + Concentration_result + Document_name`
+# MAGIC (row_id can't be used — it's generated fresh each time and differs between runs)
 # MAGIC
 # MAGIC **Safety guarantees:**
-# MAGIC - App-uploaded rows → **NEVER overwritten** (different row_ids, LEFT ANTI JOIN)
+# MAGIC - App-uploaded rows → **NEVER overwritten** (anti-join on 6-col grain, not row_id)
 # MAGIC - upload_log → **NEVER touched** (only CREATE if not exists)
 # MAGIC - uploaded_reports volume → **NEVER touched**
 # MAGIC - Re-running with same Excel → 0 new rows (idempotent)
@@ -51,7 +51,7 @@ TARGET_CATALOG = dbutils.widgets.get("TARGET_CATALOG")  # automation_d | automat
 BRONZE_SCHEMA = "bronze"
 VOLUME_BASE   = f"/Volumes/{TARGET_CATALOG}/{BRONZE_SCHEMA}/bronze_volume/air_monitoring"
 
-# Source folders (user uploads Excel here manually)
+# Source folders
 FIRST_MIGRATION_PATH = f"{VOLUME_BASE}/first_migration"
 UPDATE_FROM_V1_PATH  = f"{VOLUME_BASE}/update_from_v1"
 SITES_PATH           = f"{VOLUME_BASE}/sites"
@@ -61,28 +61,19 @@ TARGET_OUTPUT  = f"{TARGET_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_output"
 TARGET_SITES   = f"{TARGET_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_sites"
 TARGET_UPLOADS = f"{TARGET_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_upload_log"
 
+# Expanded grain for dedup (6 columns — from TECHNICAL_DOCUMENTATION.md)
+DEDUP_GRAIN = ["Code", "Sample_no", "Sample_Date", "Volume", "Concentration_result", "Document_name"]
+
 print(f"{'='*65}")
 print(f"  LOAD_MODE      : {LOAD_MODE}")
 print(f"  TARGET_CATALOG : {TARGET_CATALOG}")
 print(f"  VOLUME_BASE    : {VOLUME_BASE}")
-print(f"{'='*65}")
-print(f"  Source paths:")
-if LOAD_MODE == "initial":
-    print(f"    Output Excel : {FIRST_MIGRATION_PATH}/")
-elif LOAD_MODE == "incremental":
-    print(f"    Output Excel : {UPDATE_FROM_V1_PATH}/")
-elif LOAD_MODE == "sites":
-    print(f"    Sites Excel  : {SITES_PATH}/")
-print(f"  Target tables:")
-print(f"    output       : {TARGET_OUTPUT}")
-print(f"    sites        : {TARGET_SITES}")
-print(f"    upload_log   : {TARGET_UPLOADS}")
+print(f"  DEDUP_GRAIN    : {DEDUP_GRAIN}")
 print(f"{'='*65}")
 
 # COMMAND ----------
 
 # DBTITLE 1,Cell 2 — Install dependencies
-# BUG FIX: %pip MUST be in its own cell (Databricks restarts Python after pip)
 %pip install openpyxl --quiet
 
 # COMMAND ----------
@@ -90,7 +81,10 @@ print(f"{'='*65}")
 # DBTITLE 1,Cell 3 — Load Logic
 import pandas as pd
 import numpy as np
+import uuid
 import os
+from datetime import datetime
+from pyspark.sql import functions as F
 from pyspark.sql.types import (
     StructType, StructField, StringType, TimestampType,
     IntegerType, BooleanType, DoubleType
@@ -99,64 +93,97 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-def _find_excel(folder_path, prefix=""):
+def _find_excel(folder_path):
     """Find the most recent .xlsx file in a volume folder."""
     try:
-        files = [f for f in os.listdir(folder_path)
-                 if f.endswith(".xlsx") and (not prefix or f.startswith(prefix))]
+        files = [f for f in os.listdir(folder_path) if f.endswith(".xlsx")]
         files.sort(reverse=True)
         return files[0] if files else None
     except FileNotFoundError:
         return None
 
 
-def _prepare_dataframe(df_excel):
+def _prepare_output_dataframe(df_excel):
     """
-    Convert pandas DataFrame to Spark-ready format preserving critical types.
+    Transform raw V1 Excel (23 cols) into the full Delta schema (30 cols).
     
-    BUG FIX: Previous version used astype(str) for ALL columns, which:
-    - Turned Flag_High_Concentration into STRING "True"/"False" → app.py sum() breaks
-    - Turned Flag_EM_Concentration into STRING "0.0"/"1.0" → type mismatch
+    Generates 7 additional columns:
+      - row_id: UUID4 per row (unique identifier)
+      - row_status: 'active' or 'removed' (from Frozen_Docs)
+      - removal_reason: 'V1 frozen document' if removed
+      - status_updated_at: None
+      - uploaded_by: 'migrated'
+      - upload_batch_id: batch identifier with timestamp
+      - modified_by: None
     
-    FIX: Preserve BOOLEAN/DOUBLE types, convert everything else to STRING safely.
+    Transforms:
+      - Sample_Date: datetime → 'DD-Mon-YYYY' string (e.g. '01-Jul-2026')
+      - Code: ensure string type
+      - Flag_High_Concentration: bool (preserved)
+      - Flag_EM_Concentration: int → float
     """
     df = df_excel.copy()
+    batch_id = f"excel_migration_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     
-    # --- Preserve BOOLEAN columns ---
-    bool_cols = ["Flag_High_Concentration"]
-    for col in bool_cols:
-        if col in df.columns:
-            # Handle various representations: True/False, "True"/"False", 1/0
-            df[col] = df[col].apply(
-                lambda x: True if str(x).lower() in ("true", "1", "1.0")
-                else (False if str(x).lower() in ("false", "0", "0.0")
-                      else None) if pd.notna(x) else None
-            )
+    # --- Generate 7 additional columns ---
+    df["row_id"] = [str(uuid.uuid4()) for _ in range(len(df))]
+    df["row_status"] = df["Frozen_Docs"].apply(
+        lambda x: "removed" if str(x).strip().lower() == "x" else "active"
+    )
+    df["removal_reason"] = df["row_status"].apply(
+        lambda x: "V1 frozen document" if x == "removed" else None
+    )
+    df["status_updated_at"] = None
+    df["uploaded_by"] = "migrated"
+    df["upload_batch_id"] = batch_id
+    df["modified_by"] = None
     
-    # --- Preserve DOUBLE columns ---
-    float_cols = ["Flag_EM_Concentration"]
-    for col in float_cols:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-    
-    # --- Convert remaining columns to STRING (safely handling NaN/NaT) ---
-    for col in df.columns:
-        if col in bool_cols or col in float_cols:
-            continue  # Already handled above
-        # Convert to string, replacing NaN/NaT/None with None (→ SQL NULL)
-        df[col] = df[col].apply(
-            lambda x: str(x) if pd.notna(x) and str(x) not in ("nan", "NaT", "None", "") else None
+    # --- Transform Sample_Date: datetime → 'DD-Mon-YYYY' string ---
+    if "Sample_Date" in df.columns and pd.api.types.is_datetime64_any_dtype(df["Sample_Date"]):
+        df["Sample_Date"] = df["Sample_Date"].apply(
+            lambda x: x.strftime("%d-%b-%Y") if pd.notna(x) else None
         )
+    
+    # --- Ensure Code is string ---
+    if "Code" in df.columns:
+        df["Code"] = df["Code"].apply(lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (int, float)) else str(x) if pd.notna(x) else None)
+    
+    # --- Preserve Flag_High_Concentration as BOOLEAN ---
+    if "Flag_High_Concentration" in df.columns:
+        df["Flag_High_Concentration"] = df["Flag_High_Concentration"].apply(
+            lambda x: bool(x) if pd.notna(x) else None
+        )
+    
+    # --- Flag_EM_Concentration: int → float ---
+    if "Flag_EM_Concentration" in df.columns:
+        df["Flag_EM_Concentration"] = pd.to_numeric(df["Flag_EM_Concentration"], errors="coerce").astype("float64")
+    
+    # --- Convert all remaining object columns: NaN → None ---
+    for col in df.columns:
+        if col in ("Flag_High_Concentration", "Flag_EM_Concentration"):
+            continue
+        if df[col].dtype == "object" or df[col].dtype == "float64":
+            df[col] = df[col].apply(
+                lambda x: str(x) if pd.notna(x) and str(x) not in ("nan", "NaT", "None") else None
+            )
+        elif pd.api.types.is_datetime64_any_dtype(df[col]):
+            df[col] = df[col].apply(
+                lambda x: x.isoformat() if pd.notna(x) else None
+            )
     
     return spark.createDataFrame(df)
 
 
 def _load_output(source_path, mode_label):
     """
-    Load output_table Excel → INSERT only new rows (LEFT ANTI JOIN on row_id).
+    Load V1 output Excel → generate migration columns → INSERT only NEW rows.
     
-    SAFETY: App-uploaded rows have different row_ids from migration rows.
-    They will NEVER be matched by the anti-join → NEVER overwritten or deleted.
+    Dedup: LEFT ANTI JOIN on expanded grain (6 columns).
+    NOT on row_id (which is generated fresh each run and would never match).
+    
+    SAFETY: App-uploaded rows have different grain values (different Document_name,
+    Sample_no patterns, etc.) — they will NEVER be matched → NEVER overwritten.
+    Even if grain somehow matches, anti-join only SKIPS insertion — never deletes.
     """
     excel_file = _find_excel(source_path)
     if not excel_file:
@@ -167,49 +194,39 @@ def _load_output(source_path, mode_label):
     full_path = f"{source_path}/{excel_file}"
     print(f"[output/{mode_label}] Reading: {excel_file}")
 
-    # Read Excel (pandas infers types from content)
+    # Read raw V1 Excel (23 columns)
     df_excel = pd.read_excel(full_path, engine="openpyxl")
+    print(f"[output/{mode_label}] Excel rows: {len(df_excel):,} | Columns: {len(df_excel.columns)}")
     
-    # --- CRITICAL CHECK: row_id column must exist ---
-    assert "row_id" in df_excel.columns, (
-        f"ERROR: Excel file is missing 'row_id' column!\n"
-        f"File: {full_path}\n"
-        f"Columns found: {list(df_excel.columns)[:10]}...\n\n"
-        f"This means the Excel was NOT exported from DEV via '2_Export_to_Excel_DEV'.\n"
-        f"row_id is required for safe deduplication (LEFT ANTI JOIN).\n"
-        f"Please export from DEV first, then upload that file."
-    )
-    
-    # Convert to Spark DataFrame with proper types
-    df_spark = _prepare_dataframe(df_excel)
+    # Transform: generate row_id, row_status, etc. + type conversions
+    df_spark = _prepare_output_dataframe(df_excel)
     n_excel = df_spark.count()
-    print(f"[output/{mode_label}] Excel rows: {n_excel:,}")
+    print(f"[output/{mode_label}] Prepared DataFrame: {n_excel:,} rows, {len(df_spark.columns)} columns")
 
-    # LEFT ANTI JOIN: only keep rows whose row_id is NOT in target
+    # LEFT ANTI JOIN on expanded grain (6 columns)
+    # This checks: does a row with the SAME Code+Sample_no+Sample_Date+Volume+
+    # Concentration_result+Document_name already exist in the target?
     try:
-        existing_ids = spark.table(TARGET_OUTPUT).select("row_id")
-        df_to_write = df_spark.join(existing_ids, "row_id", "left_anti")
-        n_existing = existing_ids.count()
-        n_skip = n_excel - df_to_write.count()
+        existing = spark.table(TARGET_OUTPUT).select(*DEDUP_GRAIN)
+        df_to_write = df_spark.join(existing, DEDUP_GRAIN, "left_anti")
+        n_existing = spark.table(TARGET_OUTPUT).count()
+        n_write = df_to_write.count()
+        n_skip = n_excel - n_write
         print(f"[output/{mode_label}] Target has {n_existing:,} existing rows")
+        print(f"[output/{mode_label}] Grain match (skipped): {n_skip:,} | Net new: {n_write:,}")
     except Exception as e:
-        # Table doesn't exist yet → write everything
+        # Table doesn't exist → write everything
         print(f"[output/{mode_label}] Table not found (will be created): {type(e).__name__}")
         df_to_write = df_spark
-        n_existing = 0
-        n_skip = 0
-
-    n_write = df_to_write.count()
+        n_write = n_excel
 
     if n_write == 0:
         print(f"[output/{mode_label}] ✅ All {n_excel:,} rows already present — 0 new rows.")
     else:
         df_to_write.write.mode("append").option("mergeSchema", "true").saveAsTable(TARGET_OUTPUT)
         print(f"[output/{mode_label}] ✅ APPEND: {n_write:,} new rows → {TARGET_OUTPUT}")
-        if n_skip:
-            print(f"                    ({n_skip:,} rows already existed — skipped)")
 
-    # Verify final state
+    # Final verification
     final_count = spark.table(TARGET_OUTPUT).count()
     print(f"[output/{mode_label}] Target table total: {final_count:,} rows")
 
@@ -217,7 +234,7 @@ def _load_output(source_path, mode_label):
 def _load_sites():
     """
     Load sites Excel → OVERWRITE sites table.
-    Safe because sites is config/dimension data, not user-generated content.
+    Safe: sites is config/dimension data, not user content.
     """
     excel_file = _find_excel(SITES_PATH)
     if not excel_file:
@@ -229,7 +246,7 @@ def _load_sites():
     print(f"[sites] Reading: {excel_file}")
 
     df_sites_pd = pd.read_excel(full_path, engine="openpyxl")
-    # Sites table is all STRING columns — safe to use astype(str)
+    # Sites: all STRING columns — safe to use astype(str)
     df_sites_sp = spark.createDataFrame(
         df_sites_pd.astype(str).where(df_sites_pd.notna(), other=None)
     )
@@ -239,10 +256,7 @@ def _load_sites():
 
 
 def _ensure_upload_log():
-    """
-    CREATE upload_log table if it doesn't exist. NEVER touches existing data.
-    This table is managed by the app — records are added per upload event.
-    """
+    """CREATE upload_log table if not exists. NEVER touches existing data."""
     upload_log_schema = StructType([
         StructField("upload_id",            StringType(),    True),
         StructField("batch_id",             StringType(),    True),
@@ -267,30 +281,30 @@ def _ensure_upload_log():
 
 
 # ============================================================
-# EXECUTE based on LOAD_MODE
+# EXECUTE
 # ============================================================
 print()
 
 if LOAD_MODE == "initial":
     print("▶ MODE: Initial Migration (first_migration/)")
-    print("  Reading from:", FIRST_MIGRATION_PATH)
+    print(f"  Source: {FIRST_MIGRATION_PATH}/")
     print()
     _load_output(FIRST_MIGRATION_PATH, "initial")
     _ensure_upload_log()
 
 elif LOAD_MODE == "incremental":
     print("▶ MODE: Incremental Update (update_from_v1/)")
-    print("  Reading from:", UPDATE_FROM_V1_PATH)
+    print(f"  Source: {UPDATE_FROM_V1_PATH}/")
     print()
     _load_output(UPDATE_FROM_V1_PATH, "incremental")
-    _ensure_upload_log()  # BUG FIX: ensure table exists even if initial was never run
+    _ensure_upload_log()
 
 elif LOAD_MODE == "sites":
     print("▶ MODE: Sites Update (sites/)")
-    print("  Reading from:", SITES_PATH)
+    print(f"  Source: {SITES_PATH}/")
     print()
     _load_sites()
-    _ensure_upload_log()  # App needs this table to function
+    _ensure_upload_log()
 
 print()
 print("=" * 65)
