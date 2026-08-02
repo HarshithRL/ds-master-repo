@@ -81,30 +81,19 @@ print(f"{'='*65}")
 
 # COMMAND ----------
 
-# DBTITLE 1,Cell 2 — Load Logic
-# ============================================================
-# LOAD LOGIC
-#
-# output_table (initial/incremental):
-#   LEFT ANTI JOIN on row_id → only INSERT rows that don't exist yet.
-#   App-created rows have unique row_ids → NEVER matched → NEVER touched.
-#   Idempotent: re-running with same Excel = 0 new rows.
-#
-# sites (sites mode):
-#   OVERWRITE — full replace of site config table.
-#   This is safe because sites is a configuration/dimension table,
-#   not user-generated content.
-#
-# upload_log:
-#   CREATE empty table if it doesn't exist (all modes).
-#   NEVER modifies existing rows — those are app audit trail.
-# ============================================================
+# DBTITLE 1,Cell 2 — Install dependencies
+# BUG FIX: %pip MUST be in its own cell (Databricks restarts Python after pip)
 %pip install openpyxl --quiet
 
+# COMMAND ----------
+
+# DBTITLE 1,Cell 3 — Load Logic
 import pandas as pd
+import numpy as np
 import os
 from pyspark.sql.types import (
-    StructType, StructField, StringType, TimestampType, IntegerType
+    StructType, StructField, StringType, TimestampType,
+    IntegerType, BooleanType, DoubleType
 )
 import warnings
 warnings.filterwarnings("ignore")
@@ -119,6 +108,47 @@ def _find_excel(folder_path, prefix=""):
         return files[0] if files else None
     except FileNotFoundError:
         return None
+
+
+def _prepare_dataframe(df_excel):
+    """
+    Convert pandas DataFrame to Spark-ready format preserving critical types.
+    
+    BUG FIX: Previous version used astype(str) for ALL columns, which:
+    - Turned Flag_High_Concentration into STRING "True"/"False" → app.py sum() breaks
+    - Turned Flag_EM_Concentration into STRING "0.0"/"1.0" → type mismatch
+    
+    FIX: Preserve BOOLEAN/DOUBLE types, convert everything else to STRING safely.
+    """
+    df = df_excel.copy()
+    
+    # --- Preserve BOOLEAN columns ---
+    bool_cols = ["Flag_High_Concentration"]
+    for col in bool_cols:
+        if col in df.columns:
+            # Handle various representations: True/False, "True"/"False", 1/0
+            df[col] = df[col].apply(
+                lambda x: True if str(x).lower() in ("true", "1", "1.0")
+                else (False if str(x).lower() in ("false", "0", "0.0")
+                      else None) if pd.notna(x) else None
+            )
+    
+    # --- Preserve DOUBLE columns ---
+    float_cols = ["Flag_EM_Concentration"]
+    for col in float_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+    
+    # --- Convert remaining columns to STRING (safely handling NaN/NaT) ---
+    for col in df.columns:
+        if col in bool_cols or col in float_cols:
+            continue  # Already handled above
+        # Convert to string, replacing NaN/NaT/None with None (→ SQL NULL)
+        df[col] = df[col].apply(
+            lambda x: str(x) if pd.notna(x) and str(x) not in ("nan", "NaT", "None", "") else None
+        )
+    
+    return spark.createDataFrame(df)
 
 
 def _load_output(source_path, mode_label):
@@ -137,11 +167,21 @@ def _load_output(source_path, mode_label):
     full_path = f"{source_path}/{excel_file}"
     print(f"[output/{mode_label}] Reading: {excel_file}")
 
-    # Read Excel → Spark DataFrame (all columns as STRING for safety)
+    # Read Excel (pandas infers types from content)
     df_excel = pd.read_excel(full_path, engine="openpyxl")
-    df_spark = spark.createDataFrame(
-        df_excel.astype(str).where(df_excel.notna(), other=None)
+    
+    # --- CRITICAL CHECK: row_id column must exist ---
+    assert "row_id" in df_excel.columns, (
+        f"ERROR: Excel file is missing 'row_id' column!\n"
+        f"File: {full_path}\n"
+        f"Columns found: {list(df_excel.columns)[:10]}...\n\n"
+        f"This means the Excel was NOT exported from DEV via '2_Export_to_Excel_DEV'.\n"
+        f"row_id is required for safe deduplication (LEFT ANTI JOIN).\n"
+        f"Please export from DEV first, then upload that file."
     )
+    
+    # Convert to Spark DataFrame with proper types
+    df_spark = _prepare_dataframe(df_excel)
     n_excel = df_spark.count()
     print(f"[output/{mode_label}] Excel rows: {n_excel:,}")
 
@@ -151,9 +191,10 @@ def _load_output(source_path, mode_label):
         df_to_write = df_spark.join(existing_ids, "row_id", "left_anti")
         n_existing = existing_ids.count()
         n_skip = n_excel - df_to_write.count()
+        print(f"[output/{mode_label}] Target has {n_existing:,} existing rows")
     except Exception as e:
         # Table doesn't exist yet → write everything
-        print(f"[output/{mode_label}] Table not found (will be created): {e}")
+        print(f"[output/{mode_label}] Table not found (will be created): {type(e).__name__}")
         df_to_write = df_spark
         n_existing = 0
         n_skip = 0
@@ -168,7 +209,9 @@ def _load_output(source_path, mode_label):
         if n_skip:
             print(f"                    ({n_skip:,} rows already existed — skipped)")
 
-    print(f"[output/{mode_label}] Target table now has: {spark.table(TARGET_OUTPUT).count():,} total rows")
+    # Verify final state
+    final_count = spark.table(TARGET_OUTPUT).count()
+    print(f"[output/{mode_label}] Target table total: {final_count:,} rows")
 
 
 def _load_sites():
@@ -186,6 +229,7 @@ def _load_sites():
     print(f"[sites] Reading: {excel_file}")
 
     df_sites_pd = pd.read_excel(full_path, engine="openpyxl")
+    # Sites table is all STRING columns — safe to use astype(str)
     df_sites_sp = spark.createDataFrame(
         df_sites_pd.astype(str).where(df_sites_pd.notna(), other=None)
     )
@@ -239,13 +283,14 @@ elif LOAD_MODE == "incremental":
     print("  Reading from:", UPDATE_FROM_V1_PATH)
     print()
     _load_output(UPDATE_FROM_V1_PATH, "incremental")
+    _ensure_upload_log()  # BUG FIX: ensure table exists even if initial was never run
 
 elif LOAD_MODE == "sites":
     print("▶ MODE: Sites Update (sites/)")
     print("  Reading from:", SITES_PATH)
     print()
     _load_sites()
-    _ensure_upload_log()
+    _ensure_upload_log()  # App needs this table to function
 
 print()
 print("=" * 65)
