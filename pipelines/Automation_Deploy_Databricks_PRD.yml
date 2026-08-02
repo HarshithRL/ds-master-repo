@@ -33,7 +33,8 @@ stages:
       adbHostnameSecretName: ${{ variables.ADB_HOST_SECRET_NAME }}
       dbxProfile: ${{ variables.DBX_PROFILE }}
 
-  # Stage 2: Deploy Databricks App (overwrite app.yaml with PRD config + redeploy)
+  # Stage 2: Deploy Databricks App
+  # Uses AzureCLI task (service connection auth) to bypass Key Vault IP firewall
   - stage: Deploy_App
     displayName: 'Deploy Air Monitoring App'
     pool:
@@ -44,32 +45,32 @@ stages:
         steps:
           - checkout: self
 
-          - task: AzureKeyVault@2
-            inputs:
-              azureSubscription: ${{ variables.SUBSCRIPTION_NAME }}
-              KeyVaultName: ${{ variables.KEYVAULT_NAME }}
-              SecretsFilter: '${{ variables.SPN_ID_SECRET_NAME }},${{ variables.SPN_SECRET_SECRET_NAME }},${{ variables.TENANT_SECRET_NAME }},${{ variables.ADB_HOST_SECRET_NAME }}'
-            displayName: 'Read secrets from Key Vault'
-
           - script: |
               curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
             displayName: 'Install Databricks CLI'
 
-          - script: |
-              # Configure auth using SPN from Key Vault
-              export DATABRICKS_HOST="https://$(etex-spoke-mdp-adb-p-hostname)"
-              export DATABRICKS_CLIENT_ID="$(etex-spoke-mdp-automation-devops-prd-id)"
-              export DATABRICKS_CLIENT_SECRET="$(etex-spoke-mdp-automation-devops-prd-secret)"
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: ${{ variables.SUBSCRIPTION_NAME }}
+              scriptType: bash
+              scriptLocation: inlineScript
+              addSpnToEnvironment: true
+              inlineScript: |
+                # Get AAD token for Databricks API (resource: 2ff814a6-3304-4ab8-85cb-cd0e6f879c1d)
+                export DATABRICKS_HOST="https://adb-4844910598668398.18.azuredatabricks.net"
+                export DATABRICKS_TOKEN=$(az account get-access-token \
+                  --resource 2ff814a6-3304-4ab8-85cb-cd0e6f879c1d \
+                  --query accessToken -o tsv)
 
-              echo "Overwriting app.yaml with PRD-specific config..."
-              databricks workspace import \
-                /Workspace/automation/ds-air-monitoring-app/P/files/src/app.yaml \
-                --file $(Build.SourcesDirectory)/src/app.prd.yaml \
-                --format AUTO --overwrite
+                echo "Overwriting app.yaml with PRD-specific config..."
+                databricks workspace import \
+                  /Workspace/automation/ds-air-monitoring-app/P/files/src/app.yaml \
+                  --file $(Build.SourcesDirectory)/src/app.prd.yaml \
+                  --format AUTO --overwrite
 
-              echo "Deploying air-monitoring-app..."
-              databricks apps deploy air-monitoring-app \
-                --source-code-path "/Workspace/automation/ds-air-monitoring-app/P/files/src"
+                echo "Deploying air-monitoring-app..."
+                databricks apps deploy air-monitoring-app \
+                  --source-code-path "/Workspace/automation/ds-air-monitoring-app/P/files/src"
 
-              echo "PRD app deployment triggered."
-            displayName: 'Deploy App (swap yaml + apps deploy)'
+                echo "PRD app deployment triggered."
+            displayName: 'Deploy App (AzureCLI + Databricks CLI)'
