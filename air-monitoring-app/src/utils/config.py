@@ -35,15 +35,15 @@ logger = logging.getLogger(__name__)
 _host = os.environ.get("DATABRICKS_HOST", "")
 
 _ENV_OVERRIDES = {
-    # DEV/TEST workspace — uses shared WE-SPOKE-KV with "-t-" secret names
+    # DEV/TEST workspace — WE-SPOKE-MDP-AUT-T-KV
     "7181820732839861": {
         "catalog": "automation_d",
         "warehouse": "69ada62b2fb9b9e2",
-        "keyvault": "https://WE-SPOKE-KV.vault.azure.net/",
+        "keyvault": "https://WE-SPOKE-MDP-AUT-T-KV.vault.azure.net/",
         "auth_mode": "user",
-        "secret_doc_endpoint": "ds-we-spoke-mdp-t-formrecogniser-endpoint",
+        "secret_doc_endpoint": "ds-we-spoke-mdp-formrecogniser-endpoint",
         "secret_doc_key": "ds-we-spoke-mdp-t-formrecogniser-key1",
-        "secret_openai": "ds-we-spoke-mdp-t-openai",
+        "secret_openai": "ds-we-spoke-mdp-openai",
     },
     # ACC workspace — dedicated automation KV
     "4796304964978539": {
