@@ -1,0 +1,16 @@
+# Air Monitoring App — NOT managed by DAB (app already exists)
+# ================================================================
+# The app was created manually via Git source deploy.
+# DAB cannot CREATE it (409 ALREADY_EXISTS).
+#
+# App deployment is handled SEPARATELY after bundle deploy:
+#   1. Bundle deploy uploads src/ to workspace
+#   2. Deploy script swaps app.{acc,prd}.yaml -> app.yaml
+#   3. `databricks apps deploy` with --source-code-path does the actual deployment
+#
+# See: scripts/deploy_app.sh
+# ================================================================
+# To adopt the existing app into DAB in the future, run:
+#   databricks bundle deployment bind resources.apps.air_monitoring_app air-monitoring-app --target A
+# Then uncomment the resource block below.
+# ================================================================
