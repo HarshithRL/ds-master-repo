@@ -1666,7 +1666,11 @@ with tab_history:
                 # ── 1. DATA SHARING ──
                 st.subheader("📊 Data Sharing")
                 plants_expected = len(EXPECTED_PLANTS_2026)  # 26
-                sites_sampled = active["Site_name"].nunique() if "Site_name" in active.columns else 0
+                # Case-insensitive match: normalize both lists to lowercase
+                _expected_lower = {p.lower() for p in EXPECTED_PLANTS_2026}
+                _actual_sites_lower = set(active["Site_name"].dropna().str.lower().unique()) if "Site_name" in active.columns else set()
+                _matched_sites = _expected_lower & _actual_sites_lower
+                sites_sampled = len(_matched_sites)
                 sharing_pct = (sites_sampled / plants_expected * 100) if plants_expected > 0 else 0
 
                 ds1, ds2, ds3 = st.columns(3)
@@ -1675,10 +1679,10 @@ with tab_history:
                 ds3.metric("Data Sharing %", f"{sharing_pct:.1f}%")
 
                 with st.expander("📋 Expected Plants List (26)", expanded=False):
-                    _sampled_sites = set(active["Site_name"].unique()) if "Site_name" in active.columns else set()
+                    _sampled_lower = set(active["Site_name"].dropna().str.lower().unique()) if "Site_name" in active.columns else set()
                     _plant_status = []
                     for p in sorted(EXPECTED_PLANTS_2026):
-                        _status = "✅" if p in _sampled_sites else "⏳"
+                        _status = "✅" if p.lower() in _sampled_lower else "⏳"
                         _plant_status.append(f"{_status} {p}")
                     # Display in 3 columns
                     _pc1, _pc2, _pc3 = st.columns(3)
