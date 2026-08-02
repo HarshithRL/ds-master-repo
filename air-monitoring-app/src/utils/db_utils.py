@@ -2,6 +2,7 @@
 Database utilities for Air Monitoring V2 App.
 Features: row_id (UUID), upload_log, safe UPDATE by row_id, user tracking.
 """
+import os
 import pandas as pd
 import uuid
 from datetime import datetime
@@ -360,8 +361,17 @@ def get_upload_history(limit: int = 100) -> pd.DataFrame:
 # Volume Operations
 # ============================================================
 def upload_file_to_volume(uploaded_file, site_code: str = "") -> str:
-    w = WorkspaceClient()
-    target_path = VOLUME_PATH  # /Volumes/{catalog}/{bronze_schema}/{volume_name}/uploaded_reports
+    import streamlit as st
+    if AUTH_MODE == "user":
+        # Use the logged-in user's token (not the SPN from env vars)
+        user_token = st.context.headers.get("x-forwarded-access-token")
+        w = WorkspaceClient(
+            host=os.environ.get("DATABRICKS_HOST"),
+            token=user_token
+        )
+    else:
+        w = WorkspaceClient()
+    target_path = VOLUME_PATH  # /Volumes/{catalog}/{bronze_schema}/{volume_name}/air_monitoring/uploaded_reports
     if site_code:
         target_path = f"{target_path}/{site_code}"
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
