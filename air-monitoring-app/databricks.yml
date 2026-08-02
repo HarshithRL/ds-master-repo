@@ -24,6 +24,7 @@ targets:
     variables:
       policy_id: 306312B9730019AB
       catalog: automation_d
+      warehouse_id: 69ada62b2fb9b9e2
 
   T:
     mode: production
