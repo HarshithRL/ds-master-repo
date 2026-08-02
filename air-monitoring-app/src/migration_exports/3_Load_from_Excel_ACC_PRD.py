@@ -233,22 +233,15 @@ def _load_output(source_path, mode_label):
 
 def _load_sites():
     """
-    Load sites Excel → MERGE into sites table.
+    Load sites Excel → OVERWRITE sites table.
     
-    CRITICAL: App allows admins to add/remove allowed_users.
-    If we OVERWRITE, those app-made changes are LOST.
+    Use this for:
+      - Initial table creation (first-time setup)
+      - Full reset (if you want to start fresh)
     
-    Strategy:
-      - NEW sites (site_code not in Delta): INSERT entire row from Excel
-        (including allowed_users as initial value)
-      - EXISTING sites (site_code already in Delta): UPDATE only site_name
-        and address. NEVER overwrite allowed_users — app is the authority.
-      - If table doesn't exist yet: full INSERT (first-time setup).
-    
-    This means:
-      - To add a new site: put it in Excel with initial allowed_users → run job
-      - To change a site's users: use the App (Admin tab) — NOT Excel
-      - To change a site's name/address: update Excel → run job
+    WARNING: This OVERWRITES the entire table including allowed_users!
+    After initial setup, manage allowed_users from the App (Admin tab).
+    Only re-run this job if you intentionally want to reset site config.
     """
     excel_file = _find_excel(SITES_PATH)
     if not excel_file:
@@ -263,50 +256,10 @@ def _load_sites():
     df_sites_sp = spark.createDataFrame(
         df_sites_pd.astype(str).where(df_sites_pd.notna(), other=None)
     )
-    n_excel = df_sites_sp.count()
-    print(f"[sites] Excel rows: {n_excel:,}")
-
-    # Check if table exists
-    try:
-        existing = spark.table(TARGET_SITES)
-        n_existing = existing.count()
-        print(f"[sites] Existing table has {n_existing:,} rows")
-        
-        # Create temp view for MERGE
-        df_sites_sp.createOrReplaceTempView("_sites_excel")
-        
-        # MERGE: match on site_code
-        # MATCHED → update site_name + address ONLY (preserve allowed_users!)
-        # NOT MATCHED → insert full row from Excel (new site)
-        merge_sql = f"""
-        MERGE INTO {TARGET_SITES} AS target
-        USING _sites_excel AS source
-        ON target.site_code = source.site_code
-        WHEN MATCHED THEN UPDATE SET
-            target.site_name = source.site_name,
-            target.address = source.address
-        WHEN NOT MATCHED THEN INSERT *
-        """
-        result = spark.sql(merge_sql)
-        
-        # Report what happened
-        final = spark.table(TARGET_SITES)
-        n_final = final.count()
-        n_new = n_final - n_existing
-        n_updated = min(n_excel, n_existing)  # at most this many could be updated
-        
-        if n_new > 0:
-            print(f"[sites] ✅ MERGE: {n_new} new sites inserted")
-        print(f"[sites] ✅ MERGE: {n_updated} existing sites updated (name/address only)")
-        print(f"[sites] ⚠️  allowed_users NOT touched for existing sites (app is authority)")
-        print(f"[sites] Total sites now: {n_final:,}")
-        
-    except Exception as e:
-        # Table doesn't exist → full INSERT (first-time)
-        print(f"[sites] Table not found — creating with full Excel data: {type(e).__name__}")
-        df_sites_sp.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(TARGET_SITES)
-        print(f"[sites] ✅ CREATED: {n_excel:,} rows → {TARGET_SITES}")
-        print(f"[sites] (allowed_users from Excel used as initial values)")
+    n_sites = df_sites_sp.count()
+    df_sites_sp.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(TARGET_SITES)
+    print(f"[sites] ✅ OVERWRITE: {n_sites:,} rows → {TARGET_SITES}")
+    print(f"[sites] ⚠️  After this, manage allowed_users from the App only!")
 
 
 def _ensure_upload_log():
