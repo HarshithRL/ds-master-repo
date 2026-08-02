@@ -19,7 +19,6 @@ Secret Management:
 """
 import os
 import logging
-from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
@@ -79,85 +78,82 @@ if _detected_env is None:
 
 
 # ============================================================
-# Key Vault Secret Retrieval
+# Secret Retrieval via Databricks Secret Scopes (backed by Azure Key Vault)
 # ============================================================
-# If we detected a non-DEV environment, override AZURE_KEYVAULT_URL
-if _detected_env and _detected_env.get("keyvault"):
-    os.environ.setdefault("AZURE_KEYVAULT_URL", _detected_env["keyvault"])
+# Instead of using Azure SDK (ClientSecretCredential / DefaultAzureCredential)
+# to access Key Vault directly, we use Databricks Secret Scopes which are
+# backed by the same Key Vault. This works with the user's Databricks token
+# and avoids the Azure AD SPN tenant mismatch issue.
+#
+# Scope names match the Key Vault names:
+#   DEV: WE-SPOKE-MDP-AUT-T-KV
+#   ACC: WE-SPOKE-MDP-AUT-A-KV
+#   PRD: WE-SPOKE-MDP-AUT-P-KV
+# ============================================================
 
+# Map workspace to Databricks secret scope name
+_SCOPE_MAP = {
+    "7181820732839861": "WE-SPOKE-MDP-AUT-T-KV",   # DEV
+    "4796304964978539": "WE-SPOKE-MDP-AUT-A-KV",   # ACC
+    "4844910598668398": "WE-SPOKE-MDP-AUT-P-KV",   # PRD
+}
 
-@lru_cache(maxsize=1)
-def _get_keyvault_client():
-    """Lazily initialise the Key Vault SecretClient (cached for app lifetime).
-    
-    Auth priority:
-      1. ClientSecretCredential (if AZURE_CLIENT_ID + AZURE_CLIENT_SECRET + AZURE_TENANT_ID set)
-         — OR DATABRICKS_CLIENT_ID + DATABRICKS_CLIENT_SECRET + DATABRICKS_TENANT_ID
-      2. DefaultAzureCredential (managed identity, az cli, etc.)
-    """
-    try:
-        from azure.identity import DefaultAzureCredential, ClientSecretCredential
-        from azure.keyvault.secrets import SecretClient
-    except ImportError:
-        logger.warning(
-            "azure-identity or azure-keyvault-secrets not installed. "
-            "Falling back to environment variables for secrets."
-        )
-        return None
+_SECRET_SCOPE = None
+for _ws_id, _scope_name in _SCOPE_MAP.items():
+    if _ws_id in _host:
+        _SECRET_SCOPE = _scope_name
+        break
 
-    vault_url = os.environ.get("AZURE_KEYVAULT_URL")
-    if not vault_url:
-        logger.warning(
-            "AZURE_KEYVAULT_URL not set. Falling back to environment variables for secrets."
-        )
-        return None
-
-    try:
-        # Try explicit SPN credentials first (from app.yaml env vars)
-        _client_id = os.environ.get("AZURE_CLIENT_ID") or os.environ.get("DATABRICKS_CLIENT_ID")
-        _client_secret = os.environ.get("AZURE_CLIENT_SECRET") or os.environ.get("DATABRICKS_CLIENT_SECRET")
-        _tenant_id = os.environ.get("AZURE_TENANT_ID") or os.environ.get("DATABRICKS_TENANT_ID")
-        
-        if _client_id and _client_secret and _tenant_id:
-            logger.info(f"Key Vault auth: ClientSecretCredential (client_id={_client_id[:8]}...)")
-            credential = ClientSecretCredential(
-                tenant_id=_tenant_id,
-                client_id=_client_id,
-                client_secret=_client_secret
-            )
-        else:
-            logger.info("Key Vault auth: DefaultAzureCredential")
-            credential = DefaultAzureCredential()
-        
-        client = SecretClient(vault_url=vault_url, credential=credential)
-        return client
-    except Exception as e:
-        logger.error(f"Failed to initialise Key Vault client: {e}")
-        return None
+if _SECRET_SCOPE is None:
+    _SECRET_SCOPE = "WE-SPOKE-MDP-AUT-T-KV"  # Default to DEV
 
 
 def get_secret(secret_name: str, env_var_fallback: str, default: str = "") -> str:
     """
-    Retrieve a secret from Azure Key Vault, falling back to an env var.
+    Retrieve a secret from Databricks Secret Scope (backed by Azure Key Vault).
 
     Priority:
-      1. Azure Key Vault (via AZURE_KEYVAULT_URL)
+      1. Databricks Secret Scope (uses user's Databricks token → KV-backed scope)
       2. Environment variable (env_var_fallback)
-      3. default (empty string — forces explicit configuration)
+      3. default (empty string)
 
-    Args:
-        secret_name: Name of the secret in Key Vault (e.g. 'openai-api-key')
-        env_var_fallback: Environment variable name to check if Key Vault is unavailable
-        default: Last-resort default (should be empty for secrets, URL for endpoints)
+    The secret values are returned base64-encoded by the API and decoded here.
     """
-    # Try Key Vault first
-    client = _get_keyvault_client()
-    if client:
-        try:
-            secret = client.get_secret(secret_name)
-            return secret.value
-        except Exception as e:
-            logger.warning(f"Could not fetch '{secret_name}' from Key Vault: {e}")
+    import base64
+
+    # Try Databricks Secret Scope first
+    try:
+        import streamlit as st
+        from databricks.sdk import WorkspaceClient
+
+        user_token = st.context.headers.get("x-forwarded-access-token")
+        if user_token:
+            # Clear SPN env vars to avoid auth conflict
+            _saved_cid = os.environ.pop("DATABRICKS_CLIENT_ID", None)
+            _saved_csec = os.environ.pop("DATABRICKS_CLIENT_SECRET", None)
+            try:
+                w = WorkspaceClient(
+                    host=os.environ.get("DATABRICKS_HOST"),
+                    token=user_token
+                )
+                result = w.secrets.get_secret(scope=_SECRET_SCOPE, key=secret_name)
+                if result.value:
+                    # Databricks returns base64-encoded bytes
+                    if isinstance(result.value, bytes):
+                        decoded = base64.b64decode(result.value).decode("utf-8")
+                    else:
+                        decoded = base64.b64decode(result.value.encode()).decode("utf-8")
+                    logger.info(f"Secret '{secret_name}' loaded from scope '{_SECRET_SCOPE}'")
+                    return decoded
+            except Exception as e:
+                logger.warning(f"Could not fetch '{secret_name}' from Databricks scope '{_SECRET_SCOPE}': {e}")
+            finally:
+                if _saved_cid:
+                    os.environ["DATABRICKS_CLIENT_ID"] = _saved_cid
+                if _saved_csec:
+                    os.environ["DATABRICKS_CLIENT_SECRET"] = _saved_csec
+    except ImportError:
+        pass  # streamlit not available (e.g. during import in tests)
 
     # Fallback to environment variable
     return os.environ.get(env_var_fallback, default)
