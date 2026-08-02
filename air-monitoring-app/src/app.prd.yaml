@@ -20,11 +20,30 @@ env:
     value: "bronze_volume"
   - name: AUTH_MODE
     value: "user"
-  - name: AZURE_KEYVAULT_URL
-    value: "https://WE-SPOKE-MDP-AUT-P-KV.vault.azure.net/"
+  - name: DOC_INTELLIGENCE_ENDPOINT
+    valueFrom: doc-intelligence-endpoint
+  - name: DOC_INTELLIGENCE_KEY
+    valueFrom: doc-intelligence-key
+  - name: OPENAI_API_KEY
+    valueFrom: openai-key
 
 resources:
   - name: "sql-warehouse"
     sql_warehouse:
       id: "83294e3f6b44f138"
       permission: "CAN_USE"
+  - name: "doc-intelligence-endpoint"
+    secret:
+      scope: "WE-SPOKE-MDP-AUT-P-KV"
+      key: "ds-we-spoke-mdp-formrecogniser-endpoint"
+      permission: "READ"
+  - name: "doc-intelligence-key"
+    secret:
+      scope: "WE-SPOKE-MDP-AUT-P-KV"
+      key: "ds-we-spoke-mdp-formrecogniser-key"
+      permission: "READ"
+  - name: "openai-key"
+    secret:
+      scope: "WE-SPOKE-MDP-AUT-P-KV"
+      key: "ds-we-spoke-mdp-openai"
+      permission: "READ"
