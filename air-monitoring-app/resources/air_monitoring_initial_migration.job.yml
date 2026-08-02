@@ -1,0 +1,24 @@
+# Air Monitoring — Initial Migration
+# Run manually ONCE per environment to load V1 data into empty tables.
+# Reads from: /Volumes/{catalog}/bronze/bronze_volume/air_monitoring/first_migration/
+# Safety: LEFT ANTI JOIN on row_id — app rows NEVER overwritten.
+resources:
+  jobs:
+    air_monitoring_initial_migration:
+      name: "Air Monitoring - Initial Migration"
+      tags:
+        project: air-monitoring
+        purpose: initial-migration
+      tasks:
+        - task_key: load_initial
+          notebook_task:
+            notebook_path: ../src/migration_exports/3_Load_from_Excel_ACC_PRD.py
+            base_parameters:
+              LOAD_MODE: "initial"
+              TARGET_CATALOG: ${var.catalog}
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: "Standard_DS3_v2"
+            data_security_mode: USER_ISOLATION
+            num_workers: 0
+            policy_id: ${var.policy_id}

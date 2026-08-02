@@ -4,6 +4,13 @@ import uuid
 import base64
 from datetime import datetime
 
+
+def _to_bool(series):
+    """Convert column to bool — handles string 'True'/'False' from SQL connector."""
+    if series.dtype == bool:
+        return series
+    return series.astype(str).str.lower() == "true"
+
 # ============================================================
 st.set_page_config(
     page_title="Air Monitoring Tool",
@@ -1018,7 +1025,7 @@ with tab_upload:
 
                         # High concentration
                         if "Flag_High_Concentration" in df.columns:
-                            high = df[(df["Include"] == True) & (df["Flag_High_Concentration"] == True)]
+                            high = df[(df["Include"] == True) & (_to_bool(df["Flag_High_Concentration"]))]
                             if not high.empty:
                                 st.markdown(
                                     f'<div class="metric-highlight">⚠️ <b>{len(high)}</b> sample(s) with concentration &gt; {HIGH_CONC_THRESHOLD} f/ml</div>',
@@ -1233,7 +1240,7 @@ with tab_browser:
             m1.metric("Total Records", f"{len(df):,}")
             m2.metric("Unique Sites", df["Site_name"].nunique() if "Site_name" in df.columns else 0)
             m3.metric("Documents", df["Document_name"].nunique() if "Document_name" in df.columns else 0)
-            high_count = int(df["Flag_High_Concentration"].sum()) if "Flag_High_Concentration" in df.columns else 0
+            high_count = int(_to_bool(df["Flag_High_Concentration"]).sum()) if "Flag_High_Concentration" in df.columns else 0
             with m4:
                 st.metric(f"High Concentration (>{HIGH_CONC_THRESHOLD} f/ml)", high_count)
                 if high_count > 0:
@@ -1248,7 +1255,7 @@ with tab_browser:
 
             # Apply high-conc filter if active
             if st.session_state.get("_browser_filter_high_conc", False) and "Flag_High_Concentration" in df.columns:
-                df = df[df["Flag_High_Concentration"] == True].copy()
+                df = df[_to_bool(df["Flag_High_Concentration"])].copy()
                 st.info(f"🔍 Filtered: showing {len(df)} high concentration record(s). Click \"✕ Clear filter\" above to reset.")
 
             st.markdown("---")
@@ -1469,7 +1476,7 @@ with tab_browser:
             st.markdown("---")
             st.subheader("⚠️ High Concentration Samples")
             if "Flag_High_Concentration" in df.columns:
-                high_df = df[df["Flag_High_Concentration"] == True]
+                high_df = df[_to_bool(df["Flag_High_Concentration"])]
                 if not high_df.empty:
                     hc_display_cols = ["Site_name", "Code", "Document_name", "Sample_no", "Sample_Date",
                                        "Analysis_method", "Concentration_result", "Concentration_unit",
@@ -1623,7 +1630,7 @@ with tab_history:
                 total_records = len(active)
                 total_sites = active["Code"].nunique() if "Code" in active.columns else 0
                 total_docs = active["Document_name"].nunique() if "Document_name" in active.columns else 0
-                high_conc = int(active["Flag_High_Concentration"].sum()) if "Flag_High_Concentration" in active.columns else 0
+                high_conc = int(_to_bool(active["Flag_High_Concentration"]).sum()) if "Flag_High_Concentration" in active.columns else 0
 
                 k1, k2, k3, k4 = st.columns(4)
                 k1.metric("Total Samples", f"{total_records:,}")
@@ -1640,7 +1647,7 @@ with tab_history:
                         Samples=("Code", "count"),
                         Sites=("Code", "nunique"),
                         Documents=("Document_name", "nunique"),
-                        High_Conc=("Flag_High_Concentration", lambda x: int(x.sum()) if x.dtype == bool else 0),
+                        High_Conc=("Flag_High_Concentration", lambda x: int(_to_bool(x).sum())),
                         OM=("Analysis_method", lambda x: (x == "Optical Microscopy").sum()),
                         EM=("Analysis_method", lambda x: (x == "Electron Microscopy").sum()),
                     ).reset_index()
@@ -1671,7 +1678,7 @@ with tab_history:
                 site_stats = active.groupby(["Code", "Site_name"]).agg(
                     Active_Samples=("Code", "count"),
                     Documents=("Document_name", "nunique"),
-                    High_Conc=("Flag_High_Concentration", lambda x: int(x.sum()) if x.dtype == bool else 0),
+                    High_Conc=("Flag_High_Concentration", lambda x: int(_to_bool(x).sum())),
                     Latest_Upload=("upload_date", "max"),
                 ).reset_index().sort_values("Active_Samples", ascending=False)
 

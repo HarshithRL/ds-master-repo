@@ -25,8 +25,51 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================
+# Environment Auto-Detection
+# ============================================================
+# DATABRICKS_HOST is ALWAYS set by the platform (default env var).
+# If app.yaml has stale/wrong values (e.g. TEST warehouse on ACC workspace),
+# this detection overrides them with the correct per-environment config.
+# This makes the app self-healing regardless of app.yaml state.
+# ============================================================
+_host = os.environ.get("DATABRICKS_HOST", "")
+
+_ENV_OVERRIDES = {
+    # ACC workspace
+    "4796304964978539": {
+        "catalog": "automation_a",
+        "warehouse": "fe5f9b40ac3a9b6e",
+        "keyvault": "https://WE-SPOKE-MDP-AUT-A-KV.vault.azure.net/",
+        "auth_mode": "user",
+    },
+    # PRD workspace
+    "4844910598668398": {
+        "catalog": "automation_p",
+        "warehouse": "83294e3f6b44f138",
+        "keyvault": "https://WE-SPOKE-MDP-AUT-P-KV.vault.azure.net/",
+        "auth_mode": "user",
+    },
+}
+
+_detected_env = None
+for _ws_id, _cfg in _ENV_OVERRIDES.items():
+    if _ws_id in _host:
+        _detected_env = _cfg
+        logger.info(f"Environment detected from DATABRICKS_HOST: catalog={_cfg['catalog']}")
+        break
+
+if _detected_env is None:
+    logger.info("Environment: DEV/TEST (using env vars or defaults)")
+
+
+# ============================================================
 # Key Vault Secret Retrieval
 # ============================================================
+# If we detected a non-DEV environment, override AZURE_KEYVAULT_URL
+if _detected_env and _detected_env.get("keyvault"):
+    os.environ.setdefault("AZURE_KEYVAULT_URL", _detected_env["keyvault"])
+
+
 @lru_cache(maxsize=1)
 def _get_keyvault_client():
     """Lazily initialise the Key Vault SecretClient (cached for app lifetime)."""
@@ -84,17 +127,18 @@ def get_secret(secret_name: str, env_var_fallback: str, default: str = "") -> st
 
 # ============================================================
 # Unity Catalog — All tables in Bronze
-# Env vars set per environment in app.yaml (automation_d / automation_a / automation_p)
+# Priority: auto-detected env > app.yaml env var > hardcoded default
 # ============================================================
-UNITY_CATALOG = os.environ.get("UNITY_CATALOG", "automation_d")
+UNITY_CATALOG = _detected_env["catalog"] if _detected_env else os.environ.get("UNITY_CATALOG", "automation_d")
 BRONZE_SCHEMA = os.environ.get("BRONZE_SCHEMA", "bronze")
 SILVER_SCHEMA = os.environ.get("SILVER_SCHEMA", "silver")
 GOLD_SCHEMA = os.environ.get("GOLD_SCHEMA", "gold")
 
 # Volume for PDF uploads (lives in bronze schema)
 VOLUME_NAME = os.environ.get("VOLUME_NAME", "bronze_volume")
-VOLUME_SUBFOLDER = "uploaded_reports"  # migrated from old app
+VOLUME_SUBFOLDER = "uploaded_reports"
 IMAGES_SUBFOLDER = "images"  # static assets (logo, etc.)
+AIR_MONITORING_FOLDER = "air_monitoring"  # subfolder within volume for all app data
 
 # ============================================================
 # Table references (fully qualified)
@@ -104,12 +148,13 @@ OUTPUT_TABLE = f"{UNITY_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_output"
 UPLOAD_LOG_TABLE = f"{UNITY_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_upload_log"
 
 # Volume path for PDF storage
-VOLUME_PATH = f"/Volumes/{UNITY_CATALOG}/{BRONZE_SCHEMA}/{VOLUME_NAME}/{VOLUME_SUBFOLDER}"
+VOLUME_PATH = f"/Volumes/{UNITY_CATALOG}/{BRONZE_SCHEMA}/{VOLUME_NAME}/{AIR_MONITORING_FOLDER}/{VOLUME_SUBFOLDER}"
 
 # ============================================================
 # SQL Warehouse — from env var (different per workspace)
+# Auto-detection overrides stale app.yaml values
 # ============================================================
-WAREHOUSE_ID = os.environ.get("DATABRICKS_WAREHOUSE_ID", "69ada62b2fb9b9e2")
+WAREHOUSE_ID = _detected_env["warehouse"] if _detected_env else os.environ.get("DATABRICKS_WAREHOUSE_ID", "69ada62b2fb9b9e2")
 
 # ============================================================
 # Azure Document Intelligence
@@ -139,11 +184,9 @@ OPENAI_CONFIG = {
 
 # ============================================================
 # Auth Mode: "spn" (app service principal) or "user" (on-behalf-of-user)
-# Switch this single value to toggle between auth modes.
-# - "spn":  App uses its own service principal identity (all users share same perms)
-# - "user": App acts as the logged-in user (Unity Catalog RLS/permissions per user)
+# Auto-detected for ACC/PRD (always "user"); env var for DEV.
 # ============================================================
-AUTH_MODE = os.environ.get("AUTH_MODE", "spn").lower()  # default: spn
+AUTH_MODE = (_detected_env["auth_mode"] if _detected_env else os.environ.get("AUTH_MODE", "spn")).lower()
 
 # ============================================================
 # High Concentration Threshold (f/ml)

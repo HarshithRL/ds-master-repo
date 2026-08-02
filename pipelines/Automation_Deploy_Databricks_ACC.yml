@@ -7,8 +7,6 @@ resources:
       name: da-mdp-foundations-deployments
       ref: refs/heads/main
 
-# Trigger: only when code lands on the 'acc' branch
-# (either direct push or PR merge completion)
 trigger:
   branches:
     include:
@@ -22,6 +20,7 @@ variables:
   - template: variables/databricks_variables_acc.yml
 
 stages:
+  # Stage 1: Bundle deploy (uploads src/ including updated config.py to workspace)
   - template: pipelines/templates/deploy_databricks.yml@da-mdp-foundations-deployments
     parameters:
       env: ${{ variables.PIPELINE_ENV }}
@@ -33,3 +32,4 @@ stages:
       tenantIdSecretName: ${{ variables.TENANT_SECRET_NAME }}
       adbHostnameSecretName: ${{ variables.ADB_HOST_SECRET_NAME }}
       dbxProfile: ${{ variables.DBX_PROFILE }}
+
