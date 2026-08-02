@@ -38,31 +38,19 @@ _ENV_OVERRIDES = {
     "7181820732839861": {
         "catalog": "automation_d",
         "warehouse": "69ada62b2fb9b9e2",
-        "keyvault": "https://WE-SPOKE-MDP-AUT-T-KV.vault.azure.net/",
         "auth_mode": "user",
-        "secret_doc_endpoint": "ds-we-spoke-mdp-formrecogniser-endpoint",
-        "secret_doc_key": "ds-we-spoke-mdp-t-formrecogniser-key1",
-        "secret_openai": "ds-we-spoke-mdp-openai",
     },
     # ACC workspace — dedicated automation KV
     "4796304964978539": {
         "catalog": "automation_a",
         "warehouse": "fe5f9b40ac3a9b6e",
-        "keyvault": "https://WE-SPOKE-MDP-AUT-A-KV.vault.azure.net/",
         "auth_mode": "user",
-        "secret_doc_endpoint": "ds-we-spoke-mdp-formrecogniser-endpoint",
-        "secret_doc_key": "ds-we-spoke-mdp-formrecogniser-key",
-        "secret_openai": "ds-we-spoke-mdp-openai",
     },
     # PRD workspace — dedicated automation KV
     "4844910598668398": {
         "catalog": "automation_p",
         "warehouse": "83294e3f6b44f138",
-        "keyvault": "https://WE-SPOKE-MDP-AUT-P-KV.vault.azure.net/",
         "auth_mode": "user",
-        "secret_doc_endpoint": "ds-we-spoke-mdp-formrecogniser-endpoint",
-        "secret_doc_key": "ds-we-spoke-mdp-formrecogniser-key",
-        "secret_openai": "ds-we-spoke-mdp-openai",
     },
 }
 
@@ -147,15 +135,12 @@ WAREHOUSE_ID = _detected_env["warehouse"] if _detected_env else os.environ.get("
 # Secrets fetched from Key Vault at runtime; env var as fallback.
 # Key Vault secret names: ds-we-spoke-mdp-formrecogniser-endpoint, ds-we-spoke-mdp-formrecogniser-key
 # ============================================================
-_doc_endpoint_secret = _detected_env["secret_doc_endpoint"] if _detected_env else "ds-we-spoke-mdp-t-formrecogniser-endpoint"
-_doc_key_secret = _detected_env["secret_doc_key"] if _detected_env else "ds-we-spoke-mdp-t-formrecogniser-key1"
-
 DOC_INTELLIGENCE_ENDPOINT = get_secret(
-    _doc_endpoint_secret,
+    "doc-intelligence-endpoint",
     "DOC_INTELLIGENCE_ENDPOINT"
 )
 DOC_INTELLIGENCE_KEY = get_secret(
-    _doc_key_secret,
+    "doc-intelligence-key",
     "DOC_INTELLIGENCE_KEY"
 )
 
@@ -166,7 +151,7 @@ DOC_INTELLIGENCE_KEY = get_secret(
 # ============================================================
 OPENAI_CONFIG = {
     "endpoint": os.environ.get("OPENAI_ENDPOINT", "https://musta-m830len4-eastus2.cognitiveservices.azure.com/"),
-    "api_key": get_secret(_detected_env["secret_openai"] if _detected_env else "ds-we-spoke-mdp-t-openai", "OPENAI_API_KEY"),
+    "api_key": get_secret("openai-key", "OPENAI_API_KEY"),
     "api_version": os.environ.get("OPENAI_API_VERSION", "2024-12-01-preview"),
     "model_name": os.environ.get("OPENAI_MODEL_NAME", "EPD_Pulse_gpt-5.4"),
 }
