@@ -22,9 +22,30 @@ env:
     value: "bronze_volume"
   - name: AUTH_MODE
     value: "user"
+  - name: DOC_INTELLIGENCE_ENDPOINT
+    valueFrom: doc-intelligence-endpoint
+  - name: DOC_INTELLIGENCE_KEY
+    valueFrom: doc-intelligence-key
+  - name: OPENAI_API_KEY
+    valueFrom: openai-key
 
 resources:
   - name: "sql-warehouse"
     sql_warehouse:
       id: "69ada62b2fb9b9e2"
       permission: "CAN_USE"
+  - name: "doc-intelligence-endpoint"
+    secret:
+      scope: "WE-SPOKE-MDP-AUT-T-KV"
+      key: "ds-we-spoke-mdp-formrecogniser-endpoint"
+      permission: "READ"
+  - name: "doc-intelligence-key"
+    secret:
+      scope: "WE-SPOKE-MDP-AUT-T-KV"
+      key: "ds-we-spoke-mdp-t-formrecogniser-key1"
+      permission: "READ"
+  - name: "openai-key"
+    secret:
+      scope: "WE-SPOKE-MDP-AUT-T-KV"
+      key: "ds-we-spoke-mdp-openai"
+      permission: "READ"

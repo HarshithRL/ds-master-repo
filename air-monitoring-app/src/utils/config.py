@@ -78,85 +78,38 @@ if _detected_env is None:
 
 
 # ============================================================
-# Secret Retrieval via Databricks Secret Scopes (backed by Azure Key Vault)
+# Secret Retrieval
 # ============================================================
-# Instead of using Azure SDK (ClientSecretCredential / DefaultAzureCredential)
-# to access Key Vault directly, we use Databricks Secret Scopes which are
-# backed by the same Key Vault. This works with the user's Databricks token
-# and avoids the Azure AD SPN tenant mismatch issue.
+# Secrets are managed via Azure Key Vault, accessed through Databricks
+# Secret Scopes. The app.yaml declares secret resources (scope + key),
+# and platform injects the values as environment variables at runtime.
 #
-# Scope names match the Key Vault names:
-#   DEV: WE-SPOKE-MDP-AUT-T-KV
-#   ACC: WE-SPOKE-MDP-AUT-A-KV
-#   PRD: WE-SPOKE-MDP-AUT-P-KV
+# Flow: Azure Key Vault → Databricks Secret Scope → app.yaml resource
+#       → valueFrom → env var (e.g. DOC_INTELLIGENCE_ENDPOINT)
+#
+# If a secret is rotated in Key Vault, redeploy the app to pick up new values.
 # ============================================================
-
-# Map workspace to Databricks secret scope name
-_SCOPE_MAP = {
-    "7181820732839861": "WE-SPOKE-MDP-AUT-T-KV",   # DEV
-    "4796304964978539": "WE-SPOKE-MDP-AUT-A-KV",   # ACC
-    "4844910598668398": "WE-SPOKE-MDP-AUT-P-KV",   # PRD
-}
-
-_SECRET_SCOPE = None
-for _ws_id, _scope_name in _SCOPE_MAP.items():
-    if _ws_id in _host:
-        _SECRET_SCOPE = _scope_name
-        break
-
-if _SECRET_SCOPE is None:
-    _SECRET_SCOPE = "WE-SPOKE-MDP-AUT-T-KV"  # Default to DEV
 
 
 def get_secret(secret_name: str, env_var_fallback: str, default: str = "") -> str:
     """
-    Retrieve a secret from Databricks Secret Scope (backed by Azure Key Vault).
+    Retrieve a secret value from environment variable.
 
-    Priority:
-      1. Databricks Secret Scope (uses user's Databricks token → KV-backed scope)
-      2. Environment variable (env_var_fallback)
-      3. default (empty string)
+    The platform injects secret values from Databricks Secret Scopes
+    (backed by Azure Key Vault) as environment variables via app.yaml
+    valueFrom declarations.
 
-    The secret values are returned base64-encoded by the API and decoded here.
+    Args:
+        secret_name: Original KV secret name (for logging only)
+        env_var_fallback: Environment variable name where the secret is injected
+        default: Fallback if env var is not set
     """
-    import base64
-
-    # Try Databricks Secret Scope first
-    try:
-        import streamlit as st
-        from databricks.sdk import WorkspaceClient
-
-        user_token = st.context.headers.get("x-forwarded-access-token")
-        if user_token:
-            # Clear SPN env vars to avoid auth conflict
-            _saved_cid = os.environ.pop("DATABRICKS_CLIENT_ID", None)
-            _saved_csec = os.environ.pop("DATABRICKS_CLIENT_SECRET", None)
-            try:
-                w = WorkspaceClient(
-                    host=os.environ.get("DATABRICKS_HOST"),
-                    token=user_token
-                )
-                result = w.secrets.get_secret(scope=_SECRET_SCOPE, key=secret_name)
-                if result.value:
-                    # Databricks returns base64-encoded bytes
-                    if isinstance(result.value, bytes):
-                        decoded = base64.b64decode(result.value).decode("utf-8")
-                    else:
-                        decoded = base64.b64decode(result.value.encode()).decode("utf-8")
-                    logger.info(f"Secret '{secret_name}' loaded from scope '{_SECRET_SCOPE}'")
-                    return decoded
-            except Exception as e:
-                logger.warning(f"Could not fetch '{secret_name}' from Databricks scope '{_SECRET_SCOPE}': {e}")
-            finally:
-                if _saved_cid:
-                    os.environ["DATABRICKS_CLIENT_ID"] = _saved_cid
-                if _saved_csec:
-                    os.environ["DATABRICKS_CLIENT_SECRET"] = _saved_csec
-    except ImportError:
-        pass  # streamlit not available (e.g. during import in tests)
-
-    # Fallback to environment variable
-    return os.environ.get(env_var_fallback, default)
+    value = os.environ.get(env_var_fallback, default)
+    if value and value != default:
+        logger.info(f"Secret '{env_var_fallback}' loaded from environment")
+    elif not value:
+        logger.warning(f"Secret '{env_var_fallback}' not found in environment (KV key: {secret_name})")
+    return value
 
 # ============================================================
 # Unity Catalog — All tables in Bronze
