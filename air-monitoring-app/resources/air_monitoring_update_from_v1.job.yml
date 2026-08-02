@@ -1,0 +1,27 @@
+# Air Monitoring — Update from V1
+# Run manually when V1 has new records to sync.
+# Reads from: /Volumes/{catalog}/bronze/bronze_volume/air_monitoring/update_from_v1/
+# Safety: LEFT ANTI JOIN on row_id — only inserts NET-NEW rows.
+# App rows and previously migrated rows are NEVER touched.
+resources:
+  jobs:
+    air_monitoring_update_from_v1:
+      name: "Air Monitoring - Update from V1"
+      tags:
+        project: air-monitoring
+        purpose: incremental-sync
+      tasks:
+        - task_key: load_incremental
+          notebook_task:
+            notebook_path: ../src/migration_exports/3_Load_from_Excel_ACC_PRD.py
+            base_parameters:
+              LOAD_MODE: "incremental"
+              TARGET_CATALOG: ${var.catalog}
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: "Standard_DS3_v2"
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*]"
+              spark.databricks.cluster.profile: singleNode
+            policy_id: ${var.policy_id}
