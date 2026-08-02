@@ -361,25 +361,10 @@ def get_upload_history(limit: int = 100) -> pd.DataFrame:
 # Volume Operations
 # ============================================================
 def upload_file_to_volume(uploaded_file, site_code: str = "") -> str:
-    import streamlit as st
-    if AUTH_MODE == "user":
-        # Use the logged-in user's token (not the SPN from env vars)
-        # Must temporarily remove SPN env vars to avoid "more than one auth method" conflict
-        user_token = st.context.headers.get("x-forwarded-access-token")
-        _saved_cid = os.environ.pop("DATABRICKS_CLIENT_ID", None)
-        _saved_csec = os.environ.pop("DATABRICKS_CLIENT_SECRET", None)
-        try:
-            w = WorkspaceClient(
-                host=os.environ.get("DATABRICKS_HOST"),
-                token=user_token
-            )
-        finally:
-            if _saved_cid:
-                os.environ["DATABRICKS_CLIENT_ID"] = _saved_cid
-            if _saved_csec:
-                os.environ["DATABRICKS_CLIENT_SECRET"] = _saved_csec
-    else:
-        w = WorkspaceClient()
+    # ALWAYS use SPN (WorkspaceClient with DATABRICKS_CLIENT_ID/SECRET from env).
+    # Reason: user's forwarded token does NOT have 'files' scope (Databricks Apps limitation).
+    # The SPN needs WRITE VOLUME + USE CATALOG/SCHEMA grants on the target volume.
+    w = WorkspaceClient()
     target_path = VOLUME_PATH  # /Volumes/{catalog}/{bronze_schema}/{volume_name}/air_monitoring/uploaded_reports
     if site_code:
         target_path = f"{target_path}/{site_code}"
