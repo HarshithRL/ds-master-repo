@@ -136,8 +136,9 @@ GOLD_SCHEMA = os.environ.get("GOLD_SCHEMA", "gold")
 
 # Volume for PDF uploads (lives in bronze schema)
 VOLUME_NAME = os.environ.get("VOLUME_NAME", "bronze_volume")
-VOLUME_SUBFOLDER = "uploaded_reports"  # migrated from old app
+VOLUME_SUBFOLDER = "uploaded_reports"
 IMAGES_SUBFOLDER = "images"  # static assets (logo, etc.)
+AIR_MONITORING_FOLDER = "air_monitoring"  # subfolder within volume for all app data
 
 # ============================================================
 # Table references (fully qualified)
@@ -147,7 +148,7 @@ OUTPUT_TABLE = f"{UNITY_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_output"
 UPLOAD_LOG_TABLE = f"{UNITY_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_upload_log"
 
 # Volume path for PDF storage
-VOLUME_PATH = f"/Volumes/{UNITY_CATALOG}/{BRONZE_SCHEMA}/{VOLUME_NAME}/{VOLUME_SUBFOLDER}"
+VOLUME_PATH = f"/Volumes/{UNITY_CATALOG}/{BRONZE_SCHEMA}/{VOLUME_NAME}/{AIR_MONITORING_FOLDER}/{VOLUME_SUBFOLDER}"
 
 # ============================================================
 # SQL Warehouse — from env var (different per workspace)
