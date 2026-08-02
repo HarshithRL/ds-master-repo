@@ -216,7 +216,7 @@ DOC_INTELLIGENCE_KEY = get_secret(
 # Key Vault secret names: openai-endpoint, openai-api-key
 # ============================================================
 OPENAI_CONFIG = {
-    "endpoint": get_secret("openai-endpoint", "OPENAI_ENDPOINT"),
+    "endpoint": os.environ.get("OPENAI_ENDPOINT", "https://musta-m830len4-eastus2.cognitiveservices.azure.com/"),
     "api_key": get_secret(_detected_env["secret_openai"] if _detected_env else "ds-we-spoke-mdp-t-openai", "OPENAI_API_KEY"),
     "api_version": os.environ.get("OPENAI_API_VERSION", "2024-12-01-preview"),
     "model_name": os.environ.get("OPENAI_MODEL_NAME", "EPD_Pulse_gpt-5.4"),
