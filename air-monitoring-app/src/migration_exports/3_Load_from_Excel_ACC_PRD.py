@@ -144,6 +144,13 @@ def _prepare_output_dataframe(df_excel):
             lambda x: x.strftime("%d-%b-%Y") if pd.notna(x) else None
         )
     
+    # --- Transform upload_date: datetime → 'YYYY-MM-DD HH:MM:SS' string ---
+    # Delta table has this as STRING; Excel reads as datetime64
+    if "upload_date" in df.columns and pd.api.types.is_datetime64_any_dtype(df["upload_date"]):
+        df["upload_date"] = df["upload_date"].apply(
+            lambda x: x.strftime("%Y-%m-%d %H:%M:%S") if pd.notna(x) else None
+        )
+    
     # --- Ensure Code is string ---
     if "Code" in df.columns:
         df["Code"] = df["Code"].apply(lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (int, float)) else str(x) if pd.notna(x) else None)
