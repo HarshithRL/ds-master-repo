@@ -18,6 +18,7 @@ resources:
               TARGET_CATALOG: ${var.catalog}
           new_cluster:
             spark_version: "15.4.x-scala2.12"
+            node_type_id: "Standard_DS3_v2"
             num_workers: 0
             spark_conf:
               spark.master: "local[*]"
