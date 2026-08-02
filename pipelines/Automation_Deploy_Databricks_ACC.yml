@@ -7,7 +7,16 @@ resources:
       name: da-mdp-foundations-deployments
       ref: refs/heads/main
 
-trigger: none
+# Trigger: only when code lands on the 'acc' branch
+# (either direct push or PR merge completion)
+trigger:
+  branches:
+    include:
+      - acc
+  paths:
+    exclude:
+      - '*.md'
+      - 'pipelines/**'
 
 variables:
   - template: variables/databricks_variables_acc.yml
