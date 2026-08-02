@@ -24,6 +24,8 @@ env:
     value: "user"
   - name: AZURE_KEYVAULT_URL
     value: "https://WE-SPOKE-MDP-AUT-T-KV.vault.azure.net/"
+  - name: AZURE_TENANT_ID
+    value: "e23c7299-1ea1-4bca-b80f-8731b1cf4750"
 
 resources:
   - name: "sql-warehouse"
