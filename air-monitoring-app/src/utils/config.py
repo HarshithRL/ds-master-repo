@@ -35,6 +35,13 @@ logger = logging.getLogger(__name__)
 _host = os.environ.get("DATABRICKS_HOST", "")
 
 _ENV_OVERRIDES = {
+    # DEV/TEST workspace
+    "7181820732839861": {
+        "catalog": "automation_d",
+        "warehouse": "69ada62b2fb9b9e2",
+        "keyvault": "https://WE-SPOKE-MDP-AUT-T-KV.vault.azure.net/",
+        "auth_mode": "user",
+    },
     # ACC workspace
     "4796304964978539": {
         "catalog": "automation_a",
@@ -159,14 +166,14 @@ WAREHOUSE_ID = _detected_env["warehouse"] if _detected_env else os.environ.get("
 # ============================================================
 # Azure Document Intelligence
 # Secrets fetched from Key Vault at runtime; env var as fallback.
-# Key Vault secret names: doc-intelligence-endpoint, doc-intelligence-key
+# Key Vault secret names: ds-we-spoke-mdp-formrecogniser-endpoint, ds-we-spoke-mdp-formrecogniser-key
 # ============================================================
 DOC_INTELLIGENCE_ENDPOINT = get_secret(
-    "doc-intelligence-endpoint",
+    "ds-we-spoke-mdp-formrecogniser-endpoint",
     "DOC_INTELLIGENCE_ENDPOINT"
 )
 DOC_INTELLIGENCE_KEY = get_secret(
-    "doc-intelligence-key",
+    "ds-we-spoke-mdp-formrecogniser-key",
     "DOC_INTELLIGENCE_KEY"
 )
 
@@ -177,7 +184,7 @@ DOC_INTELLIGENCE_KEY = get_secret(
 # ============================================================
 OPENAI_CONFIG = {
     "endpoint": get_secret("openai-endpoint", "OPENAI_ENDPOINT"),
-    "api_key": get_secret("openai-api-key", "OPENAI_API_KEY"),
+    "api_key": get_secret("ds-we-spoke-mdp-openai", "OPENAI_API_KEY"),
     "api_version": os.environ.get("OPENAI_API_VERSION", "2024-12-01-preview"),
     "model_name": os.environ.get("OPENAI_MODEL_NAME", "EPD_Pulse_gpt-5.4"),
 }
