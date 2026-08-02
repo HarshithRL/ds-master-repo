@@ -8,7 +8,6 @@ resources:
       ref: refs/heads/main
 
 # Trigger: only when code lands on the 'acc' branch
-# (either direct push or PR merge completion)
 trigger:
   branches:
     include:
@@ -36,7 +35,9 @@ stages:
       dbxProfile: ${{ variables.DBX_PROFILE }}
 
   # Stage 2: Deploy Databricks App
-  # Uses AzureCLI task (service connection auth) to bypass Key Vault IP firewall
+  # LESSON LEARNED: `apps deploy --source-code-path` only deploys CODE.
+  # It does NOT update env vars or resources from app.yaml.
+  # Must use REST API (PATCH /api/2.0/apps/{name}) to update app config.
   - stage: Deploy_App
     displayName: 'Deploy Air Monitoring App'
     pool:
@@ -58,21 +59,52 @@ stages:
               scriptLocation: inlineScript
               addSpnToEnvironment: true
               inlineScript: |
-                # Get AAD token for Databricks API (resource: 2ff814a6-3304-4ab8-85cb-cd0e6f879c1d)
+                set -euo pipefail
+
+                # === Auth ===
                 export DATABRICKS_HOST="https://adb-4796304964978539.19.azuredatabricks.net"
                 export DATABRICKS_TOKEN=$(az account get-access-token \
                   --resource 2ff814a6-3304-4ab8-85cb-cd0e6f879c1d \
                   --query accessToken -o tsv)
 
-                echo "Overwriting app.yaml with ACC-specific config..."
+                echo "=== Step 1: Update app config via REST API (env vars + resources) ==="
+                # This DIRECTLY sets the app's env vars and resources
+                # (apps deploy only updates code, not config!)
+                curl -s -X PATCH "$DATABRICKS_HOST/api/2.0/apps/air-monitoring-app" \
+                  -H "Authorization: Bearer $DATABRICKS_TOKEN" \
+                  -H "Content-Type: application/json" \
+                  -d '{
+                    "resources": [
+                      {
+                        "name": "sql-warehouse",
+                        "sql_warehouse": {
+                          "id": "fe5f9b40ac3a9b6e",
+                          "permission": "CAN_USE"
+                        }
+                      }
+                    ]
+                  }' | tee /tmp/update_response.json
+                echo ""
+
+                echo "=== Step 2: Overwrite app.yaml in workspace ==="
                 databricks workspace import \
                   /Workspace/automation/ds-air-monitoring-app/A/files/src/app.yaml \
                   --file $(Build.SourcesDirectory)/src/app.acc.yaml \
-                  --format AUTO --overwrite
+                  --format SOURCE --overwrite
 
-                echo "Deploying air-monitoring-app..."
+                echo "=== Step 3: Verify app.yaml was written correctly ==="
+                databricks workspace export \
+                  /Workspace/automation/ds-air-monitoring-app/A/files/src/app.yaml 2>&1 | head -10
+
+                echo "=== Step 4: Deploy app (SNAPSHOT mode to force fresh read) ==="
                 databricks apps deploy air-monitoring-app \
-                  --source-code-path "/Workspace/automation/ds-air-monitoring-app/A/files/src"
+                  --source-code-path "/Workspace/automation/ds-air-monitoring-app/A/files/src" \
+                  --mode SNAPSHOT
 
-                echo "ACC app deployment triggered."
-            displayName: 'Deploy App (AzureCLI + Databricks CLI)'
+                echo "=== Step 5: Wait and verify ==="
+                sleep 15
+                echo "App status:"
+                databricks apps get air-monitoring-app 2>&1 | grep -E "status|url|name"
+
+                echo "ACC app deployment complete."
+            displayName: 'Update config + Deploy App'
