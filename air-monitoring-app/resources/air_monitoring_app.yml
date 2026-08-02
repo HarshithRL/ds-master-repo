@@ -1,28 +1,16 @@
-# Air Monitoring App — Databricks Apps resource for DAB
-# The app.yaml in src/ is swapped per environment BEFORE bundle deploy.
+# Air Monitoring App — NOT managed by DAB (app already exists)
+# ================================================================
+# The app was created manually via Git source deploy.
+# DAB cannot CREATE it (409 ALREADY_EXISTS).
+#
+# App deployment is handled SEPARATELY after bundle deploy:
+#   1. Bundle deploy uploads src/ to workspace
+#   2. Deploy script swaps app.{acc,prd}.yaml -> app.yaml
+#   3. `databricks apps deploy` with --source-code-path does the actual deployment
+#
 # See: scripts/deploy_app.sh
-resources:
-  apps:
-    air_monitoring_app:
-      name: "air-monitoring-app"
-      description: "Air Monitoring Tool — Upload PDFs, extract data via AI, store in Unity Catalog"
-      source_code_path: ../src
-      config:
-        command:
-          - streamlit
-          - run
-          - app.py
-          - --server.port
-          - "8000"
-          - --server.address
-          - "0.0.0.0"
-      resources:
-        - name: "sql-warehouse"
-          sql_warehouse:
-            id: ${var.warehouse_id}
-            permission: "CAN_USE"
-      permissions:
-        - user_name: "mustafaarda.bicakci@etexgroup.com"
-          level: CAN_MANAGE
-        - user_name: "pierre.delaguiche@etexgroup.com"
-          level: CAN_MANAGE
+# ================================================================
+# To adopt the existing app into DAB in the future, run:
+#   databricks bundle deployment bind resources.apps.air_monitoring_app air-monitoring-app --target A
+# Then uncomment the resource block below.
+# ================================================================
