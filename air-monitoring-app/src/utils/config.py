@@ -88,9 +88,15 @@ if _detected_env and _detected_env.get("keyvault"):
 
 @lru_cache(maxsize=1)
 def _get_keyvault_client():
-    """Lazily initialise the Key Vault SecretClient (cached for app lifetime)."""
+    """Lazily initialise the Key Vault SecretClient (cached for app lifetime).
+    
+    Auth priority:
+      1. ClientSecretCredential (if AZURE_CLIENT_ID + AZURE_CLIENT_SECRET + AZURE_TENANT_ID set)
+         — OR DATABRICKS_CLIENT_ID + DATABRICKS_CLIENT_SECRET + DATABRICKS_TENANT_ID
+      2. DefaultAzureCredential (managed identity, az cli, etc.)
+    """
     try:
-        from azure.identity import DefaultAzureCredential
+        from azure.identity import DefaultAzureCredential, ClientSecretCredential
         from azure.keyvault.secrets import SecretClient
     except ImportError:
         logger.warning(
@@ -107,7 +113,22 @@ def _get_keyvault_client():
         return None
 
     try:
-        credential = DefaultAzureCredential()
+        # Try explicit SPN credentials first (from app.yaml env vars)
+        _client_id = os.environ.get("AZURE_CLIENT_ID") or os.environ.get("DATABRICKS_CLIENT_ID")
+        _client_secret = os.environ.get("AZURE_CLIENT_SECRET") or os.environ.get("DATABRICKS_CLIENT_SECRET")
+        _tenant_id = os.environ.get("AZURE_TENANT_ID") or os.environ.get("DATABRICKS_TENANT_ID")
+        
+        if _client_id and _client_secret and _tenant_id:
+            logger.info(f"Key Vault auth: ClientSecretCredential (client_id={_client_id[:8]}...)")
+            credential = ClientSecretCredential(
+                tenant_id=_tenant_id,
+                client_id=_client_id,
+                client_secret=_client_secret
+            )
+        else:
+            logger.info("Key Vault auth: DefaultAzureCredential")
+            credential = DefaultAzureCredential()
+        
         client = SecretClient(vault_url=vault_url, credential=credential)
         return client
     except Exception as e:
