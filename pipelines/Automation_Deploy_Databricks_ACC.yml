@@ -22,6 +22,7 @@ variables:
   - template: variables/databricks_variables_acc.yml
 
 stages:
+  # Stage 1: Bundle deploy (Foundations template - uploads src/ to workspace, deploys jobs)
   - template: pipelines/templates/deploy_databricks.yml@da-mdp-foundations-deployments
     parameters:
       env: ${{ variables.PIPELINE_ENV }}
@@ -33,3 +34,44 @@ stages:
       tenantIdSecretName: ${{ variables.TENANT_SECRET_NAME }}
       adbHostnameSecretName: ${{ variables.ADB_HOST_SECRET_NAME }}
       dbxProfile: ${{ variables.DBX_PROFILE }}
+
+  # Stage 2: Deploy Databricks App (overwrite app.yaml with ACC config + redeploy)
+  - stage: Deploy_App
+    displayName: 'Deploy Air Monitoring App'
+    pool:
+      vmImage: 'ubuntu-latest'
+    jobs:
+      - job: deploy_app
+        displayName: 'Deploy App to ACC'
+        steps:
+          - checkout: self
+
+          - task: AzureKeyVault@2
+            inputs:
+              azureSubscription: ${{ variables.SUBSCRIPTION_NAME }}
+              KeyVaultName: ${{ variables.KEYVAULT_NAME }}
+              SecretsFilter: '${{ variables.SPN_ID_SECRET_NAME }},${{ variables.SPN_SECRET_SECRET_NAME }},${{ variables.TENANT_SECRET_NAME }},${{ variables.ADB_HOST_SECRET_NAME }}'
+            displayName: 'Read secrets from Key Vault'
+
+          - script: |
+              curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+            displayName: 'Install Databricks CLI'
+
+          - script: |
+              # Configure auth using SPN from Key Vault
+              export DATABRICKS_HOST="https://$(etex-spoke-mdp-adb-a-hostname)"
+              export DATABRICKS_CLIENT_ID="$(etex-spoke-mdp-automation-devops-acc-id)"
+              export DATABRICKS_CLIENT_SECRET="$(etex-spoke-mdp-automation-devops-acc-secret)"
+
+              echo "Overwriting app.yaml with ACC-specific config..."
+              databricks workspace import \
+                /Workspace/automation/ds-air-monitoring-app/A/files/src/app.yaml \
+                --file $(Build.SourcesDirectory)/src/app.acc.yaml \
+                --format AUTO --overwrite
+
+              echo "Deploying air-monitoring-app..."
+              databricks apps deploy air-monitoring-app \
+                --source-code-path "/Workspace/automation/ds-air-monitoring-app/A/files/src"
+
+              echo "ACC app deployment triggered."
+            displayName: 'Deploy App (swap yaml + apps deploy)'
