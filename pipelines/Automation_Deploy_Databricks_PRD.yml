@@ -89,7 +89,7 @@ stages:
                 echo "=== Step 2: Overwrite app.yaml in workspace ==="
                 databricks workspace import \
                   /Workspace/automation/ds-air-monitoring-app/P/files/src/app.yaml \
-                  --file $(Build.SourcesDirectory)/src/app.prd.yaml \
+                  --file $(Build.SourcesDirectory)/air-monitoring-app/src/app.prd.yaml \
                   --format SOURCE --overwrite
 
                 echo "=== Step 3: Verify app.yaml was written correctly ==="
