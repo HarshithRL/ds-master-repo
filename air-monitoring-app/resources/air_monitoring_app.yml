@@ -1,0 +1,28 @@
+# Air Monitoring App — Databricks Apps resource for DAB
+# The app.yaml in src/ is swapped per environment BEFORE bundle deploy.
+# See: scripts/deploy_app.sh
+resources:
+  apps:
+    air_monitoring_app:
+      name: "air-monitoring-app"
+      description: "Air Monitoring Tool — Upload PDFs, extract data via AI, store in Unity Catalog"
+      source_code_path: ../src
+      config:
+        command:
+          - streamlit
+          - run
+          - app.py
+          - --server.port
+          - "8000"
+          - --server.address
+          - "0.0.0.0"
+      resources:
+        - name: "sql-warehouse"
+          sql_warehouse:
+            id: ${var.warehouse_id}
+            permission: "CAN_USE"
+      permissions:
+        - user_name: "mustafaarda.bicakci@etexgroup.com"
+          level: CAN_MANAGE
+        - user_name: "pierre.delaguiche@etexgroup.com"
+          level: CAN_MANAGE
