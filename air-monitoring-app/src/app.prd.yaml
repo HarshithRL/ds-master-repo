@@ -1,5 +1,7 @@
 # Air Monitoring V2 App — PRD environment (automation_p)
 # Workspace: https://adb-4844910598668398.18.azuredatabricks.net/
+# Secrets: Loaded at runtime via user token from Databricks Secret Scopes.
+# NOTE: Secret resources grant 'secrets' scope to the OAuth token.
 command:
   - streamlit
   - run
@@ -20,12 +22,6 @@ env:
     value: "bronze_volume"
   - name: AUTH_MODE
     value: "user"
-  - name: DOC_INTELLIGENCE_ENDPOINT
-    valueFrom: doc-intelligence-endpoint
-  - name: DOC_INTELLIGENCE_KEY
-    valueFrom: doc-intelligence-key
-  - name: OPENAI_API_KEY
-    valueFrom: openai-key
 
 resources:
   - name: "sql-warehouse"
