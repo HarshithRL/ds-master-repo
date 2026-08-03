@@ -7,15 +7,15 @@ import json
 import re
 from datetime import datetime
 from openai import AzureOpenAI
-from utils.config import get_openai_config
+from utils.config import OPENAI_CONFIG
 
 
 def _get_openai_client() -> AzureOpenAI:
     """Get Azure OpenAI client — same credentials as V1."""
     return AzureOpenAI(
-        azure_endpoint=get_openai_config()["endpoint"],
-        api_key=get_openai_config()["api_key"],
-        api_version=get_openai_config()["api_version"],
+        azure_endpoint=OPENAI_CONFIG["endpoint"],
+        api_key=OPENAI_CONFIG["api_key"],
+        api_version=OPENAI_CONFIG["api_version"],
     )
 
 
@@ -236,7 +236,7 @@ def parse_extraction(raw_extraction: dict, document_name: str = "") -> list:
     3 retry attempts (same as V1 generic_utils.parse_using_gpt).
     """
     client = _get_openai_client()
-    model_name = get_openai_config()["model_name"]
+    model_name = OPENAI_CONFIG["model_name"]
     
     content = _format_extraction_content(raw_extraction)
     
