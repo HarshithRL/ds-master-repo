@@ -66,6 +66,27 @@ if _detected_env is None:
 
 
 # ============================================================
+# Unity Catalog — All tables in Bronze
+# Priority: auto-detected env > app.yaml env var > hardcoded default
+# ============================================================
+UNITY_CATALOG = _detected_env["catalog"] if _detected_env else os.environ.get("UNITY_CATALOG", "automation_d")
+BRONZE_SCHEMA = os.environ.get("BRONZE_SCHEMA", "bronze")
+SILVER_SCHEMA = os.environ.get("SILVER_SCHEMA", "silver")
+VOLUME_NAME = os.environ.get("VOLUME_NAME", "bronze_volume")
+VOLUME_SUBFOLDER = os.environ.get("VOLUME_SUBFOLDER", "uploaded_reports")
+AIR_MONITORING_FOLDER = "air_monitoring"
+VOLUME_PATH = f"/Volumes/{UNITY_CATALOG}/{BRONZE_SCHEMA}/{VOLUME_NAME}/{AIR_MONITORING_FOLDER}/{VOLUME_SUBFOLDER}"
+
+# Table names
+OUTPUT_TABLE = f"{UNITY_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_output"
+SITES_TABLE = f"{UNITY_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_sites"
+UPLOAD_LOG_TABLE = f"{UNITY_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_upload_log"
+
+# SQL Warehouse
+WAREHOUSE_ID = _detected_env["warehouse"] if _detected_env else os.environ.get("DATABRICKS_WAREHOUSE_ID", "69ada62b2fb9b9e2")
+
+
+# ============================================================
 # Secret Retrieval — Lazy Loading via User Token
 # ============================================================
 # Secrets are stored in Azure Key Vault, accessed through Databricks
