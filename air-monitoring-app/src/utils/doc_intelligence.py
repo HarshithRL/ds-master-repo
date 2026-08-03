@@ -3,18 +3,18 @@ Azure Document Intelligence integration for Air Monitoring V2.
 """
 from azure.ai.formrecognizer import DocumentAnalysisClient
 from azure.core.credentials import AzureKeyCredential
-from utils.config import DOC_INTELLIGENCE_ENDPOINT, DOC_INTELLIGENCE_KEY
+from utils.config import get_doc_intelligence_endpoint, get_doc_intelligence_key
 
 
 def _get_client() -> DocumentAnalysisClient:
     """Get Azure Document Intelligence client."""
-    if not DOC_INTELLIGENCE_ENDPOINT or not DOC_INTELLIGENCE_KEY:
+    if not get_doc_intelligence_endpoint() or not get_doc_intelligence_key():
         raise ValueError(
             "DOC_INTELLIGENCE_ENDPOINT and DOC_INTELLIGENCE_KEY must be set."
         )
     return DocumentAnalysisClient(
-        endpoint=DOC_INTELLIGENCE_ENDPOINT,
-        credential=AzureKeyCredential(DOC_INTELLIGENCE_KEY)
+        endpoint=get_doc_intelligence_endpoint(),
+        credential=AzureKeyCredential(get_doc_intelligence_key())
     )
 
 
