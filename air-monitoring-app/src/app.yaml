@@ -1,7 +1,9 @@
 # Air Monitoring V2 App — TEST/DEV environment (automation_d)
 # Workspace: https://adb-7181820732839861.1.azuredatabricks.net/
 # Secrets: Loaded at runtime from Databricks Secret Scopes (backed by Azure Key Vault)
-#          using the logged-in user's token. No secret resources needed in app.yaml.
+#          using the logged-in user's token.
+# NOTE: Secret resources are declared to grant the OAuth token 'secrets' scope.
+#       The actual values are read at runtime via WorkspaceClient (not valueFrom).
 command:
   - streamlit
   - run
@@ -28,3 +30,18 @@ resources:
     sql_warehouse:
       id: "69ada62b2fb9b9e2"
       permission: "CAN_USE"
+  - name: "doc-intelligence-endpoint"
+    secret:
+      scope: "WE-SPOKE-MDP-AUT-T-KV"
+      key: "ds-we-spoke-mdp-formrecogniser-endpoint"
+      permission: "READ"
+  - name: "doc-intelligence-key"
+    secret:
+      scope: "WE-SPOKE-MDP-AUT-T-KV"
+      key: "ds-we-spoke-mdp-t-formrecogniser-key1"
+      permission: "READ"
+  - name: "openai-key"
+    secret:
+      scope: "WE-SPOKE-MDP-AUT-T-KV"
+      key: "ds-we-spoke-mdp-openai"
+      permission: "READ"
