@@ -882,14 +882,7 @@ with tab_upload:
                     pdf_data = uf.getvalue()
                     st.session_state.pdf_bytes[uf.name] = pdf_data
 
-                    volume_path = ""
-                    try:
-                        from utils.db_utils import upload_file_to_volume
-                        volume_path = upload_file_to_volume(uf, site_code=site_info["Code"])
-                        st.session_state.volume_paths[uf.name] = volume_path
-                        st.write("  ↳ Saved to volume")
-                    except Exception as e:
-                        st.write(f"  ↳ Volume skip: {e}")
+                    volume_path = ""  # Volume upload disabled (no files scope needed)
 
                     try:
                         from utils.doc_intelligence import extract_from_pdf

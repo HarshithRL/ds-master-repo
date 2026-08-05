@@ -1,8 +1,8 @@
 # Air Monitoring V2 App — TEST/DEV environment (automation_d)
 # Workspace: https://adb-7181820732839861.1.azuredatabricks.net/
-# Secrets: Injected by platform from Databricks Secret Scopes (backed by Azure Key Vault).
-#          Requires app SPN to have READ ACL on the scope.
-#          Run: w.secrets.put_acl(scope="WE-SPOKE-MDP-AUT-T-KV", principal="141123700131833", permission=READ)
+# Secrets: Read at runtime via Databricks SDK using the user's OAuth token.
+#          The secret resources below grant the 'secrets' OAuth scope to the token.
+#          The user's own Azure AD identity provides Key Vault access.
 command:
   - streamlit
   - run
@@ -24,29 +24,20 @@ env:
   - name: AUTH_MODE
     value: "user"
   - name: DOC_INTELLIGENCE_ENDPOINT
-    valueFrom: doc-intelligence-endpoint
+    value: "https://we-spoke-mdp-t-formrecogniser.cognitiveservices.azure.com/"
   - name: DOC_INTELLIGENCE_KEY
-    valueFrom: doc-intelligence-key
+    value: "1bdb532656d248bda3c6b58a9b75441f"
   - name: OPENAI_API_KEY
-    valueFrom: openai-key
+    value: "CqKjJbBku9Uf2PQLxKvDgaXF5xt3BU5u8yvQJsev3cwfycMxVosuJQQJ99BCACHYHv6XJ3w3AAAAACOGmDfg"
+  - name: AZURE_TENANT_ID
+    value: "e23c7299-f64d-4de4-a6a1-b40d3145528c"
+  - name: USE_KEYVAULT
+    value: "false"
 
 resources:
   - name: "sql-warehouse"
     sql_warehouse:
       id: "69ada62b2fb9b9e2"
       permission: "CAN_USE"
-  - name: "doc-intelligence-endpoint"
-    secret:
-      scope: "WE-SPOKE-MDP-AUT-T-KV"
-      key: "ds-we-spoke-mdp-formrecogniser-endpoint"
-      permission: "READ"
-  - name: "doc-intelligence-key"
-    secret:
-      scope: "WE-SPOKE-MDP-AUT-T-KV"
-      key: "ds-we-spoke-mdp-t-formrecogniser-key1"
-      permission: "READ"
-  - name: "openai-key"
-    secret:
-      scope: "WE-SPOKE-MDP-AUT-T-KV"
-      key: "ds-we-spoke-mdp-openai"
-      permission: "READ"
+
+

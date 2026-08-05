@@ -1,0 +1,25 @@
+# Air Monitoring — Sites Merge (UPSERT)
+# Run when Chiara/RE team sends updated site lists.
+# Reads from: /Volumes/{catalog}/bronze/bronze_volume/air_monitoring/sites/
+# MERGE on site_code: updates existing, inserts new, preserves unlisted sites.
+# Safe to run repeatedly — never deletes sites from the table.
+resources:
+  jobs:
+    air_monitoring_sites_merge:
+      name: "Air Monitoring - Sites Merge"
+      tags:
+        project: air-monitoring
+        purpose: sites-merge
+      tasks:
+        - task_key: merge_sites
+          notebook_task:
+            notebook_path: ../src/migration_exports/3_Load_from_Excel_ACC_PRD.py
+            base_parameters:
+              LOAD_MODE: "sites_merge"
+              TARGET_CATALOG: ${var.catalog}
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: "Standard_DS3_v2"
+            data_security_mode: USER_ISOLATION
+            num_workers: 0
+            policy_id: ${var.policy_id}

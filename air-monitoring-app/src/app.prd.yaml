@@ -1,7 +1,5 @@
 # Air Monitoring V2 App — PRD environment (automation_p)
 # Workspace: https://adb-4844910598668398.18.azuredatabricks.net/
-# Secrets: Loaded at runtime via user token from Databricks Secret Scopes.
-# NOTE: Secret resources grant 'secrets' scope to the OAuth token.
 command:
   - streamlit
   - run
@@ -22,24 +20,19 @@ env:
     value: "bronze_volume"
   - name: AUTH_MODE
     value: "user"
+  - name: DOC_INTELLIGENCE_ENDPOINT
+    value: "https://we-spoke-mdp-t-formrecogniser.cognitiveservices.azure.com/"
+  - name: DOC_INTELLIGENCE_KEY
+    value: "1bdb532656d248bda3c6b58a9b75441f"
+  - name: OPENAI_API_KEY
+    value: "CqKjJbBku9Uf2PQLxKvDgaXF5xt3BU5u8yvQJsev3cwfycMxVosuJQQJ99BCACHYHv6XJ3w3AAAAACOGmDfg"
+  - name: AZURE_TENANT_ID
+    value: "e23c7299-f64d-4de4-a6a1-b40d3145528c"
+  - name: USE_KEYVAULT
+    value: "false"
 
 resources:
   - name: "sql-warehouse"
     sql_warehouse:
       id: "83294e3f6b44f138"
       permission: "CAN_USE"
-  - name: "doc-intelligence-endpoint"
-    secret:
-      scope: "WE-SPOKE-MDP-AUT-P-KV"
-      key: "ds-we-spoke-mdp-formrecogniser-endpoint"
-      permission: "READ"
-  - name: "doc-intelligence-key"
-    secret:
-      scope: "WE-SPOKE-MDP-AUT-P-KV"
-      key: "ds-we-spoke-mdp-formrecogniser-key"
-      permission: "READ"
-  - name: "openai-key"
-    secret:
-      scope: "WE-SPOKE-MDP-AUT-P-KV"
-      key: "ds-we-spoke-mdp-openai"
-      permission: "READ"
