@@ -1,21 +1,12 @@
 """
 Configuration for Air Monitoring V2 App.
 All environment-specific values read from environment variables (set in app.yaml).
-Secrets are fetched at runtime from Azure Key Vault (no hardcoded keys).
-
-Architecture:
-  - Bronze: all tables (output, sites, upload_log) + PDF volume storage
-
-Environments:
-  - TEST: automation_d (https://adb-7181820732839861.1.azuredatabricks.net/)
-  - ACC:  automation_a (https://adb-4796304964978539.19.azuredatabricks.net/)
-  - PRD:  automation_p (https://adb-4844910598668398.18.azuredatabricks.net/)
 
 Secret Management:
-  - Secrets stored in Azure Key Vault (WE-SPOKE-MDP-AUT-{T,A,P}-KV)
-  - App authenticates via DefaultAzureCredential (service principal or managed identity)
-  - AZURE_KEYVAULT_URL env var points to the correct vault per environment
-  - Fallback: env vars for local development (never commit real values)
+  - Primary: Environment variables defined in app.yaml (works immediately)
+  - Secondary (optional): Azure Key Vault via ClientSecretCredential
+    Set USE_KEYVAULT=true in app.yaml to enable KV lookup.
+    Requires app SPN to have Access Policy on the vault.
 """
 import os
 import logging
@@ -26,31 +17,26 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # Environment Auto-Detection
 # ============================================================
-# DATABRICKS_HOST is ALWAYS set by the platform (default env var).
-# If app.yaml has stale/wrong values (e.g. TEST warehouse on ACC workspace),
-# this detection overrides them with the correct per-environment config.
-# This makes the app self-healing regardless of app.yaml state.
-# ============================================================
 _host = os.environ.get("DATABRICKS_HOST", "")
 
 _ENV_OVERRIDES = {
-    # DEV/TEST workspace — WE-SPOKE-MDP-AUT-T-KV
     "7181820732839861": {
         "catalog": "automation_d",
         "warehouse": "69ada62b2fb9b9e2",
         "auth_mode": "user",
+        "keyvault_url": "https://we-spoke-mdp-aut-t-kv.vault.azure.net",
     },
-    # ACC workspace — dedicated automation KV
     "4796304964978539": {
         "catalog": "automation_a",
         "warehouse": "fe5f9b40ac3a9b6e",
         "auth_mode": "user",
+        "keyvault_url": "https://we-spoke-mdp-aut-a-kv.vault.azure.net",
     },
-    # PRD workspace — dedicated automation KV
     "4844910598668398": {
         "catalog": "automation_p",
         "warehouse": "83294e3f6b44f138",
         "auth_mode": "user",
+        "keyvault_url": "https://we-spoke-mdp-aut-p-kv.vault.azure.net",
     },
 }
 
@@ -67,7 +53,6 @@ if _detected_env is None:
 
 # ============================================================
 # Unity Catalog — All tables in Bronze
-# Priority: auto-detected env > app.yaml env var > hardcoded default
 # ============================================================
 UNITY_CATALOG = _detected_env["catalog"] if _detected_env else os.environ.get("UNITY_CATALOG", "automation_d")
 BRONZE_SCHEMA = os.environ.get("BRONZE_SCHEMA", "bronze")
@@ -89,48 +74,135 @@ WAREHOUSE_ID = _detected_env["warehouse"] if _detected_env else os.environ.get("
 # ============================================================
 # Secret Retrieval
 # ============================================================
-# Secrets come from Azure Key Vault via Databricks Secret Scopes.
-# The platform injects them as environment variables through the
-# app.yaml valueFrom mechanism (requires app SPN to have READ ACL
-# on the scope).
-#
-# Architecture:
-#   Azure Key Vault → Databricks Secret Scope → app.yaml resource
-#   → valueFrom → env var → os.environ.get()
+# Mode 1 (default): Read from environment variables (set in app.yaml)
+# Mode 2 (optional): Azure Key Vault via ClientSecretCredential
+#   To enable: set USE_KEYVAULT=true in app.yaml and ensure app SPN
+#   has Access Policy on the vault.
 # ============================================================
 
+_USE_KEYVAULT = os.environ.get("USE_KEYVAULT", "false").lower() == "true"
+_kv_client = None
+
+# Key Vault secret name mapping per environment
+_SECRET_KEYS = {
+    "7181820732839861": {  # TEST
+        "DOC_INTELLIGENCE_ENDPOINT": "ds-we-spoke-mdp-formrecogniser-endpoint",
+        "DOC_INTELLIGENCE_KEY": "ds-we-spoke-mdp-t-formrecogniser-key1",
+        "OPENAI_API_KEY": "ds-we-spoke-mdp-openai",
+    },
+    "4796304964978539": {  # ACC
+        "DOC_INTELLIGENCE_ENDPOINT": "ds-we-spoke-mdp-formrecogniser-endpoint",
+        "DOC_INTELLIGENCE_KEY": "ds-we-spoke-mdp-formrecogniser-key",
+        "OPENAI_API_KEY": "ds-we-spoke-mdp-openai",
+    },
+    "4844910598668398": {  # PRD
+        "DOC_INTELLIGENCE_ENDPOINT": "ds-we-spoke-mdp-formrecogniser-endpoint",
+        "DOC_INTELLIGENCE_KEY": "ds-we-spoke-mdp-formrecogniser-key",
+        "OPENAI_API_KEY": "ds-we-spoke-mdp-openai",
+    },
+}
+
+if _USE_KEYVAULT:
+    try:
+        from azure.identity import ClientSecretCredential
+        from azure.keyvault.secrets import SecretClient
+
+        _vault_url = _detected_env["keyvault_url"] if _detected_env else os.environ.get(
+            "AZURE_KEYVAULT_URL", "https://we-spoke-mdp-aut-t-kv.vault.azure.net"
+        )
+        _client_id = os.environ.get("DATABRICKS_CLIENT_ID", "")
+        _client_secret = os.environ.get("DATABRICKS_CLIENT_SECRET", "")
+        _tenant_id = os.environ.get("AZURE_TENANT_ID", "e23c7299-f64d-4de4-a6a1-b40d3145528c")
+
+        if _client_id and _client_secret and _tenant_id:
+            _credential = ClientSecretCredential(
+                tenant_id=_tenant_id, client_id=_client_id, client_secret=_client_secret
+            )
+            _kv_client = SecretClient(vault_url=_vault_url, credential=_credential)
+            logger.info(f"Key Vault enabled: {_vault_url}")
+        else:
+            logger.warning("USE_KEYVAULT=true but missing SPN credentials")
+    except ImportError:
+        logger.warning("USE_KEYVAULT=true but azure-keyvault-secrets not installed")
+    except Exception as e:
+        logger.error(f"Failed to initialize Key Vault client: {e}")
+
+
+def _get_secret_key(env_var_name: str) -> str:
+    """Map logical env var name to the Key Vault secret name."""
+    for ws_id, keys in _SECRET_KEYS.items():
+        if ws_id in _host:
+            return keys.get(env_var_name, "")
+    return _SECRET_KEYS.get("7181820732839861", {}).get(env_var_name, "")
+
+
 def get_secret(env_var_name: str, default: str = "") -> str:
-    """Read a secret from environment variable (injected by platform from KV)."""
-    value = os.environ.get(env_var_name, default)
-    if not value:
-        logger.warning(f"Secret env var '{env_var_name}' not set")
-    return value
+    """Fetch a secret: env var first, then optionally Key Vault.
+
+    With USE_KEYVAULT=false (default): reads only from env vars.
+    With USE_KEYVAULT=true: tries Key Vault if env var is empty.
+    """
+    # 1. Environment variable (always checked first)
+    value = os.environ.get(env_var_name, "")
+    if value:
+        return value
+
+    # 2. Azure Key Vault (only if enabled)
+    if _kv_client:
+        kv_name = _get_secret_key(env_var_name)
+        if kv_name:
+            try:
+                secret = _kv_client.get_secret(kv_name)
+                if secret.value:
+                    logger.info(f"Fetched '{kv_name}' from Key Vault for {env_var_name}")
+                    return secret.value
+            except Exception as e:
+                logger.error(f"Key Vault fetch failed for '{kv_name}': {e}")
+
+    if not default:
+        logger.warning(f"Secret '{env_var_name}' not found in env vars" +
+                      (" or Key Vault" if _USE_KEYVAULT else ""))
+    return default
 
 
+# ============================================================
+# Secret values (read from env vars set in app.yaml)
+# ============================================================
 DOC_INTELLIGENCE_ENDPOINT = get_secret("DOC_INTELLIGENCE_ENDPOINT")
 DOC_INTELLIGENCE_KEY = get_secret("DOC_INTELLIGENCE_KEY")
 
 # ============================================================
 # Azure OpenAI
-# Secrets fetched from Key Vault at runtime; env var as fallback.
-# Key Vault secret names: openai-endpoint, openai-api-key
 # ============================================================
+OPENAI_ENDPOINT = os.environ.get("OPENAI_ENDPOINT", "https://musta-m830len4-eastus2.cognitiveservices.azure.com/")
+OPENAI_API_VERSION = os.environ.get("OPENAI_API_VERSION", "2024-12-01-preview")
+OPENAI_MODEL_NAME = os.environ.get("OPENAI_MODEL_NAME", "EPD_Pulse_gpt-5.4")
+
 OPENAI_CONFIG = {
-    "endpoint": os.environ.get("OPENAI_ENDPOINT", "https://musta-m830len4-eastus2.cognitiveservices.azure.com/"),
+    "endpoint": OPENAI_ENDPOINT,
     "api_key": get_secret("OPENAI_API_KEY"),
-    "api_version": os.environ.get("OPENAI_API_VERSION", "2024-12-01-preview"),
-    "model_name": os.environ.get("OPENAI_MODEL_NAME", "EPD_Pulse_gpt-5.4"),
+    "api_version": OPENAI_API_VERSION,
+    "model_name": OPENAI_MODEL_NAME,
 }
 
+
+def get_openai_config() -> dict:
+    """Get OpenAI config (same as OPENAI_CONFIG but re-reads api_key)."""
+    return {
+        "endpoint": OPENAI_ENDPOINT,
+        "api_key": get_secret("OPENAI_API_KEY") or OPENAI_CONFIG["api_key"],
+        "api_version": OPENAI_API_VERSION,
+        "model_name": OPENAI_MODEL_NAME,
+    }
+
+
 # ============================================================
-# Auth Mode: "spn" (app service principal) or "user" (on-behalf-of-user)
-# Auto-detected for ACC/PRD (always "user"); env var for DEV.
+# Auth Mode
 # ============================================================
 AUTH_MODE = (_detected_env["auth_mode"] if _detected_env else os.environ.get("AUTH_MODE", "spn")).lower()
 
 # ============================================================
 # High Concentration Threshold (f/ml)
-# Change this single value to update threshold everywhere in the app.
 # ============================================================
 HIGH_CONC_THRESHOLD = float(os.environ.get("HIGH_CONC_THRESHOLD", "0.01"))
 
@@ -141,6 +213,5 @@ DEDUP_GRAIN = ["Code", "Sample_no", "Sample_Date", "Volume", "Concentration_resu
 
 # ============================================================
 # Legacy compatibility aliases
-# (used in older code paths — prefer explicit BRONZE/GOLD references)
 # ============================================================
 SCHEMA = BRONZE_SCHEMA  # all tables now in bronze

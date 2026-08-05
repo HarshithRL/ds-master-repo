@@ -37,7 +37,7 @@
 # PARAMETERS — passed by job or set manually via widgets
 # ============================================================
 try:
-    dbutils.widgets.dropdown("LOAD_MODE", "incremental", ["initial", "incremental", "sites"])
+    dbutils.widgets.dropdown("LOAD_MODE", "incremental", ["initial", "incremental", "sites", "sites_merge"])
     dbutils.widgets.text("TARGET_CATALOG", "automation_a")
 except Exception:
     pass
@@ -74,7 +74,7 @@ print(f"{'='*65}")
 # COMMAND ----------
 
 # DBTITLE 1,Cell 2 — Install dependencies
-%pip install openpyxl --quiet
+# MAGIC %pip install openpyxl --quiet
 
 # COMMAND ----------
 
@@ -181,7 +181,45 @@ def _prepare_output_dataframe(df_excel):
     return spark.createDataFrame(df)
 
 
-def _load_output(source_path, mode_label):
+def _load_output_initial(source_path):
+    """
+    Load V1 output Excel → generate migration columns → OVERWRITE entire table.
+    
+    Use for:
+      - First-time setup (table doesn't exist yet)
+      - Full reset (drop all existing data and replace from Excel)
+    
+    WARNING: This DROPS all existing data including app-uploaded rows!
+    Only use when you intentionally want to start fresh from an Excel export.
+    """
+    excel_file = _find_excel(source_path)
+    if not excel_file:
+        print(f"[output/initial] ⚠️  No .xlsx found in {source_path}")
+        print(f"                 Upload the Excel file first, then re-run.")
+        return
+
+    full_path = f"{source_path}/{excel_file}"
+    print(f"[output/initial] Reading: {excel_file}")
+
+    # Read raw V1 Excel (23 columns)
+    df_excel = pd.read_excel(full_path, engine="openpyxl")
+    print(f"[output/initial] Excel rows: {len(df_excel):,} | Columns: {len(df_excel.columns)}")
+    
+    # Transform: generate row_id, row_status, etc. + type conversions
+    df_spark = _prepare_output_dataframe(df_excel)
+    n_rows = df_spark.count()
+    print(f"[output/initial] Prepared DataFrame: {n_rows:,} rows, {len(df_spark.columns)} columns")
+
+    # FULL OVERWRITE — drop existing table and replace from Excel
+    df_spark.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(TARGET_OUTPUT)
+    print(f"[output/initial] ✅ OVERWRITE: {n_rows:,} rows → {TARGET_OUTPUT}")
+
+    # Final verification
+    final_count = spark.table(TARGET_OUTPUT).count()
+    print(f"[output/initial] Target table total: {final_count:,} rows")
+
+
+def _load_output_incremental(source_path):
     """
     Load V1 output Excel → generate migration columns → INSERT only NEW rows.
     
@@ -194,21 +232,21 @@ def _load_output(source_path, mode_label):
     """
     excel_file = _find_excel(source_path)
     if not excel_file:
-        print(f"[output/{mode_label}] ⚠️  No .xlsx found in {source_path}")
-        print(f"                    Upload the Excel file first, then re-run.")
+        print(f"[output/incremental] ⚠️  No .xlsx found in {source_path}")
+        print(f"                     Upload the Excel file first, then re-run.")
         return
 
     full_path = f"{source_path}/{excel_file}"
-    print(f"[output/{mode_label}] Reading: {excel_file}")
+    print(f"[output/incremental] Reading: {excel_file}")
 
     # Read raw V1 Excel (23 columns)
     df_excel = pd.read_excel(full_path, engine="openpyxl")
-    print(f"[output/{mode_label}] Excel rows: {len(df_excel):,} | Columns: {len(df_excel.columns)}")
+    print(f"[output/incremental] Excel rows: {len(df_excel):,} | Columns: {len(df_excel.columns)}")
     
     # Transform: generate row_id, row_status, etc. + type conversions
     df_spark = _prepare_output_dataframe(df_excel)
     n_excel = df_spark.count()
-    print(f"[output/{mode_label}] Prepared DataFrame: {n_excel:,} rows, {len(df_spark.columns)} columns")
+    print(f"[output/incremental] Prepared DataFrame: {n_excel:,} rows, {len(df_spark.columns)} columns")
 
     # LEFT ANTI JOIN on expanded grain (6 columns)
     # This checks: does a row with the SAME Code+Sample_no+Sample_Date+Volume+
@@ -219,23 +257,23 @@ def _load_output(source_path, mode_label):
         n_existing = spark.table(TARGET_OUTPUT).count()
         n_write = df_to_write.count()
         n_skip = n_excel - n_write
-        print(f"[output/{mode_label}] Target has {n_existing:,} existing rows")
-        print(f"[output/{mode_label}] Grain match (skipped): {n_skip:,} | Net new: {n_write:,}")
+        print(f"[output/incremental] Target has {n_existing:,} existing rows")
+        print(f"[output/incremental] Grain match (skipped): {n_skip:,} | Net new: {n_write:,}")
     except Exception as e:
         # Table doesn't exist → write everything
-        print(f"[output/{mode_label}] Table not found (will be created): {type(e).__name__}")
+        print(f"[output/incremental] Table not found (will be created): {type(e).__name__}")
         df_to_write = df_spark
         n_write = n_excel
 
     if n_write == 0:
-        print(f"[output/{mode_label}] ✅ All {n_excel:,} rows already present — 0 new rows.")
+        print(f"[output/incremental] ✅ All {n_excel:,} rows already present — 0 new rows.")
     else:
         df_to_write.write.mode("append").option("mergeSchema", "true").saveAsTable(TARGET_OUTPUT)
-        print(f"[output/{mode_label}] ✅ APPEND: {n_write:,} new rows → {TARGET_OUTPUT}")
+        print(f"[output/incremental] ✅ APPEND: {n_write:,} new rows → {TARGET_OUTPUT}")
 
     # Final verification
     final_count = spark.table(TARGET_OUTPUT).count()
-    print(f"[output/{mode_label}] Target table total: {final_count:,} rows")
+    print(f"[output/incremental] Target table total: {final_count:,} rows")
 
 
 def _load_sites():
@@ -269,6 +307,57 @@ def _load_sites():
     print(f"[sites] ⚠️  After this, manage allowed_users from the App only!")
 
 
+def _load_sites_merge():
+    """
+    Load sites Excel → MERGE into sites table (update + insert, no delete).
+    
+    Use this for:
+      - Adding new sites from an updated Excel without losing manually-added ones
+      - Updating allowed_users, address, site_name for existing site_codes
+      - Safe incremental updates that preserve sites not in the Excel
+    
+    Logic:
+      - WHEN MATCHED (site_code exists) → UPDATE site_name, address, allowed_users
+      - WHEN NOT MATCHED (new site_code) → INSERT *
+      - Sites in table but NOT in Excel → left untouched (no DELETE clause)
+    """
+    excel_file = _find_excel(SITES_PATH)
+    if not excel_file:
+        print(f"[sites_merge] ⚠️  No .xlsx found in {SITES_PATH}")
+        print(f"              Upload sites.xlsx first, then re-run.")
+        return
+
+    full_path = f"{SITES_PATH}/{excel_file}"
+    print(f"[sites_merge] Reading: {excel_file}")
+
+    df_sites_pd = pd.read_excel(full_path, engine="openpyxl")
+    df_sites_sp = spark.createDataFrame(
+        df_sites_pd.astype(str).where(df_sites_pd.notna(), other=None)
+    )
+    n_source = df_sites_sp.count()
+    print(f"[sites_merge] Excel rows: {n_source:,}")
+
+    # Register as temp view for MERGE
+    df_sites_sp.createOrReplaceTempView("_mig_sites_merge")
+
+    # MERGE: update existing site_codes, insert new ones, never delete
+    spark.sql(f"""
+        MERGE INTO {TARGET_SITES} AS t
+        USING _mig_sites_merge AS s
+        ON t.site_code = s.site_code
+        WHEN MATCHED THEN UPDATE SET
+            t.site_name = s.site_name,
+            t.address = s.address,
+            t.allowed_users = s.allowed_users
+        WHEN NOT MATCHED THEN INSERT *
+    """)
+
+    spark.catalog.dropTempView("_mig_sites_merge")
+    final_count = spark.table(TARGET_SITES).count()
+    print(f"[sites_merge] ✅ MERGE: {n_source:,} Excel rows → {final_count:,} in table")
+    print(f"[sites_merge] Existing sites not in Excel were preserved.")
+
+
 def _ensure_upload_log():
     """CREATE upload_log table if not exists. NEVER touches existing data."""
     upload_log_schema = StructType([
@@ -300,28 +389,37 @@ def _ensure_upload_log():
 print()
 
 if LOAD_MODE == "initial":
-    print("▶ MODE: Initial Migration (first_migration/)")
+    print("▶ MODE: Initial Migration — FULL OVERWRITE (first_migration/)")
     print(f"  Source: {FIRST_MIGRATION_PATH}/")
+    print(f"  ⚠️  This will REPLACE the entire output table!")
     print()
-    _load_output(FIRST_MIGRATION_PATH, "initial")
+    _load_output_initial(FIRST_MIGRATION_PATH)
     _ensure_upload_log()
 
 elif LOAD_MODE == "incremental":
-    print("▶ MODE: Incremental Update (update_from_v1/)")
+    print("▶ MODE: Incremental Update — APPEND only new (update_from_v1/)")
     print(f"  Source: {UPDATE_FROM_V1_PATH}/")
     print()
-    _load_output(UPDATE_FROM_V1_PATH, "incremental")
+    _load_output_incremental(UPDATE_FROM_V1_PATH)
     _ensure_upload_log()
 
 elif LOAD_MODE == "sites":
-    print("▶ MODE: Sites Update (sites/)")
+    print("▶ MODE: Sites Update — FULL OVERWRITE (sites/)")
     print(f"  Source: {SITES_PATH}/")
+    print(f"  ⚠️  This will REPLACE the entire sites table!")
     print()
     _load_sites()
+    _ensure_upload_log()
+
+elif LOAD_MODE == "sites_merge":
+    print("▶ MODE: Sites Merge — UPSERT (sites/)")
+    print(f"  Source: {SITES_PATH}/")
+    print(f"  Safe: updates matching site_codes, inserts new, preserves unlisted.")
+    print()
+    _load_sites_merge()
     _ensure_upload_log()
 
 print()
 print("=" * 65)
 print("✅ LOAD COMPLETE")
 print("=" * 65)
-
