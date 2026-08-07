@@ -29,4 +29,20 @@ env:
   - name: USE_KEYVAULT
     value: "false"
 
+# SQL Warehouse resources — list all environments.
+# Only the warehouse that exists in the current workspace will be active.
+# Needed to grant sql OAuth scope for user-auth token forwarding.
+resources:
+  - name: "sql-warehouse-dev"
+    sql_warehouse:
+      id: "69ada62b2fb9b9e2"
+      permission: "CAN_USE"
+  - name: "sql-warehouse-acc"
+    sql_warehouse:
+      id: "fe5f9b40ac3a9b6e"
+      permission: "CAN_USE"
+  - name: "sql-warehouse-prd"
+    sql_warehouse:
+      id: "83294e3f6b44f138"
+      permission: "CAN_USE"
 
