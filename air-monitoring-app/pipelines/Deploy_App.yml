@@ -1,16 +1,19 @@
 # Azure DevOps Pipeline — Deploy Air Monitoring App
-# Triggers on main branch changes to src/ folder
-# Deploys to ACC automatically, PRD requires approval
+# Triggers on acc or main branch changes
+# acc branch  → deploys to ACC workspace
+# main branch → deploys to ACC + PRD (PRD requires approval)
 
 trigger:
   branches:
     include:
+      - acc
       - main
   paths:
     include:
-      - src/**
-      - resources/air_monitoring_app.yml
-      - databricks.yml
+      - air-monitoring-app/src/**
+      - air-monitoring-app/resources/air_monitoring_app.yml
+      - air-monitoring-app/databricks.yml
+      - air-monitoring-app/scripts/deploy_app.sh
 
 pool:
   vmImage: 'ubuntu-latest'
