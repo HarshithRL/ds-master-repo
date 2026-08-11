@@ -1,0 +1,367 @@
+-- Databricks notebook source
+-- MAGIC %run ./config_file
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC spark.sql(f"USE CATALOG {UNITY_CATALOG}")
+-- MAGIC print(f"Active catalog: {UNITY_CATALOG}")
+
+-- COMMAND ----------
+-- DBTITLE 1,Install Dependencies
+-- MAGIC %python
+-- MAGIC # ============================================================
+-- MAGIC # INSTALL REQUIRED LIBRARIES
+-- MAGIC # ============================================================
+-- MAGIC # openpyxl: Pure Python library to read Excel (.xlsx) files
+-- MAGIC # Required since we avoid pandas for Excel parsing
+-- MAGIC # ============================================================
+-- MAGIC %pip install openpyxl --quiet
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Configuration
+-- MAGIC %python
+-- MAGIC # ============================================================
+-- MAGIC # CONFIGURATION
+-- MAGIC # ============================================================
+-- MAGIC # Source: volume root only (no subfolders). After successful load,
+-- MAGIC # files move to archive/YYYY-MM-DD/ to avoid file-trigger re-fire.
+-- MAGIC # Target: Delta tables in {SILVER}
+-- MAGIC # Default load_mode = incremental (append + dedup). Overwrite is
+-- MAGIC # for one-time rebuild / disaster recovery only.
+-- MAGIC # ============================================================
+-- MAGIC
+-- MAGIC source_path = BRONZE_VOLUME
+-- MAGIC target_schema = SILVER
+-- MAGIC
+-- MAGIC # incremental = append new rows only; overwrite = full snapshot replace per file
+-- MAGIC dbutils.widgets.dropdown("load_mode", "incremental", ["overwrite", "incremental"])
+-- MAGIC load_mode = dbutils.widgets.get("load_mode")
+-- MAGIC print(f"load_mode = {load_mode}")
+-- MAGIC
+-- MAGIC # ============================================================
+-- MAGIC # FILE-TO-TABLE MAPPING (canonical names first; legacy aliases OK)
+-- MAGIC # ============================================================
+-- MAGIC FILE_TO_TABLE_MAP = {
+-- MAGIC     # Canonical volume filenames
+-- MAGIC     "agents_inventory.xlsx": "agents_inventory",
+-- MAGIC     "agent_level_credit_consumption.xlsx": "agent_level_credit_consumption",
+-- MAGIC     "environment_level_credit_consumption.xlsx": "environment_level_credit_consumption",
+-- MAGIC     "user_level_credit_consumption.xlsx": "user_level_credit_consumption",
+-- MAGIC     "copilot_studio_kit_all_records.xlsx": "copilot_studio_kit_all_records",
+-- MAGIC     "bot_usage_pp_coe_kit.xlsx": "bot_usage_pp_coe_kit",
+-- MAGIC     "microsoft_purview_audit_log.csv": "microsoft_purview_audit_log",
+-- MAGIC     "microsoft_purview_audit_log.xlsx": "microsoft_purview_audit_log",
+-- MAGIC     # Legacy display-name uploads (lower priority vs canonical)
+-- MAGIC     "Agents Inventory.xlsx": "agents_inventory",
+-- MAGIC     "Agent-Level Credit Consumption.xlsx": "agent_level_credit_consumption",
+-- MAGIC     "Environment-Level Credit Consumption.xlsx": "environment_level_credit_consumption",
+-- MAGIC     "User-Level Credit Consumption.xlsx": "user_level_credit_consumption",
+-- MAGIC     "Microsoft Purview Audit Log.xlsx": "microsoft_purview_audit_log",
+-- MAGIC     "Bot Usage - PP COE Kit.xlsx": "bot_usage_pp_coe_kit",
+-- MAGIC     "Bot Usage - PP COE Kit (1).xlsx": "bot_usage_pp_coe_kit",
+-- MAGIC     "PVA Bot Usages.xlsx": "bot_usage_pp_coe_kit",
+-- MAGIC }
+-- MAGIC
+-- MAGIC # Business-key dedup when column exists; otherwise fall back to _row_hash
+-- MAGIC BUSINESS_KEYS = {
+-- MAGIC     "microsoft_purview_audit_log": "RecordId",
+-- MAGIC     "agents_inventory": "Item_ID",
+-- MAGIC     "bot_usage_pp_coe_kit": "Do_Not_Modify_PVA_Bot_Usage",
+-- MAGIC }
+-- MAGIC
+-- MAGIC # Prefer these filenames when multiple files map to the same table
+-- MAGIC CANONICAL_PRIORITY = {
+-- MAGIC     "microsoft_purview_audit_log": [
+-- MAGIC         "microsoft_purview_audit_log.csv",
+-- MAGIC         "microsoft_purview_audit_log.xlsx",
+-- MAGIC         "Microsoft Purview Audit Log.xlsx",
+-- MAGIC     ],
+-- MAGIC     "bot_usage_pp_coe_kit": [
+-- MAGIC         "bot_usage_pp_coe_kit.xlsx",
+-- MAGIC         "Bot Usage - PP COE Kit.xlsx",
+-- MAGIC         "PVA Bot Usages.xlsx",
+-- MAGIC         "Bot Usage - PP COE Kit (1).xlsx",
+-- MAGIC     ],
+-- MAGIC }
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Load + Dedup Helpers
+-- MAGIC %python
+-- MAGIC import re
+-- MAGIC from datetime import date
+-- MAGIC import openpyxl
+-- MAGIC from pyspark.sql import functions as F
+-- MAGIC from pyspark.sql.types import StructType, StructField, StringType
+-- MAGIC
+-- MAGIC
+-- MAGIC def sanitize_table_name(file_name):
+-- MAGIC     name = re.sub(r'\.(xlsx|xls|csv)\Z', '', file_name, flags=re.IGNORECASE)
+-- MAGIC     name = re.sub(r'[^a-zA-Z0-9]', '_', name)
+-- MAGIC     name = re.sub(r'_+', '_', name).strip('_').lower()
+-- MAGIC     return name
+-- MAGIC
+-- MAGIC
+-- MAGIC def _find_col(columns, wanted):
+-- MAGIC     """Case-insensitive column lookup; returns actual column name or None."""
+-- MAGIC     wanted_l = wanted.lower()
+-- MAGIC     for c in columns:
+-- MAGIC         if c.lower() == wanted_l:
+-- MAGIC             return c
+-- MAGIC     return None
+-- MAGIC
+-- MAGIC
+-- MAGIC def read_excel_as_spark_df(file_path):
+-- MAGIC     """Read .xlsx via openpyxl into a Spark DataFrame (all StringType)."""
+-- MAGIC     wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
+-- MAGIC     ws = wb.active
+-- MAGIC     all_rows = list(ws.iter_rows(values_only=True))
+-- MAGIC     wb.close()
+-- MAGIC
+-- MAGIC     if not all_rows:
+-- MAGIC         raise ValueError(f"Excel file is empty: {file_path}")
+-- MAGIC
+-- MAGIC     raw_headers = all_rows[0]
+-- MAGIC     headers = [
+-- MAGIC         str(h).strip().replace(' ', '_').replace('/', '_').replace('(', '').replace(')', '')
+-- MAGIC         if h else f"_col_{i}"
+-- MAGIC         for i, h in enumerate(raw_headers)
+-- MAGIC     ]
+-- MAGIC
+-- MAGIC     seen = {}
+-- MAGIC     unique_headers = []
+-- MAGIC     for h in headers:
+-- MAGIC         if h in seen:
+-- MAGIC             seen[h] += 1
+-- MAGIC             unique_headers.append(f"{h}_{seen[h]}")
+-- MAGIC         else:
+-- MAGIC             seen[h] = 1
+-- MAGIC             unique_headers.append(h)
+-- MAGIC     headers = unique_headers
+-- MAGIC
+-- MAGIC     data_rows = [
+-- MAGIC         row for row in all_rows[1:]
+-- MAGIC         if any(v is not None for v in row)
+-- MAGIC     ]
+-- MAGIC     schema = StructType([StructField(h, StringType(), True) for h in headers])
+-- MAGIC     string_rows = [
+-- MAGIC         [str(v) if v is not None else None for v in row]
+-- MAGIC         for row in data_rows
+-- MAGIC     ]
+-- MAGIC     return spark.createDataFrame(string_rows, schema=schema)
+-- MAGIC
+-- MAGIC
+-- MAGIC def _add_metadata(df, file_name):
+-- MAGIC     data_columns = df.columns
+-- MAGIC     hash_expr = F.md5(
+-- MAGIC         F.concat_ws(
+-- MAGIC             "|",
+-- MAGIC             *[F.coalesce(F.col(f"`{c}`").cast("string"), F.lit("NULL")) for c in data_columns]
+-- MAGIC         )
+-- MAGIC     )
+-- MAGIC     return df.withColumns({
+-- MAGIC         "_source_file": F.lit(file_name),
+-- MAGIC         "_ingestion_timestamp": F.current_timestamp(),
+-- MAGIC         "_row_hash": hash_expr,
+-- MAGIC     })
+-- MAGIC
+-- MAGIC
+-- MAGIC def _write_incremental(df, full_table_name, table_name):
+-- MAGIC     """Append only new rows using business key when available, else _row_hash."""
+-- MAGIC     table_exists = spark.catalog.tableExists(full_table_name)
+-- MAGIC
+-- MAGIC     if load_mode == "overwrite":
+-- MAGIC         df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable(full_table_name)
+-- MAGIC         row_count = df.count()
+-- MAGIC         print(f"  OVERWRITE | Table '{full_table_name}' written with {row_count:,} rows")
+-- MAGIC         return
+-- MAGIC
+-- MAGIC     if not table_exists:
+-- MAGIC         df.write.format("delta").mode("append").saveAsTable(full_table_name)
+-- MAGIC         row_count = df.count()
+-- MAGIC         print(f"  FULL LOAD | New table '{full_table_name}' created with {row_count:,} rows")
+-- MAGIC         return
+-- MAGIC
+-- MAGIC     target = spark.table(full_table_name)
+-- MAGIC     target_columns = target.columns
+-- MAGIC     if "_row_hash" not in target_columns:
+-- MAGIC         df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable(full_table_name)
+-- MAGIC         row_count = df.count()
+-- MAGIC         print(f"  FULL RELOAD | Table '{full_table_name}' rebuilt with {row_count:,} rows (schema migrated)")
+-- MAGIC         return
+-- MAGIC
+-- MAGIC     biz_key = BUSINESS_KEYS.get(table_name)
+-- MAGIC     src_key = _find_col(df.columns, biz_key) if biz_key else None
+-- MAGIC     tgt_key = _find_col(target_columns, biz_key) if biz_key else None
+-- MAGIC
+-- MAGIC     if src_key and tgt_key:
+-- MAGIC         existing_keys = target.select(F.col(f"`{tgt_key}`").alias("_dedup_key")).distinct()
+-- MAGIC         new_rows = (
+-- MAGIC             df.withColumn("_dedup_key", F.col(f"`{src_key}`"))
+-- MAGIC             .join(existing_keys, on="_dedup_key", how="left_anti")
+-- MAGIC             .drop("_dedup_key")
+-- MAGIC         )
+-- MAGIC         dedup_label = f"biz_key={biz_key}"
+-- MAGIC     else:
+-- MAGIC         existing_hashes = target.select("_row_hash").distinct()
+-- MAGIC         new_rows = df.join(existing_hashes, on="_row_hash", how="left_anti")
+-- MAGIC         dedup_label = "_row_hash"
+-- MAGIC         if biz_key and not (src_key and tgt_key):
+-- MAGIC             print(f"  WARN | Business key '{biz_key}' missing; falling back to _row_hash")
+-- MAGIC
+-- MAGIC     new_count = new_rows.count()
+-- MAGIC     if new_count > 0:
+-- MAGIC         new_rows.write.format("delta").mode("append").saveAsTable(full_table_name)
+-- MAGIC         print(f"  INCREMENTAL | Appended {new_count:,} new rows to '{full_table_name}' ({dedup_label})")
+-- MAGIC     else:
+-- MAGIC         print(f"  SKIP | No new rows for '{full_table_name}' ({dedup_label})")
+-- MAGIC
+-- MAGIC
+-- MAGIC def _find_audit_data_col(columns):
+-- MAGIC     for c in columns:
+-- MAGIC         if c.lower() == "auditdata":
+-- MAGIC             return c
+-- MAGIC     return None
+-- MAGIC
+-- MAGIC
+-- MAGIC def _validate_purview_audit_data(df, file_name):
+-- MAGIC     """Fail fast when AuditData JSON is truncated (common CSV parse issue)."""
+-- MAGIC     audit_col = _find_audit_data_col(df.columns)
+-- MAGIC     if audit_col is None:
+-- MAGIC         return
+-- MAGIC     total = df.count()
+-- MAGIC     if total == 0:
+-- MAGIC         return
+-- MAGIC     valid = df.filter(F.length(F.col(f"`{audit_col}`")) > 200).count()
+-- MAGIC     pct_valid = 100.0 * valid / total
+-- MAGIC     print(f"  QA | {file_name}: {valid:,}/{total:,} rows have AuditData length > 200 ({pct_valid:.1f}%)")
+-- MAGIC     if pct_valid < 90.0:
+-- MAGIC         raise ValueError(
+-- MAGIC             f"Purview CSV quality gate failed for '{file_name}': "
+-- MAGIC             f"only {pct_valid:.1f}% rows have valid AuditData JSON. "
+-- MAGIC             f"Check multiLine/quote CSV options."
+-- MAGIC         )
+-- MAGIC
+-- MAGIC
+-- MAGIC def process_excel_file(file_path, file_name, target_schema):
+-- MAGIC     table_name = FILE_TO_TABLE_MAP.get(file_name, sanitize_table_name(file_name))
+-- MAGIC     full_table_name = f"{target_schema}.{table_name}"
+-- MAGIC     df = _add_metadata(read_excel_as_spark_df(file_path), file_name)
+-- MAGIC     _write_incremental(df, full_table_name, table_name)
+-- MAGIC     return full_table_name
+-- MAGIC
+-- MAGIC
+-- MAGIC def process_csv_file(file_path, file_name, target_schema):
+-- MAGIC     """Load large CSV exports via Spark (e.g. Purview audit log)."""
+-- MAGIC     table_name = FILE_TO_TABLE_MAP.get(file_name, sanitize_table_name(file_name))
+-- MAGIC     full_table_name = f"{target_schema}.{table_name}"
+-- MAGIC
+-- MAGIC     df = (
+-- MAGIC         spark.read
+-- MAGIC         .option("header", True)
+-- MAGIC         .option("inferSchema", False)
+-- MAGIC         .option("multiLine", True)
+-- MAGIC         .option("quote", '"')
+-- MAGIC         .option("escape", '"')
+-- MAGIC         .option("mode", "PERMISSIVE")
+-- MAGIC         .option("columnNameOfCorruptRecord", "_corrupt_record")
+-- MAGIC         .csv(file_path)
+-- MAGIC     )
+-- MAGIC
+-- MAGIC     if table_name == "microsoft_purview_audit_log":
+-- MAGIC         _validate_purview_audit_data(df, file_name)
+-- MAGIC
+-- MAGIC     df = _add_metadata(df, file_name)
+-- MAGIC     _write_incremental(df, full_table_name, table_name)
+-- MAGIC     return full_table_name
+-- MAGIC
+-- MAGIC
+-- MAGIC def archive_file(file_info):
+-- MAGIC     """Move processed root file to archive/YYYY-MM-DD/."""
+-- MAGIC     archive_dir = f"{source_path.rstrip('/')}/archive/{date.today().isoformat()}/"
+-- MAGIC     try:
+-- MAGIC         dbutils.fs.mkdirs(archive_dir)
+-- MAGIC     except Exception:
+-- MAGIC         pass
+-- MAGIC     dest = archive_dir + file_info.name
+-- MAGIC     src = file_info.path
+-- MAGIC     dbutils.fs.mv(src, dest)
+-- MAGIC     print(f"  ARCHIVE | {file_info.name} -> {dest}")
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Execute - Process Volume Root Files
+-- MAGIC %python
+-- MAGIC # ============================================================
+-- MAGIC # EXECUTION: Scan volume ROOT only; pick one file per table;
+-- MAGIC # load; archive on success.
+-- MAGIC # ============================================================
+-- MAGIC
+-- MAGIC files = dbutils.fs.ls(source_path)
+-- MAGIC # Root only: dbutils.fs.ls does not recurse; also skip directories named archive/
+-- MAGIC root_files = [f for f in files if not f.isDir()]
+-- MAGIC excel_files = [f for f in root_files if f.name.lower().endswith(('.xlsx', '.xls'))]
+-- MAGIC csv_files = [f for f in root_files if f.name.lower().endswith('.csv')]
+-- MAGIC candidates = excel_files + csv_files
+-- MAGIC
+-- MAGIC if not candidates:
+-- MAGIC     print(f"No Excel/CSV files found in volume root {source_path}")
+-- MAGIC     print(f"   Found entries: {[f.name for f in files]}")
+-- MAGIC else:
+-- MAGIC     # Group by target table; apply priority rules
+-- MAGIC     by_table = {}
+-- MAGIC     for f in candidates:
+-- MAGIC         table = FILE_TO_TABLE_MAP.get(f.name, sanitize_table_name(f.name))
+-- MAGIC         by_table.setdefault(table, []).append(f)
+-- MAGIC
+-- MAGIC     selected = []
+-- MAGIC     skipped = []
+-- MAGIC     for table, group in by_table.items():
+-- MAGIC         priority = CANONICAL_PRIORITY.get(table)
+-- MAGIC         if priority:
+-- MAGIC             chosen = None
+-- MAGIC             for pname in priority:
+-- MAGIC                 match = next((g for g in group if g.name == pname), None)
+-- MAGIC                 if match:
+-- MAGIC                     chosen = match
+-- MAGIC                     break
+-- MAGIC             if chosen is None:
+-- MAGIC                 chosen = group[0]
+-- MAGIC         else:
+-- MAGIC             # Prefer exact canonical snake_case mapping entry if present
+-- MAGIC             canonical = [g for g in group if g.name in FILE_TO_TABLE_MAP and g.name.islower()]
+-- MAGIC             chosen = canonical[0] if canonical else group[0]
+-- MAGIC         selected.append((table, chosen))
+-- MAGIC         for g in group:
+-- MAGIC             if g.path != chosen.path:
+-- MAGIC                 skipped.append((table, g.name, chosen.name))
+-- MAGIC
+-- MAGIC     print(f"Found {len(candidates)} root file(s); selected {len(selected)} table(s)")
+-- MAGIC     for table, chosen_name, winner in skipped:
+-- MAGIC         print(f"  SKIP DUPLICATE | {chosen_name} (table={table}; using {winner})")
+-- MAGIC     print("=" * 60)
+-- MAGIC
+-- MAGIC     results = []
+-- MAGIC     for table, f in selected:
+-- MAGIC         file_path = f.path.replace("dbfs:", "")
+-- MAGIC         print(f"Processing: {f.name} -> {table}")
+-- MAGIC         print(f"   Size: {f.size / 1024:.1f} KB")
+-- MAGIC         try:
+-- MAGIC             if f.name.lower().endswith('.csv'):
+-- MAGIC                 loaded = process_csv_file(file_path, f.name, target_schema)
+-- MAGIC             else:
+-- MAGIC                 loaded = process_excel_file(file_path, f.name, target_schema)
+-- MAGIC             archive_file(f)
+-- MAGIC             results.append((f.name, loaded, "OK"))
+-- MAGIC         except Exception as e:
+-- MAGIC             print(f"  FAILED | {f.name}: {e}")
+-- MAGIC             results.append((f.name, table, f"FAIL: {e}"))
+-- MAGIC             raise
+-- MAGIC         print()
+-- MAGIC
+-- MAGIC     print("=" * 60)
+-- MAGIC     print(f"Processing complete! {len(results)} file(s) loaded into {target_schema}")
+-- MAGIC     for file_name, table_name, status in results:
+-- MAGIC         print(f"   • {file_name} → {table_name} [{status}]")
