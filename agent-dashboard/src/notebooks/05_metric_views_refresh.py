@@ -8,10 +8,7 @@
 # MAGIC print(f"Active catalog: {UNITY_CATALOG}")
 
 # COMMAND ----------
-# /// script
-# [tool.databricks.environment]
-# environment_version = "5"
-# ///
+
 # DBTITLE 1,Metric Views Refresh - Introduction
 # MAGIC %md
 # MAGIC # Metric Views Refresh
@@ -21,12 +18,12 @@
 # MAGIC **When to run:** After new files are uploaded to the volume and the pipeline (Etex Excel to bronze + Etex Silver Layer Pipeline) completes.
 # MAGIC
 # MAGIC **Metric Views:**
-# MAGIC 1. `metric_agent_feature_credit` — Credit breakdown by product/feature/channel/model
-# MAGIC 2. `metric_agent_governance` — Governance KPIs over agent inventory
-# MAGIC 3. `metric_credit_consumption` — Credit by user x agent
-# MAGIC 4. `metric_environment_consumption` — Daily environment MCS-message consumption
-# MAGIC 5. `copilot_analytics_metrics` — Copilot interaction KPIs (already in Metric Creation notebook)
-# MAGIC 6. `bot_usage_metrics` — Bot usage & adoption (already in Bot_Usage_Metrics notebook)
+# MAGIC 1. `metric_agent_feature_credit` - Credit breakdown by product/feature/channel/model
+# MAGIC 2. `metric_agent_governance` - Governance KPIs over agent inventory
+# MAGIC 3. `metric_credit_consumption` - Credit by user x agent
+# MAGIC 4. `metric_environment_consumption` - Daily environment MCS-message consumption
+# MAGIC 5. `copilot_analytics_metrics` - Copilot interaction KPIs (already in Metric Creation notebook)
+# MAGIC 6. `bot_usage_metrics` - Bot usage & adoption (already in Bot_Usage_Metrics notebook)
 
 # COMMAND ----------
 
