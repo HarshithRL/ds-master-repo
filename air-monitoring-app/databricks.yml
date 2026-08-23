@@ -15,9 +15,12 @@ variables:
     description: Location of the bundle deployment in the workspace
   warehouse_id:
     description: >
-      SQL warehouse the app runs on. The app forwards the visitor's token
-      (user_api_scopes: sql), so it is the visitor's own CAN_USE that
-      decides what a query may do.
+      SQL warehouse the app runs on. D and T use the shared automation warehouse,
+      because the consumer-access pipeline (Automation_Assign_Consumer_Access) does
+      not run for development or test. A and P use the warehouse that pipeline
+      created, which already carries the consumer groups' CAN_USE grant.
+      The app forwards the visitor's token (user_api_scopes: sql), so it is the
+      visitor's own CAN_USE that decides what a query may do.
   policy_id:
     description: Cluster policy id to use for setup job compute
 

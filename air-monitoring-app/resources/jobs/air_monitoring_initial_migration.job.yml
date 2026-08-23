@@ -12,7 +12,7 @@ resources:
       tasks:
         - task_key: load_initial
           notebook_task:
-            notebook_path: ../src/migration_exports/3_Load_from_Excel_ACC_PRD.py
+            notebook_path: ../../src/migration_exports/3_Load_from_Excel_ACC_PRD.py
             base_parameters:
               LOAD_MODE: "initial"
               TARGET_CATALOG: ${var.catalog}
