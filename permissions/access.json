@@ -2,7 +2,7 @@
   "_comment": [
     "Consumer access for the Air Monitoring data product.",
     "Applied by the CENTRAL pipeline (Automation_Assign_Consumer_Access) in",
-    "da-mdp-automation-deployments — there is deliberately no pipeline here,",
+    "da-mdp-automation-deployments \u2014 there is deliberately no pipeline here,",
     "because applying this file needs an account-admin identity that data-product",
     "repos must not be able to drive.",
     "",
@@ -111,14 +111,6 @@
               "catalog": "automation",
               "schema": "bronze",
               "table": "air_monitoring_sites",
-              "privileges": [
-                "MODIFY"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "bronze",
-              "table": "air_monitoring_measurements",
               "privileges": [
                 "MODIFY"
               ]
