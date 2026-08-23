@@ -5,14 +5,9 @@ include:
   - resources/apps/*.yml
   - resources/jobs/*.yml
 
-workspace:
-  root_path: ${var.workspace_root}
-
 variables:
   catalog:
     description: The Unity Catalog catalog for air monitoring tables
-  workspace_root:
-    description: Location of the bundle deployment in the workspace
   warehouse_id:
     description: >
       SQL warehouse the app runs on. D and T use the shared automation warehouse,
@@ -28,25 +23,28 @@ targets:
   D:
     mode: development
     default: true
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/Users/${workspace.current_user.userName}/${bundle.name}/${bundle.target}
     variables:
       catalog: automation_d
-      workspace_root: /Workspace/Users/${workspace.current_user.userName}/ds-air-monitoring-app
       warehouse_id: 69ada62b2fb9b9e2
       policy_id: 306312B9730019AB
-    workspace:
-      root_path: ${var.workspace_root}
-      host: https://adb-7181820732839861.1.azuredatabricks.net
 
   T:
     mode: production
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       catalog: automation_d
-      workspace_root: /Workspace/ds/ds-air-monitoring-app
       warehouse_id: 69ada62b2fb9b9e2
       policy_id: 306312B9730019AB
-    workspace:
-      root_path: ${var.workspace_root}
-      host: https://adb-7181820732839861.1.azuredatabricks.net
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
     resources:
       apps:
         air_monitoring_app:
@@ -58,14 +56,18 @@ targets:
 
   A:
     mode: production
+    workspace:
+      host: https://adb-4796304964978539.19.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       catalog: automation_a
-      workspace_root: /Workspace/ds/ds-air-monitoring-app
       warehouse_id: fe5f9b40ac3a9b6e
       policy_id: 306312B973005677
-    workspace:
-      root_path: ${var.workspace_root}
-      host: https://adb-4796304964978539.19.azuredatabricks.net
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
     resources:
       apps:
         air_monitoring_app:
@@ -77,14 +79,18 @@ targets:
 
   P:
     mode: production
+    workspace:
+      host: https://adb-4844910598668398.18.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       catalog: automation_p
-      workspace_root: /Workspace/ds/ds-air-monitoring-app
       warehouse_id: 83294e3f6b44f138
       policy_id: 306312B973005150
-    workspace:
-      root_path: ${var.workspace_root}
-      host: https://adb-4844910598668398.18.azuredatabricks.net
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
     resources:
       apps:
         air_monitoring_app:
