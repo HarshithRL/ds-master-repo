@@ -50,7 +50,9 @@
     "warehouse: true gives this data product its own warehouse, created and owned by",
     "the pipeline (automation-air-monitoring-consumer-sqlwh-a / -p). Note the bundle",
     "ALSO creates a warehouse and binds it to the app; this pipeline never touches a",
-    "warehouse it did not create, so CAN_USE on that one belongs in the bundle."
+    "warehouse it did not create, so CAN_USE on that one belongs in the bundle.",
+    "",
+    "Members: all users listed in automation_d.bronze.air_monitoring_sites.allowed_users"
   ],
   "data_products": [
     {
@@ -76,8 +78,38 @@
             }
           ],
           "members": [
+            "adam.wallace@etexgroup.com",
+            "alberto.uson@pladur.com",
+            "chiara.senzolo@etexgroup.com",
+            "choiriyah.handoko@etexgroup.com",
+            "daniel.vinascoquintero@etexgroup.com",
+            "frederic.conte@etexgroup.com",
+            "ionut.somlea@etexgroup.com",
+            "joan.magrane@etexgroup.com",
+            "jonathanagustin.sonez@etexgroup.com",
+            "josefrancisco.apablaza@etexgroup.com",
+            "juan.lavezzi@etexgroup.com",
+            "karine.canal@etexgroup.com",
+            "leonardo.salazar@etexgroup.com",
+            "malcolm.brown@etexgroup.com",
+            "mariano.caputo@etexgroup.com",
+            "mark.devlin@etexgroup.com",
+            "mart.kemerink@etexgroup.com",
             "mustafaarda.bicakci@etexgroup.com",
-            "pierre.delaguiche@etexgroup.com"
+            "olaolu.abikoye@etexgroup.com",
+            "pascal.journet@etexgroup.com",
+            "paschal.obi@etexgroup.com",
+            "patrick.vandegraaf@etexgroup.com",
+            "pierre.delaguiche@etexgroup.com",
+            "pierre.michel@etexgroup.com",
+            "roberto.barrionuevo@etexgroup.com",
+            "ronan.clooney@etexgroup.com",
+            "santiago.riveragarrido@pladur.com",
+            "sofie.staes@etexgroup.com",
+            "soren.jensen@etexgroup.com",
+            "thomas.groetzner@etexgroup.com",
+            "tom.thoelen@etexgroup.com",
+            "yusman.syidam@etexgroup.com"
           ]
         },
         {
@@ -125,8 +157,38 @@
             }
           ],
           "members": [
+            "adam.wallace@etexgroup.com",
+            "alberto.uson@pladur.com",
+            "chiara.senzolo@etexgroup.com",
+            "choiriyah.handoko@etexgroup.com",
+            "daniel.vinascoquintero@etexgroup.com",
+            "frederic.conte@etexgroup.com",
+            "ionut.somlea@etexgroup.com",
+            "joan.magrane@etexgroup.com",
+            "jonathanagustin.sonez@etexgroup.com",
+            "josefrancisco.apablaza@etexgroup.com",
+            "juan.lavezzi@etexgroup.com",
+            "karine.canal@etexgroup.com",
+            "leonardo.salazar@etexgroup.com",
+            "malcolm.brown@etexgroup.com",
+            "mariano.caputo@etexgroup.com",
+            "mark.devlin@etexgroup.com",
+            "mart.kemerink@etexgroup.com",
             "mustafaarda.bicakci@etexgroup.com",
-            "pierre.delaguiche@etexgroup.com"
+            "olaolu.abikoye@etexgroup.com",
+            "pascal.journet@etexgroup.com",
+            "paschal.obi@etexgroup.com",
+            "patrick.vandegraaf@etexgroup.com",
+            "pierre.delaguiche@etexgroup.com",
+            "pierre.michel@etexgroup.com",
+            "roberto.barrionuevo@etexgroup.com",
+            "ronan.clooney@etexgroup.com",
+            "santiago.riveragarrido@pladur.com",
+            "sofie.staes@etexgroup.com",
+            "soren.jensen@etexgroup.com",
+            "thomas.groetzner@etexgroup.com",
+            "tom.thoelen@etexgroup.com",
+            "yusman.syidam@etexgroup.com"
           ]
         }
       ]

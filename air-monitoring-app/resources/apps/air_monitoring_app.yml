@@ -1,7 +1,7 @@
 resources:
   apps:
     air_monitoring_app:
-      name: air-monitoring-app
+      name: ds-air-monitoring-app
       description: "Air quality monitoring app for Etex manufacturing sites"
       source_code_path: ../../src
       user_api_scopes:
