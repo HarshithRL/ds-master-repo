@@ -1,0 +1,96 @@
+{
+  "_comment": [
+    "Consumer access for the Air Monitoring data product.",
+    "Applied by the CENTRAL pipeline (Automation_Assign_Consumer_Access).",
+    "",
+    "The air-monitoring app runs SQL as the VISITOR (user_api_scopes: [sql]).",
+    "Visitors need USE_CATALOG + USE_SCHEMA + SELECT to read monitoring data,",
+    "and MODIFY on specific tables if they upload/update site information.",
+    "Volume uploads also run as the visitor, so WRITE_VOLUME is required.",
+    "",
+    "Catalog is the BASE name: the pipeline appends _a / _p.",
+    "",
+    "WRITE tier relies on READ members also being in READ for USE_CATALOG and",
+    "USE_SCHEMA — validation warns if a WRITE member is not also in READ."
+  ],
+  "data_products": [
+    {
+      "data_product": "air-monitoring-app",
+      "warehouse": true,
+      "consumer_groups": [
+        {
+          "tier": "READ",
+          "grants": [
+            {
+              "catalog": "automation",
+              "privileges": [
+                "USE_CATALOG"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "privileges": [
+                "USE_SCHEMA",
+                "SELECT"
+              ]
+            }
+          ],
+          "members": [
+            "mustafaarda.bicakci@etexgroup.com",
+            "pierre.delaguiche@etexgroup.com"
+          ]
+        },
+        {
+          "tier": "WRITE",
+          "grants": [
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "air_monitoring_sites",
+              "privileges": [
+                "MODIFY"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "air_monitoring_measurements",
+              "privileges": [
+                "MODIFY"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "air_monitoring_output",
+              "privileges": [
+                "MODIFY"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "air_monitoring_upload_log",
+              "privileges": [
+                "MODIFY"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "volume": "bronze_volume",
+              "privileges": [
+                "WRITE_VOLUME"
+              ]
+            }
+          ],
+          "members": [
+            "mustafaarda.bicakci@etexgroup.com",
+            "pierre.delaguiche@etexgroup.com"
+          ]
+        }
+      ]
+    }
+  ]
+}

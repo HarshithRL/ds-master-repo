@@ -1,3 +1,14 @@
+# DEPRECATED — This per-project pipeline is replaced by the shared master pipeline.
+# Deployment is now handled by:
+#   pipelines/Automation_Deploy_Databricks_{TEST,ACC,PRD}.yml (at repo root)
+# which uses the da-mdp-foundations-deployments template and iterates all bundles.
+#
+# The app is now a proper DAB resource (resources/apps/air_monitoring_app.yml)
+# and deploys automatically with `databricks bundle deploy`.
+#
+# DELETE this file once the new pipeline is confirmed working.
+#
+# --- ORIGINAL (kept for reference) ---
 # Azure DevOps Pipeline — Deploy Air Monitoring App
 # Triggers on acc or main branch changes
 # acc branch  → deploys to ACC workspace

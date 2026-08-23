@@ -1,7 +1,6 @@
-# Air Monitoring V2 App — Environment-agnostic
-# UNITY_CATALOG and WAREHOUSE_ID are auto-detected from DATABRICKS_HOST at runtime
-# by config.py (_ENV_OVERRIDES). No need to set them here.
-# This same app.yaml works on DEV, ACC, and PRD without modification.
+# Air Monitoring App — managed by Declarative Automation Bundle
+# SQL_WAREHOUSE_ID is injected via the app resource (valueFrom).
+# UNITY_CATALOG is auto-detected from DATABRICKS_HOST at runtime by config.py.
 command:
   - streamlit
   - run
@@ -10,8 +9,9 @@ command:
   - "8000"
   - --server.address
   - "0.0.0.0"
-
 env:
+  - name: SQL_WAREHOUSE_ID
+    valueFrom: sql-warehouse
   - name: BRONZE_SCHEMA
     value: "bronze"
   - name: VOLUME_NAME
@@ -28,21 +28,3 @@ env:
     value: "e23c7299-f64d-4de4-a6a1-b40d3145528c"
   - name: USE_KEYVAULT
     value: "false"
-
-# SQL Warehouse resources — list all environments.
-# Only the warehouse that exists in the current workspace will be active.
-# Needed to grant sql OAuth scope for user-auth token forwarding.
-resources:
-  - name: "sql-warehouse-dev"
-    sql_warehouse:
-      id: "69ada62b2fb9b9e2"
-      permission: "CAN_USE"
-  - name: "sql-warehouse-acc"
-    sql_warehouse:
-      id: "fe5f9b40ac3a9b6e"
-      permission: "CAN_USE"
-  - name: "sql-warehouse-prd"
-    sql_warehouse:
-      id: "83294e3f6b44f138"
-      permission: "CAN_USE"
-
