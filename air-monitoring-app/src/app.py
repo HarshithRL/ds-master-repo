@@ -882,14 +882,7 @@ with tab_upload:
                     pdf_data = uf.getvalue()
                     st.session_state.pdf_bytes[uf.name] = pdf_data
 
-                    volume_path = ""
-                    try:
-                        from utils.db_utils import upload_file_to_volume
-                        volume_path = upload_file_to_volume(uf, site_code=site_info["Code"])
-                        st.session_state.volume_paths[uf.name] = volume_path
-                        st.write("  ↳ Saved to volume")
-                    except Exception as e:
-                        st.write(f"  ↳ Volume skip: {e}")
+                    volume_path = ""  # Volume upload disabled (no files scope needed)
 
                     try:
                         from utils.doc_intelligence import extract_from_pdf
@@ -934,6 +927,7 @@ with tab_upload:
                         if records:
                             df = pd.DataFrame(records)
                             df.insert(0, "Include", True)
+                            df.insert(1, "Personal", False)
                             st.session_state.pdf_results[uf.name] = df
                             from utils.db_utils import check_duplicates
                             dupes = check_duplicates(df, site_info["Code"])
@@ -1042,6 +1036,7 @@ with tab_upload:
                             key=f"ed_{filename}",
                             column_config={
                                 "Include": st.column_config.CheckboxColumn("✓", default=True, width="small"),
+                                "Personal": st.column_config.CheckboxColumn("👤", default=False, width="small", help="Mark as personal sample (saved but hidden from active view)"),
                                 "🔁": st.column_config.TextColumn("🔁", width="small", disabled=True, help="⚠️ = duplicate exists in DB"),
                                 "Duplicate_of": st.column_config.TextColumn("Duplicate of", width="medium", disabled=True, help="Existing PDF name and upload date"),
                                 "Flag_High_Concentration": st.column_config.CheckboxColumn("⚠️ High", width="small", help=f"Concentration > {HIGH_CONC_THRESHOLD} f/ml"),
@@ -1051,11 +1046,12 @@ with tab_upload:
                                 "Concentration_unit": st.column_config.TextColumn("Unit", width="small"),
                                 "Concentration_result_in_f_ml": st.column_config.TextColumn("f/ml", width="small"),
                             },
-                            column_order=["Include", "🔁", "Sample_no", "Pump_Location", "Sample_Date", "Analysis_method",
-                                          "Concentration_result", "Concentration_unit", "Concentration_result_in_f_ml",
+                            column_order=["Include", "Personal", "🔁", "Sample_no", "Sample_Date", "Analysis_method",
+                                          "Followed_Norm", "Volume", "Concentration_result",
+                                          "Concentration_unit", "Concentration_result_in_f_ml",
                                           "Flag_High_Concentration", "Flag_EM_Concentration",
-                                          "Volume", "Followed_Norm", "Lab_name", "Report_number",
-                                          "Project_Name", "Building", "Duplicate_of", "Document_name",
+                                          "Lab_name", "Project_Name", "Building", "Pump_Location",
+                                          "Report_number", "Duplicate_of", "Document_name",
                                           "Site_name", "Code", "Site_Address", "upload_date", "PDF_URL"],
                         )
 
@@ -1072,19 +1068,32 @@ with tab_upload:
                             if st.button("💾 Save to DB", key=f"sv_{filename}", type="primary", use_container_width=True):
                                 try:
                                     from utils.db_utils import write_to_output_table, log_upload
-                                    drop_cols = [c for c in ["Include", "🔁", "Duplicate_of"] if c in edited.columns]
+                                    drop_cols = [c for c in ["Include", "Personal", "🔁", "Duplicate_of"] if c in edited.columns]
                                     save_df = edited[edited["Include"] == True].drop(columns=drop_cols).copy()
                                     # Restore row_status from original df (excluded from data editor display)
                                     save_df["row_status"] = df.loc[save_df.index, "row_status"] if "row_status" in df.columns else "active"
                                     save_df["removal_reason"] = df.loc[save_df.index, "removal_reason"] if "removal_reason" in df.columns else None
                                     save_df["status_updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                     # Mark duplicates as removed, keep personal detection from earlier
-                                    for idx in save_df.index:
-                                        if idx in dupes and save_df.loc[idx, "row_status"] != "removed":
-                                            save_df.loc[idx, "row_status"] = "removed"
-                                            save_df.loc[idx, "removal_reason"] = "Duplicate"
-                                        elif save_df.loc[idx, "row_status"] != "removed":
-                                            save_df.loc[idx, "row_status"] = "active"
+                                    # Mark personal samples
+                                    if "Personal" in edited.columns:
+                                        personal_mask = edited.loc[save_df.index, "Personal"].fillna(False).astype(bool)
+                                        for idx in save_df.index:
+                                            if personal_mask.get(idx, False):
+                                                save_df.loc[idx, "row_status"] = "removed"
+                                                save_df.loc[idx, "removal_reason"] = "Personal sample"
+                                            elif idx in dupes and save_df.loc[idx, "row_status"] != "removed":
+                                                save_df.loc[idx, "row_status"] = "removed"
+                                                save_df.loc[idx, "removal_reason"] = "Duplicate"
+                                            elif save_df.loc[idx, "row_status"] != "removed":
+                                                save_df.loc[idx, "row_status"] = "active"
+                                    else:
+                                        for idx in save_df.index:
+                                            if idx in dupes and save_df.loc[idx, "row_status"] != "removed":
+                                                save_df.loc[idx, "row_status"] = "removed"
+                                                save_df.loc[idx, "removal_reason"] = "Duplicate"
+                                            elif save_df.loc[idx, "row_status"] != "removed":
+                                                save_df.loc[idx, "row_status"] = "active"
                                     write_to_output_table(save_df, uploaded_by=user, batch_id=st.session_state.batch_id)
                                     log_upload(
                                         filename=filename, site_code=site_info.get("Code", ""),
@@ -1313,12 +1322,13 @@ with tab_browser:
                     "modified_by": st.column_config.TextColumn("Modified By", disabled=True, width="small"),
                     "status_updated_at": st.column_config.DatetimeColumn("Modified At", format="DD/MM/YYYY HH:mm", disabled=True, width="small"),
                 },
-                column_order=["row_status", "Site_name", "Code", "Document_name", "Sample_no",
-                              "Pump_Location", "Sample_Date", "Analysis_method",
+                column_order=["row_status", "Site_name", "Code", "Site_Address", "upload_date",
+                              "Document_name", "Report_number", "Sample_no",
+                              "Sample_Date", "Analysis_method", "Followed_Norm", "Volume",
                               "Concentration_result", "Concentration_unit", "Concentration_result_in_f_ml",
-                              "Flag_High_Concentration", "Volume", "Followed_Norm", "Lab_name",
-                              "Report_number", "Project_Name", "Building",
-                              "upload_date", "uploaded_by", "modified_by", "status_updated_at", "row_id", "removal_reason"],
+                              "Lab_name", "Project_Name", "Building", "Pump_Location",
+                              "Flag_EM_Concentration", "Flag_High_Concentration",
+                              "uploaded_by", "modified_by", "status_updated_at", "row_id", "removal_reason"],
             )
 
             # Changes — compare only user-editable columns
@@ -1632,8 +1642,103 @@ with tab_history:
                 total_docs = active["Document_name"].nunique() if "Document_name" in active.columns else 0
                 high_conc = int(_to_bool(active["Flag_High_Concentration"]).sum()) if "Flag_High_Concentration" in active.columns else 0
 
+                # ════════════════════════════════════════════════════════
+                # CHIARA'S KPI DASHBOARD (3 categories)
+                # ════════════════════════════════════════════════════════
+
+                # Expected plants list (26 — from Chiara's Jul 2026 email)
+                EXPECTED_PLANTS_2026 = [
+                    "Aghires", "Athy", "Auneuil", "Branden", "Carpentras",
+                    "Dabrowa", "Für", "Goor", "Gresik", "KOB", "Lagos",
+                    "Maipú", "Manizales", "Mazan", "Meldreth", "Neubeckum",
+                    "Novo Mesto", "Ottmarshein", "Rantigny", "Rennes",
+                    "Roedding", "San Justo", "Santa Rosa", "Stirling",
+                    "Tisselt", "Saint Loubes"
+                ]
+
+                # ── 1. DATA SHARING ──
+                st.subheader("📊 Data Sharing")
+                plants_expected = len(EXPECTED_PLANTS_2026)  # 26
+                # Case-insensitive match: normalize both lists to lowercase
+                _expected_lower = {p.lower() for p in EXPECTED_PLANTS_2026}
+                _actual_sites_lower = set(active["Site_name"].dropna().str.lower().unique()) if "Site_name" in active.columns else set()
+                _matched_sites = _expected_lower & _actual_sites_lower
+                sites_sampled = len(_matched_sites)
+                sharing_pct = (sites_sampled / plants_expected * 100) if plants_expected > 0 else 0
+
+                ds1, ds2, ds3 = st.columns(3)
+                ds1.metric("Plants Expected", plants_expected)
+                ds2.metric("Sites Sampled", sites_sampled)
+                ds3.metric("Data Sharing %", f"{sharing_pct:.1f}%")
+
+                with st.expander("📋 Expected Plants List (26)", expanded=False):
+                    _sampled_lower = set(active["Site_name"].dropna().str.lower().unique()) if "Site_name" in active.columns else set()
+                    _plant_status = []
+                    for p in sorted(EXPECTED_PLANTS_2026):
+                        _status = "✅" if p.lower() in _sampled_lower else "⏳"
+                        _plant_status.append(f"{_status} {p}")
+                    # Display in 3 columns
+                    _pc1, _pc2, _pc3 = st.columns(3)
+                    _third = len(_plant_status) // 3 + 1
+                    _pc1.markdown("\n".join(_plant_status[:_third]))
+                    _pc2.markdown("\n".join(_plant_status[_third:2*_third]))
+                    _pc3.markdown("\n".join(_plant_status[2*_third:]))
+
+                st.markdown("---")
+
+                # ── 2. COMPLIANCE ──
+                st.subheader("✅ Compliance")
+                total_samples = total_records
+
+                # Filter for Electron Microscopy only for compliance
+                em_mask = active["Analysis_method"] == "Electron Microscopy" if "Analysis_method" in active.columns else pd.Series([False] * len(active))
+                em_data = active[em_mask]
+
+                # Parse concentration for comparison
+                def _safe_conc(val):
+                    try:
+                        s = str(val).replace("<", "").replace(",", ".").strip()
+                        return float(s) if s and s not in ("", "None", "Not specified", "N/A") else 0.0
+                    except (ValueError, TypeError):
+                        return 0.0
+
+                if "Concentration_result_in_f_ml" in em_data.columns:
+                    em_conc = em_data["Concentration_result_in_f_ml"].apply(_safe_conc)
+                else:
+                    em_conc = pd.Series(dtype=float)
+
+                above_01 = int((em_conc > 0.1).sum())
+                above_001 = int((em_conc > 0.01).sum())
+                compliance_01 = ((total_samples - above_01) / total_samples * 100) if total_samples > 0 else 100.0
+                compliance_001 = ((total_samples - above_001) / total_samples * 100) if total_samples > 0 else 100.0
+
+                c1, c2, c3, c4, c5 = st.columns(5)
+                c1.metric("Total Samples", f"{total_samples:,}")
+                c2.metric("EM > 0.01 f/ml", above_001, help="Electron Microscopy samples exceeding 0.01 f/ml")
+                c3.metric("EM > 0.1 f/ml", above_01, help="Electron Microscopy samples exceeding 0.1 f/ml")
+                c4.metric("Compliance (0.01)", f"{compliance_001:.1f}%")
+                c5.metric("Compliance (0.1)", f"{compliance_01:.1f}%")
+
+                st.markdown("---")
+
+                # ── 3. AUTOMATION ──
+                st.subheader("🤖 Automation")
+                # Total parsed by AI = all records with row_status in (active, modified, removed)
+                total_parsed = len(all_data) if all_data is not None else 0
+                # Manual corrections = modified rows
+                corrections = int((all_data["row_status"] == "modified").sum()) if "row_status" in all_data.columns else 0
+                error_pct = (corrections / total_parsed * 100) if total_parsed > 0 else 0
+
+                a1, a2, a3 = st.columns(3)
+                a1.metric("Total Parsed by AI", f"{total_parsed:,}")
+                a2.metric("Manual Corrections", corrections)
+                a3.metric("Automation Error %", f"{error_pct:.2f}%")
+
+                st.markdown("---")
+
+                # ── Legacy metrics (quick summary) ──
                 k1, k2, k3, k4 = st.columns(4)
-                k1.metric("Total Samples", f"{total_records:,}")
+                k1.metric("Active Records", f"{total_records:,}")
                 k2.metric("Active Sites", total_sites)
                 k3.metric("Documents", total_docs)
                 k4.metric(f"High Conc. (>{HIGH_CONC_THRESHOLD})", high_conc)

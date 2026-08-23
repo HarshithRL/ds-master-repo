@@ -24,3 +24,5 @@ stages:
       tenantIdSecretName: ${{ variables.TENANT_SECRET_NAME }}
       adbHostnameSecretName: ${{ variables.ADB_HOST_SECRET_NAME }}
       dbxProfile: ${{ variables.DBX_PROFILE }}
+      enablePostDeploy: true
+      enableRollbackOnFailure: true
