@@ -1,4 +1,10 @@
 #!/bin/bash
+# DEPRECATED — Manual app deploy workaround.
+# The app is now managed as a proper DAB resource in resources/apps/air_monitoring_app.yml.
+# Deployment should happen via `databricks bundle deploy` through the shared master pipeline.
+# Keep this script only as rollback reference until the new flow is confirmed.
+#
+# --- ORIGINAL SCRIPT BELOW ---
 # =============================================================
 # deploy_app.sh - Full CI/CD deploy for Air Monitoring App
 # Usage: ./scripts/deploy_app.sh <TARGET>

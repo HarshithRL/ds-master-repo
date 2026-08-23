@@ -13,7 +13,7 @@ resources:
       tasks:
         - task_key: merge_sites
           notebook_task:
-            notebook_path: ../src/migration_exports/3_Load_from_Excel_ACC_PRD.py
+            notebook_path: ../../src/migration_exports/3_Load_from_Excel_ACC_PRD.py
             base_parameters:
               LOAD_MODE: "sites_merge"
               TARGET_CATALOG: ${var.catalog}
