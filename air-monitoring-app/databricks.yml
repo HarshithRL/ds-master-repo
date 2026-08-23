@@ -49,6 +49,10 @@ targets:
       apps:
         air_monitoring_app:
           permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE
             - group_name: AUTOMATION.AIR_MONITORING.CONSUMER.READ
               level: CAN_USE
             - group_name: AUTOMATION.AIR_MONITORING.CONSUMER.WRITE
@@ -72,6 +76,10 @@ targets:
       apps:
         air_monitoring_app:
           permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE
             - group_name: AUTOMATION.AIR_MONITORING.CONSUMER.READ
               level: CAN_USE
             - group_name: AUTOMATION.AIR_MONITORING.CONSUMER.WRITE
@@ -95,6 +103,10 @@ targets:
       apps:
         air_monitoring_app:
           permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE
             - group_name: AUTOMATION.AIR_MONITORING.CONSUMER.READ
               level: CAN_USE
             - group_name: AUTOMATION.AIR_MONITORING.CONSUMER.WRITE
