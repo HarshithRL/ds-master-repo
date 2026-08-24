@@ -1,0 +1,680 @@
+-- Databricks notebook source
+-- MAGIC %run ./config_file
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC spark.sql(f"USE CATALOG {UNITY_CATALOG}")
+-- MAGIC print(f"Active catalog: {UNITY_CATALOG}")
+
+-- COMMAND ----------
+-- DBTITLE 1,Dimensional Layer Refresh
+-- MAGIC %md
+-- MAGIC # Dimensional Layer Refresh
+-- MAGIC 
+-- MAGIC Rebuilds `{SILVER}` dim/fact/view tables consumed by the Agent Dashboard.
+-- MAGIC 
+-- MAGIC **Run after:** `Read_excel_files` and `Tables_modeling`
+-- MAGIC **Before:** metric view notebooks
+-- MAGIC 
+-- MAGIC Note: `_agent_name_bridge` is not refreshed (mapping table from original build).
+-- MAGIC Note: `sl_purview_log` is owned by notebook 02 (QA filter LENGTH(AuditData) > 200).
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Silver normalize | sl_agent_inventory
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.sl_agent_inventory AS
+-- MAGIC SELECT
+-- MAGIC   Item_name                 AS item_name,
+-- MAGIC   Created_in                AS created_in,
+-- MAGIC   Item_ID                   AS item_id,
+-- MAGIC   Status                    AS status,
+-- MAGIC   Owner                     AS owner,
+-- MAGIC   Model                     AS model,
+-- MAGIC   Authentication            AS authentication,
+-- MAGIC   Orchestration             AS orchestration,
+-- MAGIC   Microsoft_Entra_app_ID    AS microsoft_entra_app_id,
+-- MAGIC   Microsoft_Entra_Agent_ID  AS microsoft_entra_agent_id,
+-- MAGIC   Blueprint_ID              AS blueprint_id,
+-- MAGIC   Created_on                AS created_on,
+-- MAGIC   Created_by                AS created_by,
+-- MAGIC   Published_on              AS published_on,
+-- MAGIC   Environment               AS environment,
+-- MAGIC   Environment_ID            AS environment_id,
+-- MAGIC   Environment_type          AS environment_type,
+-- MAGIC   Environment_region        AS environment_region,
+-- MAGIC   Managed_environment       AS managed_environment,
+-- MAGIC   Environment_group         AS environment_group,
+-- MAGIC   Environment_group_ID      AS environment_group_id
+-- MAGIC FROM silver.agents_inventory
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Silver normalize | sl_agent_credit
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.sl_agent_credit AS
+-- MAGIC SELECT
+-- MAGIC   Agent_Name                                AS agent_name,
+-- MAGIC   Agent_Id                                  AS agent_id,
+-- MAGIC   Product                                   AS product,
+-- MAGIC   AI_Feature_Billable_Feature               AS ai_feature_billable_feature,
+-- MAGIC   CAST(ROUND(TRY_CAST(Billed_credit AS DOUBLE), 0) AS BIGINT)             AS billed_credit,
+-- MAGIC   CAST(`Non-billed_credit` AS DECIMAL(21,1)) AS non_billed_credit,
+-- MAGIC   Channel                                   AS channel,
+-- MAGIC   Knowledge_Sources                         AS knowledge_sources,
+-- MAGIC   Tool_Used                                 AS tool_used,
+-- MAGIC   LLM_Model                                 AS llm_model,
+-- MAGIC   Scenario_Name                             AS scenario_name,
+-- MAGIC   Environment_Id                            AS environment_id,
+-- MAGIC   Environment_Name                          AS environment_name
+-- MAGIC FROM silver.agent_level_credit_consumption
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Silver normalize | sl_environment_credit
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.sl_environment_credit AS
+-- MAGIC SELECT
+-- MAGIC   BillingPlan_Id                                        AS billing_plan_id,
+-- MAGIC   BillingPlan_Name                                      AS billing_plan_name,
+-- MAGIC   Environment_Id                                        AS environment_id,
+-- MAGIC   Environment_Name                                      AS environment_name,
+-- MAGIC   Capacity_Type                                         AS capacity_type,
+-- MAGIC   CAST(ROUND(TRY_CAST(Entitled_Quantity AS DOUBLE), 0) AS BIGINT)                     AS entitled_quantity,
+-- MAGIC   CAST(ROUND(TRY_CAST(Prepaid_Consumed_Quantity AS DOUBLE), 0) AS BIGINT)             AS prepaid_consumed_quantity,
+-- MAGIC   CAST(ROUND(TRY_CAST(Pay_as_you_go_Consumed_Quantity AS DOUBLE), 0) AS BIGINT)       AS pay_as_you_go_consumed_quantity,
+-- MAGIC   Usage_Date                                            AS usage_date
+-- MAGIC FROM silver.environment_level_credit_consumption
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Silver normalize | sl_user_credit
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.sl_user_credit AS
+-- MAGIC SELECT
+-- MAGIC   User_Id                                       AS user_id,
+-- MAGIC   User_Email                                    AS user_email,
+-- MAGIC   Agent_Id                                      AS agent_id,
+-- MAGIC   Agent_Name                                    AS agent_name,
+-- MAGIC   CAST(ROUND(TRY_CAST(Billable_credit_used AS DOUBLE), 0) AS BIGINT)          AS billable_credit_used,
+-- MAGIC   CAST(Credits_used AS DECIMAL(21,1))           AS credits_used,
+-- MAGIC   CAST(M365_Copilot_Licensed AS BOOLEAN)        AS m365_copilot_licensed
+-- MAGIC FROM silver.user_level_credit_consumption
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Reference | ref_credit_rate
+-- MAGIC %sql
+-- MAGIC -- Note: sl_purview_log is owned by notebook 02 (LENGTH(AuditData) > 200 filter).
+-- MAGIC CREATE OR REPLACE TABLE silver.ref_credit_rate AS
+-- MAGIC SELECT
+-- MAGIC   CAST(0.006932 AS DOUBLE)  AS credit_to_eur,
+-- MAGIC   'EUR'                     AS currency,
+-- MAGIC   DATE'2026-06-29'          AS effective_date,
+-- MAGIC   'Microsoft Copilot Studio prepaid Copilot Credit pack: EUR 173.30 / 25,000 credits (ex-VAT), per microsoft.com/en-ie M365 Copilot pricing (2026). Data is 100% prepaid (PAYG=0). PAYG list rate = USD 0.01/credit.' AS notes
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Dimension | dim_date
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.dim_date AS
+-- MAGIC SELECT
+-- MAGIC   CAST(DATE_FORMAT(d, 'yyyyMMdd') AS INT)  AS date_key,
+-- MAGIC   d                                        AS date,
+-- MAGIC   DATE_FORMAT(d, 'dd/MM/yyyy')             AS date_eu,
+-- MAGIC   YEAR(d)                                  AS year,
+-- MAGIC   MONTH(d)                                 AS month,
+-- MAGIC   DAY(d)                                   AS day,
+-- MAGIC   DATE_FORMAT(d, 'MMMM')                   AS month_name,
+-- MAGIC   QUARTER(d)                               AS quarter,
+-- MAGIC   DAYOFWEEK(d)                             AS day_of_week,
+-- MAGIC   WEEKOFYEAR(d)                            AS week_of_year
+-- MAGIC FROM (
+-- MAGIC   SELECT EXPLODE(SEQUENCE(DATE'2023-01-01', DATE'2026-12-31', INTERVAL 1 DAY)) AS d
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Dimension | dim_user
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.dim_user AS
+-- MAGIC SELECT
+-- MAGIC   XXHASH64(user_id)      AS user_key,
+-- MAGIC   user_id,
+-- MAGIC   user_email,
+-- MAGIC   m365_copilot_licensed
+-- MAGIC FROM (
+-- MAGIC   SELECT DISTINCT
+-- MAGIC     user_id,
+-- MAGIC     LOWER(user_email) AS user_email,
+-- MAGIC     m365_copilot_licensed
+-- MAGIC   FROM silver.sl_user_credit
+-- MAGIC )
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Dimension | dim_environment
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.dim_environment AS
+-- MAGIC WITH inv AS (
+-- MAGIC   SELECT
+-- MAGIC     LOWER(environment)                        AS environment_name_norm,
+-- MAGIC     environment                               AS environment_name,
+-- MAGIC     NULLIF(NULLIF(environment_id, ''), '-')   AS environment_id,
+-- MAGIC     NULLIF(environment_type, '-')             AS environment_type,
+-- MAGIC     NULLIF(environment_region, '-')           AS environment_region,
+-- MAGIC     managed_environment
+-- MAGIC   FROM silver.sl_agent_inventory
+-- MAGIC ),
+-- MAGIC agg AS (
+-- MAGIC   SELECT
+-- MAGIC     environment_name_norm,
+-- MAGIC     MAX(environment_name)   AS environment_name,
+-- MAGIC     MAX(environment_id)     AS environment_id,
+-- MAGIC     MAX(environment_type)   AS environment_type,
+-- MAGIC     MAX(environment_region) AS environment_region,
+-- MAGIC     MAX(CASE WHEN managed_environment = 'Yes' THEN TRUE ELSE FALSE END) AS is_managed
+-- MAGIC   FROM inv
+-- MAGIC   GROUP BY environment_name_norm
+-- MAGIC ),
+-- MAGIC ac AS (
+-- MAGIC   SELECT LOWER(environment_name) AS n,
+-- MAGIC          MAX(NULLIF(NULLIF(environment_id, ''), '-')) AS environment_id
+-- MAGIC   FROM silver.sl_agent_credit GROUP BY LOWER(environment_name)
+-- MAGIC ),
+-- MAGIC ec AS (
+-- MAGIC   SELECT LOWER(environment_name) AS n,
+-- MAGIC          MAX(NULLIF(NULLIF(environment_id, ''), '-')) AS environment_id
+-- MAGIC   FROM silver.sl_environment_credit GROUP BY LOWER(environment_name)
+-- MAGIC )
+-- MAGIC SELECT
+-- MAGIC   XXHASH64(a.environment_name_norm) AS environment_key,
+-- MAGIC   a.environment_name,
+-- MAGIC   a.environment_name_norm,
+-- MAGIC   COALESCE(a.environment_id, ac.environment_id, ec.environment_id) AS environment_id,
+-- MAGIC   a.environment_type,
+-- MAGIC   a.environment_region,
+-- MAGIC   a.is_managed,
+-- MAGIC   TRUE                              AS in_inventory,
+-- MAGIC   (ac.n IS NOT NULL)                AS in_agent_credit,
+-- MAGIC   (ec.n IS NOT NULL)                AS in_env_credit
+-- MAGIC FROM agg a
+-- MAGIC LEFT JOIN ac ON ac.n = a.environment_name_norm
+-- MAGIC LEFT JOIN ec ON ec.n = a.environment_name_norm
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Dimension | dim_agent
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.dim_agent AS
+-- MAGIC WITH dedup AS (
+-- MAGIC   SELECT * FROM silver.sl_agent_inventory
+-- MAGIC ),
+-- MAGIC parsed_all AS (
+-- MAGIC   SELECT
+-- MAGIC     item_id,
+-- MAGIC     item_name,
+-- MAGIC     created_in,
+-- MAGIC     NULLIF(status, '-')          AS status,
+-- MAGIC     NULLIF(owner, '-')           AS owner,
+-- MAGIC     NULLIF(created_by, '-')      AS created_by,
+-- MAGIC     model,
+-- MAGIC     authentication,
+-- MAGIC     orchestration,
+-- MAGIC     environment,
+-- MAGIC     COALESCE(
+-- MAGIC       CAST(TRY_TO_TIMESTAMP(NULLIF(created_on, '-'), 'yyyy-MM-dd HH:mm:ss') AS DATE),
+-- MAGIC       TRY_TO_DATE(NULLIF(created_on, '-'), 'M/d/yy'),
+-- MAGIC       TRY_TO_DATE(NULLIF(created_on, '-'), 'M/d/yyyy')
+-- MAGIC     ) AS created_on_date,
+-- MAGIC     COALESCE(
+-- MAGIC       CAST(TRY_TO_TIMESTAMP(NULLIF(published_on, '-'), 'yyyy-MM-dd HH:mm:ss') AS DATE),
+-- MAGIC       TRY_TO_DATE(NULLIF(published_on, '-'), 'M/d/yy'),
+-- MAGIC       TRY_TO_DATE(NULLIF(published_on, '-'), 'M/d/yyyy')
+-- MAGIC     ) AS published_on_date
+-- MAGIC   FROM dedup
+-- MAGIC ),
+-- MAGIC parsed AS (
+-- MAGIC   SELECT * FROM (
+-- MAGIC     SELECT
+-- MAGIC       *,
+-- MAGIC       ROW_NUMBER() OVER (
+-- MAGIC         PARTITION BY item_id
+-- MAGIC         ORDER BY published_on_date DESC NULLS LAST, created_on_date DESC NULLS LAST, environment
+-- MAGIC       ) AS rn
+-- MAGIC     FROM parsed_all
+-- MAGIC   ) WHERE rn = 1
+-- MAGIC ),
+-- MAGIC credit AS (
+-- MAGIC   SELECT LOWER(agent_name) AS n, MAX(agent_name) AS credit_agent_name
+-- MAGIC   FROM silver.sl_agent_credit
+-- MAGIC   GROUP BY LOWER(agent_name)
+-- MAGIC )
+-- MAGIC SELECT
+-- MAGIC   XXHASH64(p.item_id)                       AS agent_key,
+-- MAGIC   p.item_id                                 AS agent_id,
+-- MAGIC   p.item_name                               AS agent_name,
+-- MAGIC   CASE WHEN p.created_in = 'Copilot Studio' THEN 'Copilot Studio'
+-- MAGIC        ELSE 'Agent Builder' END             AS platform,
+-- MAGIC   CASE WHEN p.created_in = 'Copilot Studio' THEN 'Copilot Studio'
+-- MAGIC        ELSE 'Agent Builder' END             AS agent_category,
+-- MAGIC   p.status,
+-- MAGIC   p.owner,
+-- MAGIC   p.created_by,
+-- MAGIC   p.model,
+-- MAGIC   p.authentication,
+-- MAGIC   p.orchestration,
+-- MAGIC   p.created_on_date,
+-- MAGIC   DATE_FORMAT(p.created_on_date, 'dd/MM/yyyy')   AS created_on_eu,
+-- MAGIC   YEAR(p.created_on_date)                        AS created_year,
+-- MAGIC   MONTH(p.created_on_date)                       AS created_month,
+-- MAGIC   p.published_on_date,
+-- MAGIC   DATE_FORMAT(p.published_on_date, 'dd/MM/yyyy') AS published_on_eu,
+-- MAGIC   (p.created_by IS NOT NULL)                AS is_valid_agent,
+-- MAGIC   (p.authentication = 'None')               AS is_no_auth,
+-- MAGIC   (c.credit_agent_name IS NOT NULL)         AS is_used,
+-- MAGIC   c.credit_agent_name,
+-- MAGIC   e.environment_key,
+-- MAGIC   e.environment_name,
+-- MAGIC   e.environment_type,
+-- MAGIC   e.environment_region,
+-- MAGIC   e.is_managed
+-- MAGIC FROM parsed p
+-- MAGIC LEFT JOIN credit c              ON c.n = LOWER(p.item_name)
+-- MAGIC LEFT JOIN silver.dim_environment e
+-- MAGIC                                 ON e.environment_name_norm = LOWER(p.environment)
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Fact | fact_environment_credit
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.fact_environment_credit AS
+-- MAGIC WITH parsed AS (
+-- MAGIC   SELECT
+-- MAGIC     environment_id,
+-- MAGIC     environment_name,
+-- MAGIC     capacity_type,
+-- MAGIC     prepaid_consumed_quantity,
+-- MAGIC     entitled_quantity,
+-- MAGIC     pay_as_you_go_consumed_quantity,
+-- MAGIC     COALESCE(
+-- MAGIC       CAST(TRY_TO_TIMESTAMP(usage_date, 'yyyy-MM-dd HH:mm:ss')   AS DATE),
+-- MAGIC       CAST(TRY_TO_TIMESTAMP(usage_date, 'M/d/yyyy h:mm:ss a')    AS DATE),
+-- MAGIC       CAST(TRY_TO_TIMESTAMP(usage_date, 'M/d/yy H:mm')           AS DATE),
+-- MAGIC       TRY_TO_DATE(usage_date, 'M/d/yyyy'),
+-- MAGIC       TRY_TO_DATE(usage_date, 'M/d/yy')
+-- MAGIC     ) AS usage_date
+-- MAGIC   FROM silver.sl_environment_credit
+-- MAGIC )
+-- MAGIC SELECT
+-- MAGIC   XXHASH64(LOWER(environment_name))            AS environment_key,
+-- MAGIC   CAST(DATE_FORMAT(usage_date, 'yyyyMMdd') AS INT) AS date_key,
+-- MAGIC   usage_date,
+-- MAGIC   DATE_FORMAT(usage_date, 'dd/MM/yyyy')        AS usage_date_eu,
+-- MAGIC   environment_id,
+-- MAGIC   environment_name,
+-- MAGIC   capacity_type,
+-- MAGIC   prepaid_consumed_quantity,
+-- MAGIC   entitled_quantity,
+-- MAGIC   pay_as_you_go_consumed_quantity
+-- MAGIC FROM parsed
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Fact | fact_agent_credit
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.fact_agent_credit AS
+-- MAGIC SELECT
+-- MAGIC   XXHASH64(LOWER(c.environment_name)) AS environment_key,
+-- MAGIC   CASE WHEN c.product = 'Copilot Studio' THEN b.agent_key END AS inventory_agent_key,
+-- MAGIC   c.agent_id AS credit_agent_id,
+-- MAGIC   c.agent_name,
+-- MAGIC   c.product,
+-- MAGIC   CASE WHEN c.product = 'Dataverse' THEN 'Platform Tool' ELSE 'Copilot Studio' END AS agent_category,
+-- MAGIC   c.ai_feature_billable_feature AS ai_feature,
+-- MAGIC   c.channel,
+-- MAGIC   c.knowledge_sources,
+-- MAGIC   c.tool_used,
+-- MAGIC   c.llm_model,
+-- MAGIC   c.environment_name,
+-- MAGIC   c.billed_credit,
+-- MAGIC   c.non_billed_credit
+-- MAGIC FROM silver.sl_agent_credit c
+-- MAGIC LEFT JOIN silver._agent_name_bridge b ON b.agent_name_norm = LOWER(c.agent_name)
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Fact | fact_user_agent_credit
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.fact_user_agent_credit AS
+-- MAGIC WITH bridge AS (
+-- MAGIC   SELECT agent_name_norm, agent_key FROM silver._agent_name_bridge
+-- MAGIC )
+-- MAGIC SELECT
+-- MAGIC   u.user_key,
+-- MAGIC   b.agent_key AS inventory_agent_key,
+-- MAGIC   c.agent_id AS credit_agent_id,
+-- MAGIC   c.agent_name,
+-- MAGIC   COALESCE(ac.agent_category, 'Copilot Studio') AS agent_category,
+-- MAGIC   c.billable_credit_used,
+-- MAGIC   c.credits_used
+-- MAGIC FROM silver.sl_user_credit c
+-- MAGIC INNER JOIN silver.dim_user u ON u.user_id = c.user_id
+-- MAGIC LEFT JOIN bridge b ON b.agent_name_norm = LOWER(c.agent_name)
+-- MAGIC LEFT JOIN (
+-- MAGIC   SELECT
+-- MAGIC     LOWER(agent_name) AS agent_name_norm,
+-- MAGIC     MAX(CASE WHEN product = 'Dataverse' THEN 'Platform Tool' ELSE 'Copilot Studio' END) AS agent_category
+-- MAGIC   FROM silver.sl_agent_credit
+-- MAGIC   GROUP BY LOWER(agent_name)
+-- MAGIC ) ac ON ac.agent_name_norm = LOWER(c.agent_name)
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Fact | fact_agent_knowledge_source
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.fact_agent_knowledge_source AS
+-- MAGIC WITH inv AS (
+-- MAGIC   SELECT DISTINCT item_id FROM silver.sl_agent_inventory
+-- MAGIC ),
+-- MAGIC kit AS (
+-- MAGIC   SELECT
+-- MAGIC     Agent_ID AS agent_id,
+-- MAGIC     Name AS agent_name,
+-- MAGIC     Agent_Owner AS agent_owner,
+-- MAGIC     Agent_Owner_Email AS agent_owner_email,
+-- MAGIC     Environment_Name AS environment_name,
+-- MAGIC     Environment_Type AS environment_type,
+-- MAGIC     Published AS published,
+-- MAGIC     Agent_Created_By AS created_by,
+-- MAGIC     Model AS model,
+-- MAGIC     Knowledge_Sources AS knowledge_sources_raw
+-- MAGIC   FROM silver.copilot_studio_kit_all_records
+-- MAGIC ),
+-- MAGIC exploded AS (
+-- MAGIC   SELECT
+-- MAGIC     k.*,
+-- MAGIC     kb.DisplayName AS kb_display_name,
+-- MAGIC     kb.KnowledgeType AS kb_type,
+-- MAGIC     kb.Value AS kb_value
+-- MAGIC   FROM kit k
+-- MAGIC   LATERAL VIEW EXPLODE(
+-- MAGIC     FROM_JSON(
+-- MAGIC       CASE
+-- MAGIC         WHEN k.knowledge_sources_raw IS NULL OR k.knowledge_sources_raw IN ('', '-', '[]')
+-- MAGIC         THEN '[]'
+-- MAGIC         ELSE k.knowledge_sources_raw
+-- MAGIC       END,
+-- MAGIC       'ARRAY<STRUCT<DisplayName:STRING,KnowledgeType:STRING,Value:STRING>>'
+-- MAGIC     )
+-- MAGIC   ) t AS kb
+-- MAGIC   WHERE kb.Value IS NOT NULL
+-- MAGIC ),
+-- MAGIC kb_counts AS (
+-- MAGIC   SELECT kb_value, COUNT(DISTINCT agent_id) AS kb_agent_count
+-- MAGIC   FROM exploded
+-- MAGIC   GROUP BY kb_value
+-- MAGIC )
+-- MAGIC SELECT
+-- MAGIC   e.agent_id,
+-- MAGIC   e.agent_name,
+-- MAGIC   e.agent_owner,
+-- MAGIC   e.agent_owner_email,
+-- MAGIC   e.environment_name,
+-- MAGIC   e.environment_type,
+-- MAGIC   e.published,
+-- MAGIC   e.created_by,
+-- MAGIC   e.model,
+-- MAGIC   MD5(e.kb_value) AS kb_key,
+-- MAGIC   e.kb_display_name,
+-- MAGIC   e.kb_type,
+-- MAGIC   e.kb_value,
+-- MAGIC   c.kb_agent_count,
+-- MAGIC   (c.kb_agent_count > 1) AS is_shared,
+-- MAGIC   (i.item_id IS NOT NULL) AS in_inventory,
+-- MAGIC   (da.is_valid_agent AND da.platform = 'Copilot Studio') AS is_valid_studio
+-- MAGIC FROM exploded e
+-- MAGIC INNER JOIN kb_counts c ON c.kb_value = e.kb_value
+-- MAGIC LEFT JOIN inv i ON i.item_id = e.agent_id
+-- MAGIC LEFT JOIN silver.dim_agent da ON da.agent_id = e.agent_id
+
+-- COMMAND ----------
+
+-- DBTITLE 1,View | vw_agent_governance
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.vw_agent_governance AS
+-- MAGIC WITH env_credit AS (
+-- MAGIC   SELECT DISTINCT LOWER(environment_name) AS environment_name_norm
+-- MAGIC   FROM silver.sl_environment_credit
+-- MAGIC )
+-- MAGIC SELECT
+-- MAGIC   d.agent_key,
+-- MAGIC   d.agent_id,
+-- MAGIC   d.agent_name,
+-- MAGIC   d.platform,
+-- MAGIC   d.agent_category,
+-- MAGIC   d.status,
+-- MAGIC   d.owner,
+-- MAGIC   d.created_by,
+-- MAGIC   d.model,
+-- MAGIC   d.authentication,
+-- MAGIC   d.orchestration,
+-- MAGIC   d.created_on_date,
+-- MAGIC   d.created_on_eu,
+-- MAGIC   d.created_year,
+-- MAGIC   d.created_month,
+-- MAGIC   d.published_on_date,
+-- MAGIC   d.published_on_eu,
+-- MAGIC   DATEDIFF(CURRENT_DATE(), d.created_on_date) AS agent_age_in_days,
+-- MAGIC   d.is_valid_agent,
+-- MAGIC   d.is_no_auth,
+-- MAGIC   d.is_used,
+-- MAGIC   CASE WHEN d.is_used THEN 'Used' ELSE 'Dormant' END AS usage_status,
+-- MAGIC   d.credit_agent_name,
+-- MAGIC   d.environment_name,
+-- MAGIC   d.environment_type,
+-- MAGIC   d.environment_region,
+-- MAGIC   e.environment_id,
+-- MAGIC   d.is_managed,
+-- MAGIC   (ec.environment_name_norm IS NOT NULL) AS environment_has_credit
+-- MAGIC FROM silver.dim_agent d
+-- MAGIC LEFT JOIN silver.dim_environment e ON e.environment_key = d.environment_key
+-- MAGIC LEFT JOIN env_credit ec ON ec.environment_name_norm = LOWER(d.environment_name)
+
+-- COMMAND ----------
+
+-- DBTITLE 1,View | vw_agent_knowledge
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.vw_agent_knowledge AS
+-- MAGIC WITH inv AS (
+-- MAGIC   SELECT DISTINCT item_id FROM silver.sl_agent_inventory
+-- MAGIC ),
+-- MAGIC kit AS (
+-- MAGIC   SELECT
+-- MAGIC     Agent_ID AS agent_id,
+-- MAGIC     Name AS agent_name,
+-- MAGIC     Agent_Owner AS agent_owner,
+-- MAGIC     Agent_Owner_Email AS agent_owner_email,
+-- MAGIC     Environment_Name AS environment_name,
+-- MAGIC     Environment_Type AS environment_type,
+-- MAGIC     Published AS published,
+-- MAGIC     Agent_Created_By AS created_by,
+-- MAGIC     Model AS model,
+-- MAGIC     Knowledge_Sources AS knowledge_sources_raw,
+-- MAGIC     Uses_Knowledge_Sources AS uses_knowledge_flag,
+-- MAGIC     Web_Search_Enabled AS web_search_enabled
+-- MAGIC   FROM silver.copilot_studio_kit_all_records
+-- MAGIC ),
+-- MAGIC parsed AS (
+-- MAGIC   SELECT
+-- MAGIC     k.*,
+-- MAGIC     CASE
+-- MAGIC       WHEN k.knowledge_sources_raw IS NULL OR k.knowledge_sources_raw IN ('', '-', '[]')
+-- MAGIC       THEN 0
+-- MAGIC       ELSE SIZE(
+-- MAGIC         FROM_JSON(k.knowledge_sources_raw, 'ARRAY<STRUCT<DisplayName:STRING,KnowledgeType:STRING,Value:STRING>>')
+-- MAGIC       )
+-- MAGIC     END AS knowledge_source_count
+-- MAGIC   FROM kit k
+-- MAGIC ),
+-- MAGIC da AS (
+-- MAGIC   SELECT agent_id, is_valid_agent, platform
+-- MAGIC   FROM silver.dim_agent
+-- MAGIC )
+-- MAGIC SELECT
+-- MAGIC   p.agent_id,
+-- MAGIC   p.agent_name,
+-- MAGIC   p.agent_owner,
+-- MAGIC   p.agent_owner_email,
+-- MAGIC   p.environment_name,
+-- MAGIC   p.environment_type,
+-- MAGIC   p.published,
+-- MAGIC   p.created_by,
+-- MAGIC   p.model,
+-- MAGIC   p.uses_knowledge_flag,
+-- MAGIC   p.web_search_enabled,
+-- MAGIC   p.knowledge_source_count,
+-- MAGIC   (p.knowledge_source_count > 0) AS has_knowledge_sources,
+-- MAGIC   (p.knowledge_sources_raw IS NULL OR p.knowledge_sources_raw IN ('', '-')) AS is_detail_unavailable,
+-- MAGIC   (i.item_id IS NOT NULL) AS in_inventory,
+-- MAGIC   (d.is_valid_agent AND d.platform = 'Copilot Studio') AS is_valid_studio
+-- MAGIC FROM parsed p
+-- MAGIC LEFT JOIN inv i ON i.item_id = p.agent_id
+-- MAGIC LEFT JOIN da d ON d.agent_id = p.agent_id
+
+-- COMMAND ----------
+
+-- DBTITLE 1,View | vw_agent_credit_detail
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.vw_agent_credit_detail AS
+-- MAGIC WITH rate AS (
+-- MAGIC   SELECT MAX(credit_to_eur) AS credit_to_eur FROM silver.ref_credit_rate
+-- MAGIC ),
+-- MAGIC bridge AS (
+-- MAGIC   SELECT agent_name_norm, agent_key, inventory_agent_name FROM silver._agent_name_bridge
+-- MAGIC )
+-- MAGIC SELECT
+-- MAGIC   f.credit_agent_id,
+-- MAGIC   f.agent_name,
+-- MAGIC   f.agent_category,
+-- MAGIC   f.product,
+-- MAGIC   f.ai_feature,
+-- MAGIC   f.channel,
+-- MAGIC   f.knowledge_sources,
+-- MAGIC   f.tool_used,
+-- MAGIC   f.llm_model,
+-- MAGIC   f.environment_name,
+-- MAGIC   e.environment_type,
+-- MAGIC   e.environment_region,
+-- MAGIC   COALESCE(b.inventory_agent_name, '') AS inventory_agent_name,
+-- MAGIC   COALESCE(d.platform, '') AS platform,
+-- MAGIC   f.billed_credit,
+-- MAGIC   f.non_billed_credit,
+-- MAGIC   CAST(f.billed_credit + f.non_billed_credit AS DECIMAL(22, 1)) AS total_credit,
+-- MAGIC   CAST((f.billed_credit + f.non_billed_credit) * r.credit_to_eur AS DOUBLE) AS total_credit_cost_eur
+-- MAGIC FROM silver.fact_agent_credit f
+-- MAGIC CROSS JOIN rate r
+-- MAGIC LEFT JOIN silver.dim_environment e ON e.environment_key = f.environment_key
+-- MAGIC LEFT JOIN bridge b ON b.agent_key = f.inventory_agent_key
+-- MAGIC LEFT JOIN silver.dim_agent d ON d.agent_key = f.inventory_agent_key
+
+-- COMMAND ----------
+
+-- DBTITLE 1,View | vw_environment_daily
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.vw_environment_daily AS
+-- MAGIC WITH rate AS (
+-- MAGIC   SELECT MAX(credit_to_eur) AS credit_to_eur FROM silver.ref_credit_rate
+-- MAGIC )
+-- MAGIC SELECT
+-- MAGIC   f.environment_name,
+-- MAGIC   e.environment_type,
+-- MAGIC   e.environment_region,
+-- MAGIC   e.is_managed,
+-- MAGIC   f.usage_date AS date,
+-- MAGIC   f.usage_date_eu AS date_eu,
+-- MAGIC   dd.year,
+-- MAGIC   dd.month,
+-- MAGIC   dd.month_name,
+-- MAGIC   dd.quarter,
+-- MAGIC   dd.week_of_year,
+-- MAGIC   f.capacity_type,
+-- MAGIC   f.prepaid_consumed_quantity,
+-- MAGIC   f.entitled_quantity,
+-- MAGIC   f.pay_as_you_go_consumed_quantity,
+-- MAGIC   CAST(f.prepaid_consumed_quantity * r.credit_to_eur AS DOUBLE) AS prepaid_cost_eur
+-- MAGIC FROM silver.fact_environment_credit f
+-- MAGIC CROSS JOIN rate r
+-- MAGIC LEFT JOIN silver.dim_environment e ON e.environment_key = f.environment_key
+-- MAGIC LEFT JOIN silver.dim_date dd ON dd.date_key = f.date_key
+
+-- COMMAND ----------
+
+-- DBTITLE 1,View | vw_user_agent_usage
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.vw_user_agent_usage AS
+-- MAGIC WITH rate AS (
+-- MAGIC   SELECT MAX(credit_to_eur) AS credit_to_eur FROM silver.ref_credit_rate
+-- MAGIC ),
+-- MAGIC bridge AS (
+-- MAGIC   SELECT agent_name_norm, agent_key, inventory_agent_name FROM silver._agent_name_bridge
+-- MAGIC )
+-- MAGIC SELECT
+-- MAGIC   f.user_key,
+-- MAGIC   u.user_email,
+-- MAGIC   u.m365_copilot_licensed,
+-- MAGIC   f.credit_agent_id,
+-- MAGIC   f.agent_name,
+-- MAGIC   f.agent_category,
+-- MAGIC   f.inventory_agent_key,
+-- MAGIC   b.inventory_agent_name,
+-- MAGIC   COALESCE(d.platform, '') AS platform,
+-- MAGIC   COALESCE(d.is_valid_agent, FALSE) AS is_valid_agent,
+-- MAGIC   f.billable_credit_used,
+-- MAGIC   f.credits_used,
+-- MAGIC   CAST(f.credits_used * r.credit_to_eur AS DOUBLE) AS consumption_cost_eur,
+-- MAGIC   CAST(f.billable_credit_used * r.credit_to_eur AS DOUBLE) AS spend_cost_eur
+-- MAGIC FROM silver.fact_user_agent_credit f
+-- MAGIC CROSS JOIN rate r
+-- MAGIC INNER JOIN silver.dim_user u ON u.user_key = f.user_key
+-- MAGIC LEFT JOIN bridge b ON b.agent_key = f.inventory_agent_key
+-- MAGIC LEFT JOIN silver.dim_agent d ON d.agent_key = f.inventory_agent_key
+
+-- COMMAND ----------
+
+-- DBTITLE 1,Bot usage | bot_usage
+-- MAGIC %sql
+-- MAGIC CREATE OR REPLACE TABLE silver.bot_usage AS
+-- MAGIC SELECT
+-- MAGIC   k.Do_Not_Modify_PVA_Bot_Usage AS pva_bot_usage_id,
+-- MAGIC   k.Do_Not_Modify_Row_Checksum AS row_checksum,
+-- MAGIC   TRY_TO_TIMESTAMP(k.Do_Not_Modify_Modified_On) AS system_modified_on,
+-- MAGIC   k.Bot_Environment_Display_Name_PVA_Bot_PVA_Bot AS environment,
+-- MAGIC   k.PVA_Bot AS bot_name,
+-- MAGIC   COALESCE(
+-- MAGIC     TRY_TO_DATE(k.Date, 'yyyy-MM-dd HH:mm:ss'),
+-- MAGIC     TRY_TO_DATE(k.Date, 'M/d/yyyy'),
+-- MAGIC     TRY_TO_DATE(k.Date, 'M/d/yy')
+-- MAGIC   ) AS usage_date,
+-- MAGIC   CAST(ROUND(TRY_CAST(k.Conversations AS DOUBLE), 0) AS BIGINT) AS conversations,
+-- MAGIC   TRY_TO_TIMESTAMP(k.Created_On) AS created_on,
+-- MAGIC   k.Modified_By AS modified_by,
+-- MAGIC   CAST(k.Modified_By_Delegate AS DOUBLE) AS modified_by_delegate,
+-- MAGIC   TRY_TO_TIMESTAMP(k.Modified_On) AS modified_on,
+-- MAGIC   k.Name AS usage_record_name,
+-- MAGIC   k.Owner AS owner,
+-- MAGIC   k.Owning_Business_Unit AS owning_business_unit,
+-- MAGIC   CAST(k.Record_Created_On AS DOUBLE) AS record_created_on,
+-- MAGIC   k.Status AS status,
+-- MAGIC   k.Status_Reason AS status_reason,
+-- MAGIC   CAST(k.Created_By_Delegate AS DOUBLE) AS created_by_delegate,
+-- MAGIC   k.Created_By AS created_by,
+-- MAGIC   CASE
+-- MAGIC     WHEN LOWER(k.Bot_Environment_Display_Name_PVA_Bot_PVA_Bot) LIKE '%prod%' THEN 'Production'
+-- MAGIC     WHEN LOWER(k.Bot_Environment_Display_Name_PVA_Bot_PVA_Bot) LIKE '%default%' THEN 'Default environment'
+-- MAGIC     ELSE 'Dev / Test / Other'
+-- MAGIC   END AS env_type
+-- MAGIC FROM silver.bot_usage_pp_coe_kit k
+-- MAGIC WHERE k.Do_Not_Modify_PVA_Bot_Usage IS NOT NULL
+
