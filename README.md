@@ -5,7 +5,7 @@ Single shared repository for all Data Science projects at Etex. Each project is 
 ---
 
 
-## Why a Single Repo?
+## Why a Single Repo ?
 
 Setting up CI/CD per project is inefficient:
 - Permission requests for each new repo and pipeline
