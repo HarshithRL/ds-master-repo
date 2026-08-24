@@ -47,7 +47,7 @@ targets:
         level: CAN_MANAGE
     resources:
       apps:
-        air_monitoring_app:
+        ds_air_monitoring_app:
           permissions:
             - user_name: mustafaarda.bicakci@etexgroup.com
               level: CAN_MANAGE
@@ -74,7 +74,7 @@ targets:
         level: CAN_MANAGE
     resources:
       apps:
-        air_monitoring_app:
+        ds_air_monitoring_app:
           permissions:
             - user_name: mustafaarda.bicakci@etexgroup.com
               level: CAN_MANAGE
@@ -101,7 +101,7 @@ targets:
         level: CAN_MANAGE
     resources:
       apps:
-        air_monitoring_app:
+        ds_air_monitoring_app:
           permissions:
             - user_name: mustafaarda.bicakci@etexgroup.com
               level: CAN_MANAGE
