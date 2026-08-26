@@ -88,10 +88,15 @@ targets:
         level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
-    # Deploy only jobs/files — no app (app needs warehouse CAN_USE from consumer pipeline first)
+    # Deploy jobs/files + app shell without warehouse (no SQL endpoint permission needed)
     resources:
       apps:
         ds_air_monitoring_app:
+          name: ds-air-monitoring-app
+          description: "Air quality monitoring app for Etex manufacturing sites"
+          source_code_path: src
+          user_api_scopes:
+            - sql
           resources: []
 
   A:
@@ -145,10 +150,15 @@ targets:
         level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
-    # Deploy only jobs/files — no app (app needs warehouse CAN_USE from consumer pipeline first)
+    # Deploy jobs/files + app shell without warehouse (no SQL endpoint permission needed)
     resources:
       apps:
         ds_air_monitoring_app:
+          name: ds-air-monitoring-app
+          description: "Air quality monitoring app for Etex manufacturing sites"
+          source_code_path: src
+          user_api_scopes:
+            - sql
           resources: []
 
   P:
