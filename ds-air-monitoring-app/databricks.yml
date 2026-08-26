@@ -65,7 +65,7 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       catalog: automation_a
-      warehouse_id: fe5f9b40ac3a9b6e
+      warehouse_id: f68599b38752394a
       policy_id: 306312B973005677
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
