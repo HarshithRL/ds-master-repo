@@ -111,7 +111,7 @@ OUTPUT_COLUMNS = [
 
 
 def _ensure_output_table():
-    """Create output table if not exists."""
+    """Create output table if not exists, and add row_id column if missing."""
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
@@ -126,6 +126,11 @@ def _ensure_output_table():
                 else:
                     cols_def.append(f"`{col}` STRING")
             cursor.execute(f"CREATE TABLE IF NOT EXISTS {OUTPUT_TABLE} ({', '.join(cols_def)})")
+            # Add row_id if table existed without it
+            try:
+                cursor.execute(f"ALTER TABLE {OUTPUT_TABLE} ADD COLUMN `row_id` STRING FIRST")
+            except Exception:
+                pass  # column already exists
     finally:
         conn.close()
 
