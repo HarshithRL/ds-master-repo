@@ -8,6 +8,7 @@ variables:
   catalog:
     description: The Unity Catalog catalog for air monitoring tables
   warehouse_id:
+    default: ""
     description: >
       SQL warehouse the app runs on. D and T use the shared automation warehouse,
       because the consumer-access pipeline (Automation_Assign_Consumer_Access) does
