@@ -53,9 +53,9 @@ targets:
               level: CAN_MANAGE
             - user_name: pierre.delaguiche@etexgroup.com
               level: CAN_MANAGE
-            - group_name: AUTOMATION.AIR_MONITORING.CONSUMER.READ
+            - group_name: AUTOMATION.AIRMONITORING.CONSUMER.READ
               level: CAN_USE
-            - group_name: AUTOMATION.AIR_MONITORING.CONSUMER.WRITE
+            - group_name: AUTOMATION.AIRMONITORING.CONSUMER.WRITE
               level: CAN_USE
 
   A:
@@ -80,9 +80,9 @@ targets:
               level: CAN_MANAGE
             - user_name: pierre.delaguiche@etexgroup.com
               level: CAN_MANAGE
-            - group_name: AUTOMATION.AIR_MONITORING.CONSUMER.READ
+            - group_name: AUTOMATION.AIRMONITORING.CONSUMER.READ
               level: CAN_USE
-            - group_name: AUTOMATION.AIR_MONITORING.CONSUMER.WRITE
+            - group_name: AUTOMATION.AIRMONITORING.CONSUMER.WRITE
               level: CAN_USE
 
   P:
@@ -107,7 +107,7 @@ targets:
               level: CAN_MANAGE
             - user_name: pierre.delaguiche@etexgroup.com
               level: CAN_MANAGE
-            - group_name: AUTOMATION.AIR_MONITORING.CONSUMER.READ
+            - group_name: AUTOMATION.AIRMONITORING.CONSUMER.READ
               level: CAN_USE
-            - group_name: AUTOMATION.AIR_MONITORING.CONSUMER.WRITE
+            - group_name: AUTOMATION.AIRMONITORING.CONSUMER.WRITE
               level: CAN_USE

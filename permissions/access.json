@@ -73,7 +73,30 @@
               "catalog": "automation",
               "schema": "bronze",
               "privileges": [
-                "USE_SCHEMA",
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "air_monitoring_output",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "air_monitoring_sites",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "air_monitoring_upload_log",
+              "privileges": [
                 "SELECT"
               ]
             }
@@ -110,23 +133,6 @@
             {
               "catalog": "automation",
               "schema": "bronze",
-              "table": "air_monitoring_sites",
-              "privileges": [
-                "MODIFY"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "bronze",
-              "table": "air_monitoring_output",
-              "privileges": [
-                "MODIFY"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "bronze",
-              "table": "air_monitoring_upload_log",
               "privileges": [
                 "MODIFY"
               ]
