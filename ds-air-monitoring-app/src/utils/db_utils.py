@@ -111,7 +111,7 @@ OUTPUT_COLUMNS = [
 
 
 def _ensure_output_table():
-    """Create output table if not exists, and add row_id column if missing."""
+    """Create output table if not exists, add missing V2 columns, and fix void-typed columns."""
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
@@ -126,11 +126,26 @@ def _ensure_output_table():
                 else:
                     cols_def.append(f"`{col}` STRING")
             cursor.execute(f"CREATE TABLE IF NOT EXISTS {OUTPUT_TABLE} ({', '.join(cols_def)})")
-            # Add row_id if table existed without it
-            try:
-                cursor.execute(f"ALTER TABLE {OUTPUT_TABLE} ADD COLUMN `row_id` STRING FIRST")
-            except Exception:
-                pass  # column already exists
+            # Add any missing columns (silently skip if already exists)
+            col_types = {}
+            for col, col_def in zip(OUTPUT_COLUMNS, cols_def):
+                col_types[col] = col_def.split(" ", 1)[1]
+            for col in OUTPUT_COLUMNS:
+                try:
+                    cursor.execute(f"ALTER TABLE {OUTPUT_TABLE} ADD COLUMN `{col}` {col_types[col]}")
+                except Exception:
+                    pass
+            # Fix void-typed columns left by earlier NULL-only inserts
+            type_fixes = {
+                "status_updated_at": "TIMESTAMP",
+                "Delete_docs": "STRING",
+                "modified_by": "STRING",
+            }
+            for col, typ in type_fixes.items():
+                try:
+                    cursor.execute(f"ALTER TABLE {OUTPUT_TABLE} ALTER COLUMN `{col}` TYPE {typ}")
+                except Exception:
+                    pass
     finally:
         conn.close()
 
