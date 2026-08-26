@@ -17,6 +17,12 @@ variables:
       visitor's own CAN_USE that decides what a query may do.
   policy_id:
     description: Cluster policy id to use for setup job compute
+  mdp_monitoring_sp_client_id:
+    description: MDP Monitoring app service principal client_id (injected by pipeline)
+    default: ""
+  notification_destination_id:
+    description: Webhook notification destination ID for the MDP Monitoring app (injected by pipeline)
+    default: ""
 
 targets:
   D:
@@ -75,7 +81,6 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/A
     variables:
       catalog: automation_a
-      warehouse_id: fe5f9b40ac3a9b6e
       policy_id: 306312B973005677
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
@@ -133,7 +138,6 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/P
     variables:
       catalog: automation_p
-      warehouse_id: 83294e3f6b44f138
       policy_id: 306312B973005150
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
