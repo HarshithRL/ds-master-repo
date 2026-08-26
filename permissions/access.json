@@ -57,7 +57,7 @@
   ],
   "data_products": [
     {
-      "data_product": "air-monitoring-app",
+      "data_product": "ds-air-monitoring-app",
       "warehouse": true,
       "consumer_groups": [
         {
