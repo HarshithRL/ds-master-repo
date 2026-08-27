@@ -131,7 +131,7 @@ print(f"  ✓ {CATALOG}.{BRONZE_SCHEMA}.air_monitoring_sites")
 
 spark.sql(f"""
     CREATE TABLE IF NOT EXISTS {CATALOG}.{BRONZE_SCHEMA}.air_monitoring_output (
-        row_id STRING NOT NULL,
+        row_id STRING,
         Site_name STRING,
         Code STRING,
         Site_Address STRING,
@@ -155,7 +155,7 @@ spark.sql(f"""
         Flag_EM_Concentration DOUBLE,
         Flag_High_Concentration BOOLEAN,
         Delete_docs STRING,
-        row_status STRING DEFAULT 'active',
+        row_status STRING,
         removal_reason STRING,
         status_updated_at TIMESTAMP,
         uploaded_by STRING,
