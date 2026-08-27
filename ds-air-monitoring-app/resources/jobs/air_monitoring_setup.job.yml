@@ -1,7 +1,10 @@
 resources:
   jobs:
     air_monitoring_setup_tables:
-      name: air_monitoring_setup_tables
+      name: "Air Monitoring - Setup Tables"
+      tags:
+        project: air-monitoring
+        purpose: setup-tables
 
       schedule:
         quartz_cron_expression: 0 0 0 1 1 ?
@@ -29,4 +32,6 @@ resources:
 
       permissions:
         - user_name: "mustafaarda.bicakci@etexgroup.com"
+          level: "CAN_MANAGE"
+        - user_name: "pierre.delaguiche@etexgroup.com"
           level: "CAN_MANAGE"
