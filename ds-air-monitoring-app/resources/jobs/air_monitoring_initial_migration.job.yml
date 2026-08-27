@@ -21,4 +21,6 @@ resources:
             node_type_id: "Standard_DS3_v2"
             data_security_mode: USER_ISOLATION
             num_workers: 0
+            spark_conf:
+              spark.master: "local[*]"
             policy_id: ${var.policy_id}

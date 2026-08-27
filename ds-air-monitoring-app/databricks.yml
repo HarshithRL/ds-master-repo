@@ -54,7 +54,6 @@ targets:
             - sql
           resources:
             - name: "sql-warehouse"
-              description: "SQL warehouse for air monitoring queries"
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: "CAN_USE"
@@ -67,26 +66,6 @@ targets:
               level: CAN_USE
             - group_name: AUTOMATION.AIRMONITORING.CONSUMER.WRITE
               level: CAN_USE
-
-  A_bootstrap:
-    mode: production
-    workspace:
-      host: https://adb-4796304964978539.19.azuredatabricks.net
-      root_path: /Workspace/automation/${bundle.name}/A
-    variables:
-      catalog: automation_a
-      warehouse_id: fe5f9b40ac3a9b6e
-      policy_id: 306312B973005677
-    permissions:
-      - user_name: mustafaarda.bicakci@etexgroup.com
-        level: CAN_MANAGE
-      - user_name: pierre.delaguiche@etexgroup.com
-        level: CAN_MANAGE
-    # Deploy only jobs/files — no app (app needs warehouse CAN_USE from consumer pipeline first)
-    resources:
-      apps:
-        ds_air_monitoring_app:
-          resources: []
 
   A:
     mode: production
@@ -95,7 +74,7 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       catalog: automation_a
-      warehouse_id: f68599b38752394a
+      warehouse_id: f68599b38752394a  # aut-airmonitoring-consumer-sqlwh-a
       policy_id: 306312B973005677
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
@@ -112,7 +91,6 @@ targets:
             - sql
           resources:
             - name: "sql-warehouse"
-              description: "SQL warehouse for air monitoring queries"
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: "CAN_USE"
@@ -126,26 +104,6 @@ targets:
             - group_name: AUTOMATION.AIRMONITORING.CONSUMER.WRITE
               level: CAN_USE
 
-  P_bootstrap:
-    mode: production
-    workspace:
-      host: https://adb-4844910598668398.18.azuredatabricks.net
-      root_path: /Workspace/automation/${bundle.name}/P
-    variables:
-      catalog: automation_p
-      warehouse_id: 83294e3f6b44f138
-      policy_id: 306312B973005150
-    permissions:
-      - user_name: mustafaarda.bicakci@etexgroup.com
-        level: CAN_MANAGE
-      - user_name: pierre.delaguiche@etexgroup.com
-        level: CAN_MANAGE
-    # Deploy only jobs/files — no app (app needs warehouse CAN_USE from consumer pipeline first)
-    resources:
-      apps:
-        ds_air_monitoring_app:
-          resources: []
-
   P:
     mode: production
     workspace:
@@ -153,7 +111,7 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       catalog: automation_p
-      warehouse_id: 83294e3f6b44f138
+      warehouse_id: efc56ffbe4189cdf  # aut-airmonitoring-consumer-sqlwh-p
       policy_id: 306312B973005150
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
@@ -170,7 +128,6 @@ targets:
             - sql
           resources:
             - name: "sql-warehouse"
-              description: "SQL warehouse for air monitoring queries"
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: "CAN_USE"
