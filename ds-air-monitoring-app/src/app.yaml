@@ -11,7 +11,7 @@ command:
   - "0.0.0.0"
 env:
   - name: SQL_WAREHOUSE_ID
-    valueFrom: sql-warehouse # value: "69ada62b2fb9b9e2"
+    valueFrom: sql-warehouse #value: "69ada62b2fb9b9e2" 
   - name: BRONZE_SCHEMA
     value: "bronze"
   - name: VOLUME_NAME

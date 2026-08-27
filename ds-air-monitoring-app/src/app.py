@@ -1012,7 +1012,8 @@ with tab_upload:
                     with data_col:
                         # Duplicates
                         if dupes:
-                            with st.expander(f"⚠️ {len(dupes)} potential duplicate(s)", expanded=False):
+                            st.markdown(f"⚠️ **{len(dupes)} potential duplicate(s)**", unsafe_allow_html=False)
+                            with st.container():
                                 for idx, info in dupes.items():
                                     if idx < len(df):
                                         sample = df.iloc[idx].get("Sample_no", "?")
