@@ -834,8 +834,8 @@ with tab_upload:
             unsafe_allow_html=True
         )
         uploaded_files = st.file_uploader(
-            "Upload PDF Reports",
-            type=["pdf"],
+            "Upload Reports (PDF only — other formats will be skipped)",
+            type=None,
             accept_multiple_files=True,
             label_visibility="collapsed",
             help="Drag and drop multiple PDFs. Each file gets its own review tab."
@@ -876,6 +876,11 @@ with tab_upload:
                     # Check if this file was already uploaded for this site
                     if check_file_already_uploaded(uf.name, site_info["Code"]):
                         st.warning(f"  ⚠️ `{uf.name}` has already been uploaded for this site — skipping.")
+                        _skipped_files.append(uf.name)
+                        continue
+
+                    if not uf.name.lower().endswith(".pdf"):
+                        st.warning(f"  ⚠️ `{uf.name}` is not a PDF — skipped. Only PDF files can be processed.")
                         _skipped_files.append(uf.name)
                         continue
 
@@ -972,10 +977,12 @@ with tab_upload:
             if saved_count > 0:
                 st.progress((len(st.session_state.saved_files) + len(st.session_state.skipped_files)) / len(tab_names), text=f"{len(st.session_state.saved_files)} saved, {len(st.session_state.skipped_files)} skipped / {len(tab_names)} total")
 
-            tabs = st.tabs([f"{'✅ ' if n in st.session_state.saved_files else '⏭️ ' if n in st.session_state.skipped_files else '📄 '}{n}" for n in tab_names])
-
-            for tab, filename in zip(tabs, tab_names):
-                with tab:
+            for filename in tab_names:
+                icon = "✅" if filename in st.session_state.saved_files else "⏭️" if filename in st.session_state.skipped_files else "📄"
+                # Auto-expand only the first unsaved/unskipped file
+                is_pending = filename not in st.session_state.saved_files and filename not in st.session_state.skipped_files
+                first_pending = next((f for f in tab_names if f not in st.session_state.saved_files and f not in st.session_state.skipped_files), None)
+                with st.expander(f"{icon} {filename}", expanded=(filename == first_pending)):
                     if filename in st.session_state.saved_files:
                         st.markdown(
                             '<div class="save-summary"><b>✓ Saved to database</b></div>',

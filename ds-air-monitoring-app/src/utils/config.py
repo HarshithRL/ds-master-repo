@@ -22,19 +22,16 @@ _host = os.environ.get("DATABRICKS_HOST", "")
 _ENV_OVERRIDES = {
     "7181820732839861": {
         "catalog": "automation_d",
-        "warehouse": "69ada62b2fb9b9e2",
         "auth_mode": "user",
         "keyvault_url": "https://we-spoke-mdp-aut-t-kv.vault.azure.net",
     },
     "4796304964978539": {
         "catalog": "automation_a",
-        "warehouse": "fe5f9b40ac3a9b6e",
         "auth_mode": "user",
         "keyvault_url": "https://we-spoke-mdp-aut-a-kv.vault.azure.net",
     },
     "4844910598668398": {
         "catalog": "automation_p",
-        "warehouse": "83294e3f6b44f138",
         "auth_mode": "user",
         "keyvault_url": "https://we-spoke-mdp-aut-p-kv.vault.azure.net",
     },
@@ -68,7 +65,8 @@ SITES_TABLE = f"{UNITY_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_sites"
 UPLOAD_LOG_TABLE = f"{UNITY_CATALOG}.{BRONZE_SCHEMA}.air_monitoring_upload_log"
 
 # SQL Warehouse
-WAREHOUSE_ID = _detected_env["warehouse"] if _detected_env else os.environ.get("DATABRICKS_WAREHOUSE_ID", "69ada62b2fb9b9e2")
+# SQL_WAREHOUSE_ID is injected by app.yaml (valueFrom: sql-warehouse)
+WAREHOUSE_ID = os.environ.get("SQL_WAREHOUSE_ID") or os.environ.get("DATABRICKS_WAREHOUSE_ID", "69ada62b2fb9b9e2")
 
 
 # ============================================================
