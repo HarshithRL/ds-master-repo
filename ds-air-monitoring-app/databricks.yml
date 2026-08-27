@@ -8,7 +8,6 @@ variables:
   catalog:
     description: The Unity Catalog catalog for air monitoring tables
   warehouse_id:
-    default: ""
     description: >
       SQL warehouse the app runs on. D and T use the shared automation warehouse,
       because the consumer-access pipeline (Automation_Assign_Consumer_Access) does
@@ -18,12 +17,6 @@ variables:
       visitor's own CAN_USE that decides what a query may do.
   policy_id:
     description: Cluster policy id to use for setup job compute
-  mdp_monitoring_sp_client_id:
-    description: MDP Monitoring app service principal client_id (injected by pipeline)
-    default: ""
-  notification_destination_id:
-    description: Webhook notification destination ID for the MDP Monitoring app (injected by pipeline)
-    default: ""
 
 targets:
   D:
@@ -61,7 +54,6 @@ targets:
             - sql
           resources:
             - name: "sql-warehouse"
-              description: "SQL warehouse for air monitoring queries"
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: "CAN_USE"
@@ -74,30 +66,6 @@ targets:
               level: CAN_USE
             - group_name: AUTOMATION.AIRMONITORING.CONSUMER.WRITE
               level: CAN_USE
-
-  A_bootstrap:
-    mode: production
-    workspace:
-      host: https://adb-4796304964978539.19.azuredatabricks.net
-      root_path: /Workspace/automation/${bundle.name}/A
-    variables:
-      catalog: automation_a
-      policy_id: 306312B973005677
-    permissions:
-      - user_name: mustafaarda.bicakci@etexgroup.com
-        level: CAN_MANAGE
-      - user_name: pierre.delaguiche@etexgroup.com
-        level: CAN_MANAGE
-    # Deploy jobs/files + app shell without warehouse (no SQL endpoint permission needed)
-    resources:
-      apps:
-        ds_air_monitoring_app:
-          name: ds-air-monitoring-app
-          description: "Air quality monitoring app for Etex manufacturing sites"
-          source_code_path: src
-          user_api_scopes:
-            - sql
-          resources: []
 
   A:
     mode: production
@@ -106,7 +74,7 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       catalog: automation_a
-      warehouse_id: f68599b38752394a
+      warehouse_id: f68599b38752394a  # aut-airmonitoring-consumer-sqlwh-a
       policy_id: 306312B973005677
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
@@ -123,7 +91,6 @@ targets:
             - sql
           resources:
             - name: "sql-warehouse"
-              description: "SQL warehouse for air monitoring queries"
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: "CAN_USE"
@@ -137,30 +104,6 @@ targets:
             - group_name: AUTOMATION.AIRMONITORING.CONSUMER.WRITE
               level: CAN_USE
 
-  P_bootstrap:
-    mode: production
-    workspace:
-      host: https://adb-4844910598668398.18.azuredatabricks.net
-      root_path: /Workspace/automation/${bundle.name}/P
-    variables:
-      catalog: automation_p
-      policy_id: 306312B973005150
-    permissions:
-      - user_name: mustafaarda.bicakci@etexgroup.com
-        level: CAN_MANAGE
-      - user_name: pierre.delaguiche@etexgroup.com
-        level: CAN_MANAGE
-    # Deploy jobs/files + app shell without warehouse (no SQL endpoint permission needed)
-    resources:
-      apps:
-        ds_air_monitoring_app:
-          name: ds-air-monitoring-app
-          description: "Air quality monitoring app for Etex manufacturing sites"
-          source_code_path: src
-          user_api_scopes:
-            - sql
-          resources: []
-
   P:
     mode: production
     workspace:
@@ -168,7 +111,7 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       catalog: automation_p
-      warehouse_id: 83294e3f6b44f138
+      warehouse_id: efc56ffbe4189cdf  # aut-airmonitoring-consumer-sqlwh-p
       policy_id: 306312B973005150
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
@@ -185,7 +128,6 @@ targets:
             - sql
           resources:
             - name: "sql-warehouse"
-              description: "SQL warehouse for air monitoring queries"
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: "CAN_USE"

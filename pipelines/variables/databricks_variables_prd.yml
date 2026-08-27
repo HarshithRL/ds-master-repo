@@ -2,9 +2,7 @@ variables:
   - name: ENV_LONG
     value: prd
   - name: ENV_SHORT
-    # P           = full deploy (app + jobs) — requires Mikail's consumer pipeline to have run
-    # P_bootstrap = jobs + files only (no app) — use first time before consumer pipeline runs
-    value: P_bootstrap
+    value: P
   - name: ENV_catalog
     value: p
   - name: SUBSCRIPTION_NAME

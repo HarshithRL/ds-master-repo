@@ -2,8 +2,6 @@ variables:
   - name: ENV_LONG
     value: acc
   - name: ENV_SHORT
-    # A           = full deploy (app + jobs) — requires Mikail's consumer pipeline to have run
-    # A_bootstrap = jobs + files only (no app) — use first time before consumer pipeline runs
     value: A
   - name: ENV_catalog
     value: a

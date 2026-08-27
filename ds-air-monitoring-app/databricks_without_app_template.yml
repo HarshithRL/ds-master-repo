@@ -1,0 +1,62 @@
+# ============================================================
+# TEMPLATE: WITHOUT APP (bootstrap) — copy this to databricks.yml
+# ============================================================
+# Use BEFORE Mikail's consumer pipeline has run.
+# ENV_SHORT stays A / P — just swap databricks.yml content.
+# Steps:
+#   1. Copy this content into databricks.yml
+#   2. Commit → pipeline deploys jobs + files only (no app, no warehouse needed)
+#   3. Run air_monitoring_setup_tables job → tables created
+#   4. Mikail runs consumer pipeline → warehouse + SPN permissions
+#   5. Switch to databricks_app_template.yml (fill WAREHOUSE_ID_ACC/PRD)
+# ============================================================
+bundle:
+  name: ds-air-monitoring-app
+
+include:
+  - resources/jobs/*.yml
+
+variables:
+  catalog:
+    description: The Unity Catalog catalog for air monitoring tables
+  policy_id:
+    description: Cluster policy id to use for setup job compute
+
+targets:
+  D:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/Users/${workspace.current_user.userName}/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_d
+      policy_id: 306312B9730019AB
+
+  A:
+    mode: production
+    workspace:
+      host: https://adb-4796304964978539.19.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/A
+    variables:
+      catalog: automation_a
+      policy_id: 306312B973005677
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+
+  P:
+    mode: production
+    workspace:
+      host: https://adb-4844910598668398.18.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/P
+    variables:
+      catalog: automation_p
+      policy_id: 306312B973005150
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
