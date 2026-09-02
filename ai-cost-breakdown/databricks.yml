@@ -31,6 +31,8 @@ targets:
       policy_id: 306312B9730019AB
       catalog: automation_d
     permissions:
+      - service_principal_name: ${workspace.current_user.userName}
+        level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
@@ -45,6 +47,8 @@ targets:
       policy_id: 306312B973005677
       catalog: automation_a
     permissions:
+      - service_principal_name: ${workspace.current_user.userName}
+        level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
@@ -59,6 +63,8 @@ targets:
       policy_id: 306312B973005150
       catalog: automation_p
     permissions:
+      - service_principal_name: ${workspace.current_user.userName}
+        level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
