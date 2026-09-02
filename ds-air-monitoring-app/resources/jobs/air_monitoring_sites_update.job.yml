@@ -1,0 +1,27 @@
+# Air Monitoring — Sites Update
+# Run manually when site config changes (new sites, updated allowed_users, etc.)
+# Reads from: /Volumes/{catalog}/bronze/bronze_volume/air_monitoring/sites/
+# OVERWRITES sites table (config/dimension — not user data, safe to replace).
+# Also ensures upload_log table exists.
+resources:
+  jobs:
+    air_monitoring_sites_update:
+      name: "Air Monitoring - Sites Update"
+      tags:
+        project: air-monitoring
+        purpose: sites-config
+      tasks:
+        - task_key: load_sites
+          notebook_task:
+            notebook_path: ../../src/migration_exports/3_Load_from_Excel_ACC_PRD.py
+            base_parameters:
+              LOAD_MODE: "sites"
+              TARGET_CATALOG: ${var.catalog}
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: "Standard_DS3_v2"
+            data_security_mode: USER_ISOLATION
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*]"
+            policy_id: ${var.policy_id}

@@ -1,0 +1,98 @@
+# =============================================================================
+# JOB: agent_dashboard — Phase 1 pipeline (serverless)
+# =============================================================================
+# Ingest → Silver → Gold → (Bot / Copilot / Governance) → Validate → Publish
+# File-arrival trigger watches the bronze volume (PAUSED until verified).
+# =============================================================================
+
+resources:
+  jobs:
+    agent_dashboard:
+      name: Agent Dashboard Phase 1 Pipeline
+      max_concurrent_runs: 1
+      performance_target: PERFORMANCE_OPTIMIZED
+      queue:
+        enabled: true
+
+      environments:
+        - environment_key: Default
+          spec:
+            environment_version: "5"
+
+      trigger:
+        file_arrival:
+          url: /Volumes/${var.catalog}/bronze/bronze_volume/
+        pause_status: PAUSED
+
+      tasks:
+        - task_key: Ingest_bronze
+          environment_key: Default
+          notebook_task:
+            notebook_path: ../src/notebooks/01_excel_to_bronze.sql
+            base_parameters:
+              load_mode: incremental
+          timeout_seconds: 7200
+
+        - task_key: Silver_preprocess
+          depends_on:
+            - task_key: Ingest_bronze
+          environment_key: Default
+          notebook_task:
+            notebook_path: ../src/notebooks/02_silver_layer_pipeline.py
+
+        - task_key: Gold_dimensional
+          depends_on:
+            - task_key: Silver_preprocess
+          environment_key: Default
+          notebook_task:
+            notebook_path: ../src/notebooks/07_dimensional_layer_refresh.sql
+
+        - task_key: Bot_usage_metrics
+          depends_on:
+            - task_key: Gold_dimensional
+          environment_key: Default
+          notebook_task:
+            notebook_path: ../src/notebooks/03_bot_usage_metrics.sql
+
+        - task_key: Copilot_metrics
+          depends_on:
+            - task_key: Gold_dimensional
+          environment_key: Default
+          notebook_task:
+            notebook_path: ../src/notebooks/04_metric_creation.py
+
+        - task_key: Governance_cost_metrics
+          depends_on:
+            - task_key: Gold_dimensional
+          environment_key: Default
+          notebook_task:
+            notebook_path: ../src/notebooks/05_metric_views_refresh.py
+
+        - task_key: Validate_dashboard
+          depends_on:
+            - task_key: Bot_usage_metrics
+            - task_key: Copilot_metrics
+            - task_key: Governance_cost_metrics
+          environment_key: Default
+          notebook_task:
+            notebook_path: ../src/notebooks/08_validate_dashboard.py
+          timeout_seconds: 3600
+
+        - task_key: Publish_dashboard
+          depends_on:
+            - task_key: Validate_dashboard
+          environment_key: Default
+          notebook_task:
+            notebook_path: ../src/notebooks/09_publish_dashboard.py
+            base_parameters:
+              dashboard_id: ${var.dashboard_id}
+              warehouse_id: ${var.warehouse_id}
+          timeout_seconds: 600
+
+      permissions:
+        - user_name: harshith.raghunath@etexgroup.com
+          level: CAN_MANAGE
+        - user_name: pierre.delaguiche@etexgroup.com
+          level: CAN_MANAGE
+        - user_name: mustafaarda.bicakci@etexgroup.com
+          level: CAN_MANAGE

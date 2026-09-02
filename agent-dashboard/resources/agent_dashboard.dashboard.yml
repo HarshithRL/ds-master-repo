@@ -1,0 +1,15 @@
+# =============================================================================
+# DASHBOARD: Agent Dashboard Phase 1 (Silver)
+# =============================================================================
+# Lakeview dashboard deployed from src/dashboards/*.lvdash.json.
+# dataset_catalog / dataset_schema remapped per target (automation_{d|a|p}.silver).
+# =============================================================================
+
+resources:
+  dashboards:
+    agent_dashboard_phase1:
+      display_name: Agent Dashboard Phase 1 (Silver)
+      file_path: ../src/dashboards/agent_dashboard_phase1.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${var.catalog}
+      dataset_schema: ${var.schema}

@@ -1,0 +1,124 @@
+# DEPRECATED — This per-project pipeline is replaced by the shared master pipeline.
+# Deployment is now handled by:
+#   pipelines/Automation_Deploy_Databricks_{TEST,ACC,PRD}.yml (at repo root)
+# which uses the da-mdp-foundations-deployments template and iterates all bundles.
+#
+# The app is now a proper DAB resource (resources/apps/air_monitoring_app.yml)
+# and deploys automatically with `databricks bundle deploy`.
+#
+# DELETE this file once the new pipeline is confirmed working.
+#
+# --- ORIGINAL (kept for reference) ---
+# Azure DevOps Pipeline — Deploy Air Monitoring App
+# Triggers on acc or main branch changes
+# acc branch  → deploys to ACC workspace
+# main branch → deploys to ACC + PRD (PRD requires approval)
+
+trigger:
+  branches:
+    include:
+      - acc
+      - main
+  paths:
+    include:
+      - ds-air-monitoring-app/src/**
+      - ds-air-monitoring-app/resources/air_monitoring_app.yml
+      - ds-air-monitoring-app/databricks.yml
+      - ds-air-monitoring-app/scripts/deploy_app.sh
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - group: 'air-monitoring-app-secrets'  # Contains SPN credentials per env
+
+stages:
+  # ============================================================
+  # ACC Deployment
+  # ============================================================
+  - stage: Deploy_ACC
+    displayName: 'Deploy to ACC'
+    jobs:
+      - job: deploy_acc
+        displayName: 'Deploy App to ACC'
+        steps:
+          - checkout: self
+
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.11'
+
+          - script: |
+              curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+            displayName: 'Install Databricks CLI'
+
+          - script: |
+              # Configure Databricks CLI for ACC workspace
+              export DATABRICKS_HOST="https://adb-4796304964978539.19.azuredatabricks.net"
+              export DATABRICKS_CLIENT_ID=$(ACC_SPN_CLIENT_ID)
+              export DATABRICKS_CLIENT_SECRET=$(ACC_SPN_CLIENT_SECRET)
+
+              # Swap app.yaml for ACC
+              echo "Copying app.acc.yaml -> app.yaml"
+              cp src/app.acc.yaml src/app.yaml
+
+              # Bundle deploy (uploads source + registers app)
+              databricks bundle deploy --target A
+
+              # Deploy app to compute
+              databricks apps deploy ds-air-monitoring-app \
+                --source-code-path "/Workspace/automation/ds-air-monitoring-app/A/files/src"
+
+              echo "✅ ACC deployment complete"
+            displayName: 'Deploy to ACC'
+            env:
+              ACC_SPN_CLIENT_ID: $(acc-spn-client-id)
+              ACC_SPN_CLIENT_SECRET: $(acc-spn-client-secret)
+
+  # ============================================================
+  # PRD Deployment (with approval gate)
+  # ============================================================
+  - stage: Deploy_PRD
+    displayName: 'Deploy to PRD'
+    dependsOn: Deploy_ACC
+    condition: succeeded()
+    jobs:
+      - deployment: deploy_prd
+        displayName: 'Deploy App to PRD'
+        environment: 'production'  # Requires approval in Azure DevOps
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: UsePythonVersion@0
+                  inputs:
+                    versionSpec: '3.11'
+
+                - script: |
+                    curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+                  displayName: 'Install Databricks CLI'
+
+                - script: |
+                    # Configure Databricks CLI for PRD workspace
+                    export DATABRICKS_HOST="https://adb-4844910598668398.18.azuredatabricks.net"
+                    export DATABRICKS_CLIENT_ID=$(PRD_SPN_CLIENT_ID)
+                    export DATABRICKS_CLIENT_SECRET=$(PRD_SPN_CLIENT_SECRET)
+
+                    # Swap app.yaml for PRD
+                    echo "Copying app.prd.yaml -> app.yaml"
+                    cp src/app.prd.yaml src/app.yaml
+
+                    # Bundle deploy (uploads source + registers app)
+                    databricks bundle deploy --target P
+
+                    # Deploy app to compute
+                    databricks apps deploy ds-air-monitoring-app \
+                      --source-code-path "/Workspace/automation/ds-air-monitoring-app/P/files/src"
+
+                    echo "✅ PRD deployment complete"
+                  displayName: 'Deploy to PRD'
+                  env:
+                    PRD_SPN_CLIENT_ID: $(prd-spn-client-id)
+                    PRD_SPN_CLIENT_SECRET: $(prd-spn-client-secret)

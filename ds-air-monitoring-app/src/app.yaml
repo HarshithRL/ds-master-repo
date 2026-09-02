@@ -1,0 +1,30 @@
+# Air Monitoring App — managed by Declarative Automation Bundle
+# SQL_WAREHOUSE_ID is injected via the app resource (valueFrom).
+# UNITY_CATALOG is auto-detected from DATABRICKS_HOST at runtime by config.py.
+command:
+  - streamlit
+  - run
+  - app.py
+  - --server.port
+  - "8000"
+  - --server.address
+  - "0.0.0.0"
+env:
+  - name: SQL_WAREHOUSE_ID
+    valueFrom: sql-warehouse # value: "69ada62b2fb9b9e2"
+  - name: BRONZE_SCHEMA
+    value: "bronze"
+  - name: VOLUME_NAME
+    value: "bronze_volume"
+  - name: AUTH_MODE
+    value: "user"
+  - name: DOC_INTELLIGENCE_ENDPOINT
+    value: "https://we-spoke-mdp-t-formrecogniser.cognitiveservices.azure.com/"
+  - name: DOC_INTELLIGENCE_KEY
+    value: "1bdb532656d248bda3c6b58a9b75441f"
+  - name: OPENAI_API_KEY
+    value: "CqKjJbBku9Uf2PQLxKvDgaXF5xt3BU5u8yvQJsev3cwfycMxVosuJQQJ99BCACHYHv6XJ3w3AAAAACOGmDfg"
+  - name: AZURE_TENANT_ID
+    value: "e23c7299-f64d-4de4-a6a1-b40d3145528c"
+  - name: USE_KEYVAULT
+    value: "false"

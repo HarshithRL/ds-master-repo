@@ -1,0 +1,178 @@
+{
+  "_comment": [
+    "Consumer access for the Air Monitoring data product.",
+    "Applied by the CENTRAL pipeline (Automation_Assign_Consumer_Access) in",
+    "da-mdp-automation-deployments \u2014 there is deliberately no pipeline here,",
+    "because applying this file needs an account-admin identity that data-product",
+    "repos must not be able to drive.",
+    "",
+    "Environments: acc and prd only. Consumer groups exist to use apps, and apps are",
+    "consumed in acceptance and production; dev/test access belongs to the engineers",
+    "through their SEC.RBAC.* groups.",
+    "",
+    "WHY THESE GRANTS MATTER FOR THIS APP",
+    "The air-monitoring app runs its SQL as the VISITOR, not as its service principal:",
+    "resources/apps/air_monitoring_app.yml declares user_api_scopes: [sql], and",
+    "src/utils/db_utils.py opens the connection with the forwarded x-forwarded-access-token.",
+    "It refuses to fall back to the service principal, so a visitor who is missing a",
+    "grant below gets a permission error rather than silently borrowing the SP's",
+    "access. That is what makes these grants load-bearing instead of decorative.",
+    "Volume uploads also run as the visitor (upload_file_to_volume uses the forwarded",
+    "token), so WRITE_VOLUME is equally load-bearing.",
+    "",
+    "HOW A GRANT WORKS",
+    "  tier       picks the GROUP.  READ -> AUTOMATION.AIR_MONITORING.CONSUMER.READ",
+    "                               WRITE -> AUTOMATION.AIR_MONITORING.CONSUMER.WRITE",
+    "             The tier name carries no privilege meaning - it is only the group",
+    "             suffix.",
+    "  privileges are real Databricks privileges, exactly as in GRANT ... ON ...",
+    "             Nothing is added or implied.",
+    "",
+    "  Allowed per object (an allow-list - no route to ALL_PRIVILEGES, MANAGE,",
+    "  CREATE_*, APPLY_TAG or ownership):",
+    "    catalog  USE_CATALOG, USE_SCHEMA, SELECT",
+    "    schema   USE_SCHEMA, SELECT, MODIFY",
+    "    table    SELECT, MODIFY",
+    "    volume   READ_VOLUME, WRITE_VOLUME",
+    "",
+    "  catalog is the BASE name: the pipeline appends _a / _p, so one file serves both",
+    "  environments. An environment-suffixed catalog is rejected.",
+    "",
+    "  The WRITE tier grants MODIFY per table rather than on the schema, so a consumer",
+    "  can write the app's own tables and nothing else that later lands in the schema.",
+    "  It relies on its members also being in READ for USE_CATALOG and USE_SCHEMA -",
+    "  validation warns about exactly that, by design.",
+    "",
+    "  Tables the app writes as the visitor are taken from src/utils/db_utils.py.",
+    "  setup_tables.py is run by the setup job as the service principal, not through",
+    "  the app, so CREATE TABLE operations do not need a consumer grant.",
+    "",
+    "warehouse: true gives this data product its own warehouse, created and owned by",
+    "the pipeline (aut-airmonitoring-consumer-sqlwh-a / -p). Note the bundle",
+    "ALSO creates a warehouse and binds it to the app; this pipeline never touches a",
+    "warehouse it did not create, so CAN_USE on that one belongs in the bundle.",
+    "",
+    "Members: all @etexgroup.com users listed in automation_d.bronze.air_monitoring_sites.allowed_users",
+    "Excluded: @pladur.com addresses (not allowed by guardrails) and users not in the Databricks account."
+  ],
+  "data_products": [
+    {
+      "data_product": "ds-air-monitoring-app",
+      "warehouse": true,
+      "consumer_groups": [
+        {
+          "tier": "READ",
+          "grants": [
+            {
+              "catalog": "automation",
+              "privileges": [
+                "USE_CATALOG"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "air_monitoring_output",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "air_monitoring_sites",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "air_monitoring_upload_log",
+              "privileges": [
+                "SELECT"
+              ]
+            }
+          ],
+          "members": [
+            "adam.wallace@etexgroup.com",
+            "chiara.senzolo@etexgroup.com",
+            "daniel.vinascoquintero@etexgroup.com",
+            "frederic.conte@etexgroup.com",
+            "ionut.somlea@etexgroup.com",
+            "joan.magrane@etexgroup.com",
+            "josefrancisco.apablaza@etexgroup.com",
+            "juan.lavezzi@etexgroup.com",
+            "leonardo.salazar@etexgroup.com",
+            "malcolm.brown@etexgroup.com",
+            "mariano.caputo@etexgroup.com",
+            "mustafaarda.bicakci@etexgroup.com",
+            "olaolu.abikoye@etexgroup.com",
+            "pascal.journet@etexgroup.com",
+            "patrick.vandegraaf@etexgroup.com",
+            "pierre.delaguiche@etexgroup.com",
+            "roberto.barrionuevo@etexgroup.com",
+            "ronan.clooney@etexgroup.com",
+            "sofie.staes@etexgroup.com",
+            "soren.jensen@etexgroup.com",
+            "thomas.groetzner@etexgroup.com",
+            "tom.thoelen@etexgroup.com",
+            "yusman.syidam@etexgroup.com"
+          ]
+        },
+        {
+          "tier": "WRITE",
+          "grants": [
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "privileges": [
+                "MODIFY"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "volume": "bronze_volume",
+              "privileges": [
+                "WRITE_VOLUME"
+              ]
+            }
+          ],
+          "members": [
+            "adam.wallace@etexgroup.com",
+            "chiara.senzolo@etexgroup.com",
+            "daniel.vinascoquintero@etexgroup.com",
+            "frederic.conte@etexgroup.com",
+            "ionut.somlea@etexgroup.com",
+            "joan.magrane@etexgroup.com",
+            "josefrancisco.apablaza@etexgroup.com",
+            "juan.lavezzi@etexgroup.com",
+            "leonardo.salazar@etexgroup.com",
+            "malcolm.brown@etexgroup.com",
+            "mariano.caputo@etexgroup.com",
+            "mustafaarda.bicakci@etexgroup.com",
+            "olaolu.abikoye@etexgroup.com",
+            "pascal.journet@etexgroup.com",
+            "patrick.vandegraaf@etexgroup.com",
+            "pierre.delaguiche@etexgroup.com",
+            "roberto.barrionuevo@etexgroup.com",
+            "ronan.clooney@etexgroup.com",
+            "sofie.staes@etexgroup.com",
+            "soren.jensen@etexgroup.com",
+            "thomas.groetzner@etexgroup.com",
+            "tom.thoelen@etexgroup.com",
+            "yusman.syidam@etexgroup.com"
+          ]
+        }
+      ]
+    }
+  ]
+}

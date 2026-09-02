@@ -1,0 +1,142 @@
+bundle:
+  name: ds-air-monitoring-app
+
+include:
+  - resources/jobs/*.yml
+
+variables:
+  catalog:
+    description: The Unity Catalog catalog for air monitoring tables
+  warehouse_id:
+    description: >
+      SQL warehouse the app runs on. D and T use the shared automation warehouse,
+      because the consumer-access pipeline (Automation_Assign_Consumer_Access) does
+      not run for development or test. A and P use the warehouse that pipeline
+      created, which already carries the consumer groups' CAN_USE grant.
+      The app forwards the visitor's token (user_api_scopes: sql), so it is the
+      visitor's own CAN_USE that decides what a query may do.
+  policy_id:
+    description: Cluster policy id to use for setup job compute
+
+targets:
+  D:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/Users/${workspace.current_user.userName}/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_d
+      warehouse_id: 69ada62b2fb9b9e2
+      policy_id: 306312B9730019AB
+
+  T:
+    mode: production
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_d
+      warehouse_id: 69ada62b2fb9b9e2
+      policy_id: 306312B9730019AB
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+    resources:
+      apps:
+        ds_air_monitoring_app:
+          name: ds-air-monitoring-app
+          description: "Air quality monitoring app for Etex manufacturing sites"
+          source_code_path: src
+          user_api_scopes:
+            - sql
+          resources:
+            - name: "sql-warehouse"
+              sql_warehouse:
+                id: ${var.warehouse_id}
+                permission: "CAN_USE"
+          permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE
+            - group_name: AUTOMATION.AIRMONITORING.CONSUMER.READ
+              level: CAN_USE
+            - group_name: AUTOMATION.AIRMONITORING.CONSUMER.WRITE
+              level: CAN_USE
+
+  A:
+    mode: production
+    workspace:
+      host: https://adb-4796304964978539.19.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_a
+      warehouse_id: f68599b38752394a  # aut-airmonitoring-consumer-sqlwh-a
+      policy_id: 306312B973005677
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+    resources:
+      apps:
+        ds_air_monitoring_app:
+          name: ds-air-monitoring-app
+          description: "Air quality monitoring app for Etex manufacturing sites"
+          source_code_path: src
+          user_api_scopes:
+            - sql
+          resources:
+            - name: "sql-warehouse"
+              sql_warehouse:
+                id: ${var.warehouse_id}
+                permission: "CAN_USE"
+          permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE
+            - group_name: AUTOMATION.AIRMONITORING.CONSUMER.READ
+              level: CAN_USE
+            - group_name: AUTOMATION.AIRMONITORING.CONSUMER.WRITE
+              level: CAN_USE
+
+  P:
+    mode: production
+    workspace:
+      host: https://adb-4844910598668398.18.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_p
+      warehouse_id: efc56ffbe4189cdf  # aut-airmonitoring-consumer-sqlwh-p
+      policy_id: 306312B973005150
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+    resources:
+      apps:
+        ds_air_monitoring_app:
+          name: ds-air-monitoring-app
+          description: "Air quality monitoring app for Etex manufacturing sites"
+          source_code_path: src
+          user_api_scopes:
+            - sql
+          resources:
+            - name: "sql-warehouse"
+              sql_warehouse:
+                id: ${var.warehouse_id}
+                permission: "CAN_USE"
+          permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE
+            - group_name: AUTOMATION.AIRMONITORING.CONSUMER.READ
+              level: CAN_USE
+            - group_name: AUTOMATION.AIRMONITORING.CONSUMER.WRITE
+              level: CAN_USE
