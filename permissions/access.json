@@ -57,6 +57,42 @@
   ],
   "data_products": [
     {
+      "data_product": "ds-ai-cost-breakdown",
+      "warehouse": false,
+      "consumer_groups": [
+        {
+          "tier": "READ",
+          "grants": [
+            {
+              "catalog": "automation",
+              "privileges": [
+                "USE_CATALOG"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "ai_cost_breakdown_enriched",
+              "privileges": [
+                "SELECT"
+              ]
+            }
+          ],
+          "members": [
+            "mustafaarda.bicakci@etexgroup.com",
+            "pierre.delaguiche@etexgroup.com"
+          ]
+        }
+      ]
+    },
+    {
       "data_product": "ds-air-monitoring-app",
       "warehouse": true,
       "consumer_groups": [
