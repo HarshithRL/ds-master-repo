@@ -1012,7 +1012,8 @@ with tab_upload:
                     with data_col:
                         # Duplicates
                         if dupes:
-                            with st.expander(f"⚠️ {len(dupes)} potential duplicate(s)", expanded=False):
+                            st.markdown(f"⚠️ **{len(dupes)} potential duplicate(s)**", unsafe_allow_html=False)
+                            with st.container():
                                 for idx, info in dupes.items():
                                     if idx < len(df):
                                         sample = df.iloc[idx].get("Sample_no", "?")
@@ -1155,12 +1156,14 @@ with tab_browser:
         # Filters in a card
 
         sites_df = get_sites_for_user(user)
+        _is_admin_user = is_admin(user)
         if not sites_df.empty:
             sites_df = sites_df.sort_values("site_code").reset_index(drop=True)
             sites_df["display"] = sites_df["site_code"].fillna("") + " — " + sites_df["site_name"]
-            site_options = ["All"] + sites_df["display"].tolist()
+            # "All" is only offered to admins — regular users only ever see their own site(s)
+            site_options = (["All"] if _is_admin_user else []) + sites_df["display"].tolist()
         else:
-            site_options = ["All"]
+            site_options = ["All"] if _is_admin_user else []
 
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -1525,378 +1528,397 @@ with tab_history:
 
         # ── Global Site Filter (affects all sections below) ──
         _user_sites = get_sites_for_user(user)
+        _is_admin_user = is_admin(user)
         if not _user_sites.empty:
             _site_filter_options = _user_sites[["site_code", "site_name"]].drop_duplicates().sort_values("site_code")
             _site_filter_labels = [f"{row['site_code']} — {row['site_name']}" for _, row in _site_filter_options.iterrows()]
             _analytics_site_filter = st.multiselect(
-                "🔍 Filter by Site", _site_filter_labels, default=[],
-                help="Leave empty to show all sites",
-                placeholder="All sites",
+                "🔍 Filter by Site", _site_filter_labels, default=([] if _is_admin_user else _site_filter_labels),
+                help="Admins: leave empty to include all sites. Other users: leave empty to include all of your assigned sites." if _is_admin_user else "Leave empty to include all of your assigned sites — you will never see other sites' data.",
+                placeholder="All sites" if _is_admin_user else "All my sites",
                 key="analytics_site_filter"
             )
             _filtered_site_codes = [s.split(" — ")[0] for s in _analytics_site_filter] if _analytics_site_filter else []
         else:
             _filtered_site_codes = []
 
-        # ════════════════════════════════════════════════════════════
-        # UPLOAD HISTORY
-        # ════════════════════════════════════════════════════════════
+        st.markdown("")
+        _load_analytics_btn = st.button("🔍 Load Analytics", type="primary", key="load_analytics_btn")
+        if _load_analytics_btn:
+            st.session_state["analytics_loaded"] = True
 
-        from utils.db_utils import get_upload_history
-        history = get_upload_history(limit=10000)
-        # Filter to user's allowed sites
-        _allowed_codes = get_allowed_site_codes(user)
-        if not history.empty and _allowed_codes and "site_code" in history.columns:
-            history = history[history["site_code"].isin(_allowed_codes)]
-        # Apply site filter
-        if _filtered_site_codes and not history.empty and "site_code" in history.columns:
-            history = history[history["site_code"].isin(_filtered_site_codes)]
-
-        if history.empty:
-            st.info("No uploads recorded yet. Process some PDFs to see history here.")
+        if not st.session_state.get("analytics_loaded", False):
+            st.info("Select site(s) above (optional — admins see all sites, other users only their own) and click **🔍 Load Analytics** to view upload history and KPIs.")
         else:
-            m1, m2, m3 = st.columns(3)
-            m1.metric("Total Uploads", f"{len(history):,}")
-            m2.metric("Records Saved", f"{int(history['num_saved'].sum()):,}" if "num_saved" in history.columns else "0")
-            m3.metric("Users", history["uploaded_by"].nunique() if "uploaded_by" in history.columns else 0)
+            # ════════════════════════════════════════════════════════════
+            # UPLOAD HISTORY
+            # ════════════════════════════════════════════════════════════
 
-            st.markdown("---")
-
-            display_cols = ["upload_time", "filename", "site_name", "site_code",
-                           "uploaded_by", "num_records", "num_duplicates_found", "num_saved", "status"]
-            available_cols = [c for c in display_cols if c in history.columns]
-
-            st.dataframe(
-                history[available_cols],
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "upload_time": st.column_config.DatetimeColumn("When", format="DD/MM/YYYY HH:mm"),
-                    "filename": st.column_config.TextColumn("File"),
-                    "site_name": st.column_config.TextColumn("Site"),
-                    "site_code": st.column_config.TextColumn("Code", width="small"),
-                    "uploaded_by": st.column_config.TextColumn("User"),
-                    "num_records": st.column_config.NumberColumn("Extracted", width="small"),
-                    "num_duplicates_found": st.column_config.NumberColumn("Dupes", width="small"),
-                    "num_saved": st.column_config.NumberColumn("Saved", width="small"),
-                    "status": st.column_config.TextColumn("Status", width="small"),
-                }
-            )
-
-            st.markdown("---")
-
-            # ── Upload Activity Chart ──
-            st.subheader("📅 Upload Activity")
-            if "upload_time" in history.columns:
-                try:
-                    hist_copy = history.copy()
-                    hist_copy["upload_time"] = pd.to_datetime(hist_copy["upload_time"])
-                    hist_copy["upload_month"] = hist_copy["upload_time"].dt.to_period("M").astype(str)
-                    monthly_uploads = hist_copy.groupby("upload_month").size().reset_index(name="Uploads")
-                    monthly_uploads = monthly_uploads.tail(12)
-                    st.bar_chart(monthly_uploads.set_index("upload_month"), y="Uploads", use_container_width=True)
-                except:
-                    st.info("Could not generate upload trend chart.")
-
-        # ════════════════════════════════════════════════════════════
-        # ANALYTICS — KPIs, Site Overview, Data Quality
-        # ════════════════════════════════════════════════════════════
-
-        from utils.db_utils import execute_query
-
-        try:
-            # Load all data for KPIs
-            # Filter by user's allowed sites
+            from utils.db_utils import get_upload_history
+            history = get_upload_history(limit=10000)
+            # Filter to user's allowed sites
             _allowed_codes = get_allowed_site_codes(user)
-            if _allowed_codes:
-                _codes_sql = ", ".join([f"'{c}'" for c in _allowed_codes])
-                _analytics_where = f"Code IN ({_codes_sql})"
+            if not history.empty and _allowed_codes and "site_code" in history.columns:
+                history = history[history["site_code"].isin(_allowed_codes)]
+            # Apply site filter
+            if _filtered_site_codes and not history.empty and "site_code" in history.columns:
+                history = history[history["site_code"].isin(_filtered_site_codes)]
+
+            if history.empty:
+                st.info("No uploads recorded yet. Process some PDFs to see history here.")
             else:
-                _analytics_where = "1=0"
-            all_data = execute_query(f"SELECT * FROM {OUTPUT_TABLE} WHERE {_analytics_where}")
-
-            if all_data is not None and not all_data.empty:
-                # ── Parse Sample_Date for year filtering ──
-                if "Sample_Date" in all_data.columns:
-                    def _parse_sd(s):
-                        if pd.isna(s) or str(s).strip() in ('', 'None', 'NaT', 'Not specified', 'N/A', 'n/a', 'NA'):
-                            return pd.NaT
-                        for fmt in ('%d-%b-%Y', '%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
-                            try:
-                                return pd.to_datetime(s, format=fmt)
-                            except Exception:
-                                pass
-                        return pd.to_datetime(s, errors='coerce')
-                    all_data["_sample_date_parsed"] = all_data["Sample_Date"].apply(_parse_sd)
-                    all_data["_sample_year"] = all_data["_sample_date_parsed"].dt.year.astype("Int64")
-                else:
-                    all_data["_sample_year"] = None
-
-                # ── Year Filter ──
-                available_years = sorted(all_data["_sample_year"].dropna().unique().tolist(), reverse=True)
-                available_years_str = [str(int(y)) for y in available_years]
-                selected_years = st.multiselect("Filter by Sampling Year", available_years_str, default=available_years_str,
-                                                help="Select which sampling years to include in the analytics")
-                selected_years_int = [int(y) for y in selected_years] if selected_years else available_years
-
-                # ── Apply filters ──
-                active = all_data[all_data["row_status"].isin(["active", "modified"])] if "row_status" in all_data.columns else all_data
-                active = active[active["_sample_year"].isin(selected_years_int) | active["_sample_year"].isna()]
-                if _filtered_site_codes:
-                    active = active[active["Code"].isin(_filtered_site_codes)]
-                total_records = len(active)
-                total_sites = active["Code"].nunique() if "Code" in active.columns else 0
-                total_docs = active["Document_name"].nunique() if "Document_name" in active.columns else 0
-                high_conc = int(_to_bool(active["Flag_High_Concentration"]).sum()) if "Flag_High_Concentration" in active.columns else 0
-
-                # ════════════════════════════════════════════════════════
-                # CHIARA'S KPI DASHBOARD (3 categories)
-                # ════════════════════════════════════════════════════════
-
-                # Expected plants list (26 — from Chiara's Jul 2026 email)
-                EXPECTED_PLANTS_2026 = [
-                    "Aghires", "Athy", "Auneuil", "Branden", "Carpentras",
-                    "Dabrowa", "Für", "Goor", "Gresik", "KOB", "Lagos",
-                    "Maipú", "Manizales", "Mazan", "Meldreth", "Neubeckum",
-                    "Novo Mesto", "Ottmarshein", "Rantigny", "Rennes",
-                    "Roedding", "San Justo", "Santa Rosa", "Stirling",
-                    "Tisselt", "Saint Loubes"
-                ]
-
-                # ── 1. DATA SHARING ──
-                st.subheader("📊 Data Sharing")
-                plants_expected = len(EXPECTED_PLANTS_2026)  # 26
-                # Case-insensitive match: normalize both lists to lowercase
-                _expected_lower = {p.lower() for p in EXPECTED_PLANTS_2026}
-                _actual_sites_lower = set(active["Site_name"].dropna().str.lower().unique()) if "Site_name" in active.columns else set()
-                _matched_sites = _expected_lower & _actual_sites_lower
-                sites_sampled = len(_matched_sites)
-                sharing_pct = (sites_sampled / plants_expected * 100) if plants_expected > 0 else 0
-
-                ds1, ds2, ds3 = st.columns(3)
-                ds1.metric("Plants Expected", plants_expected)
-                ds2.metric("Sites Sampled", sites_sampled)
-                ds3.metric("Data Sharing %", f"{sharing_pct:.1f}%")
-
-                with st.expander("📋 Expected Plants List (26)", expanded=False):
-                    _sampled_lower = set(active["Site_name"].dropna().str.lower().unique()) if "Site_name" in active.columns else set()
-                    _plant_status = []
-                    for p in sorted(EXPECTED_PLANTS_2026):
-                        _status = "✅" if p.lower() in _sampled_lower else "⏳"
-                        _plant_status.append(f"{_status} {p}")
-                    # Display in 3 columns
-                    _pc1, _pc2, _pc3 = st.columns(3)
-                    _third = len(_plant_status) // 3 + 1
-                    _pc1.markdown("\n".join(_plant_status[:_third]))
-                    _pc2.markdown("\n".join(_plant_status[_third:2*_third]))
-                    _pc3.markdown("\n".join(_plant_status[2*_third:]))
+                m1, m2, m3 = st.columns(3)
+                m1.metric("Total Uploads", f"{len(history):,}")
+                m2.metric("Records Saved", f"{int(history['num_saved'].sum()):,}" if "num_saved" in history.columns else "0")
+                m3.metric("Users", history["uploaded_by"].nunique() if "uploaded_by" in history.columns else 0)
 
                 st.markdown("---")
 
-                # ── 2. COMPLIANCE ──
-                st.subheader("✅ Compliance")
-                total_samples = total_records
-
-                # Filter for Electron Microscopy only for compliance
-                em_mask = active["Analysis_method"] == "Electron Microscopy" if "Analysis_method" in active.columns else pd.Series([False] * len(active))
-                em_data = active[em_mask]
-
-                # Parse concentration for comparison
-                def _safe_conc(val):
-                    try:
-                        s = str(val).replace("<", "").replace(",", ".").strip()
-                        return float(s) if s and s not in ("", "None", "Not specified", "N/A") else 0.0
-                    except (ValueError, TypeError):
-                        return 0.0
-
-                if "Concentration_result_in_f_ml" in em_data.columns:
-                    em_conc = em_data["Concentration_result_in_f_ml"].apply(_safe_conc)
-                else:
-                    em_conc = pd.Series(dtype=float)
-
-                above_01 = int((em_conc > 0.1).sum())
-                above_001 = int((em_conc > 0.01).sum())
-                compliance_01 = ((total_samples - above_01) / total_samples * 100) if total_samples > 0 else 100.0
-                compliance_001 = ((total_samples - above_001) / total_samples * 100) if total_samples > 0 else 100.0
-
-                c1, c2, c3, c4, c5 = st.columns(5)
-                c1.metric("Total Samples", f"{total_samples:,}")
-                c2.metric("EM > 0.01 f/ml", above_001, help="Electron Microscopy samples exceeding 0.01 f/ml")
-                c3.metric("EM > 0.1 f/ml", above_01, help="Electron Microscopy samples exceeding 0.1 f/ml")
-                c4.metric("Compliance (0.01)", f"{compliance_001:.1f}%")
-                c5.metric("Compliance (0.1)", f"{compliance_01:.1f}%")
-
-                st.markdown("---")
-
-                # ── 3. AUTOMATION ──
-                st.subheader("🤖 Automation")
-                # Total parsed by AI = all records with row_status in (active, modified, removed)
-                total_parsed = len(all_data) if all_data is not None else 0
-                # Manual corrections = modified rows
-                corrections = int((all_data["row_status"] == "modified").sum()) if "row_status" in all_data.columns else 0
-                error_pct = (corrections / total_parsed * 100) if total_parsed > 0 else 0
-
-                a1, a2, a3 = st.columns(3)
-                a1.metric("Total Parsed by AI", f"{total_parsed:,}")
-                a2.metric("Manual Corrections", corrections)
-                a3.metric("Automation Error %", f"{error_pct:.2f}%")
-
-                st.markdown("---")
-
-                # ── Legacy metrics (quick summary) ──
-                k1, k2, k3, k4 = st.columns(4)
-                k1.metric("Active Records", f"{total_records:,}")
-                k2.metric("Active Sites", total_sites)
-                k3.metric("Documents", total_docs)
-                k4.metric(f"High Conc. (>{HIGH_CONC_THRESHOLD})", high_conc)
-
-                st.markdown("---")
-
-                # ── KPIs per Year ──
-                st.subheader("📅 Samples per Year")
-                if "_sample_year" in active.columns:
-                    year_stats = active.groupby("_sample_year", dropna=False).agg(
-                        Samples=("Code", "count"),
-                        Sites=("Code", "nunique"),
-                        Documents=("Document_name", "nunique"),
-                        High_Conc=("Flag_High_Concentration", lambda x: int(_to_bool(x).sum())),
-                        OM=("Analysis_method", lambda x: (x == "Optical Microscopy").sum()),
-                        EM=("Analysis_method", lambda x: (x == "Electron Microscopy").sum()),
-                    ).reset_index()
-                    year_stats["_sample_year"] = year_stats["_sample_year"].astype("Int64").astype(str).replace("<NA>", "Unknown")
-                    year_stats = year_stats.sort_values("_sample_year", ascending=False)
-                    st.dataframe(
-                        year_stats,
-                        use_container_width=True,
-                        hide_index=True,
-                        column_config={
-                            "_sample_year": st.column_config.TextColumn("Year", width="small"),
-                            "Samples": st.column_config.NumberColumn("Samples", width="small"),
-                            "Sites": st.column_config.NumberColumn("Sites", width="small"),
-                            "Documents": st.column_config.NumberColumn("Docs", width="small"),
-                            "High_Conc": st.column_config.NumberColumn("⚠️ High", width="small"),
-                            "OM": st.column_config.NumberColumn("OM", width="small",
-                                help="Optical Microscopy samples"),
-                            "EM": st.column_config.NumberColumn("EM", width="small",
-                                help="Electron Microscopy samples"),
-                        }
-                    )
-
-                st.markdown("---")
-
-                # ── Site Overview Table (like V1 Pipeline Overview) ──
-                st.subheader("🏭 Site Overview")
-
-                site_stats = active.groupby(["Code", "Site_name"]).agg(
-                    Active_Samples=("Code", "count"),
-                    Documents=("Document_name", "nunique"),
-                    High_Conc=("Flag_High_Concentration", lambda x: int(_to_bool(x).sum())),
-                    Latest_Upload=("upload_date", "max"),
-                ).reset_index().sort_values("Active_Samples", ascending=False)
+                display_cols = ["upload_time", "filename", "site_name", "site_code",
+                               "uploaded_by", "num_records", "num_duplicates_found", "num_saved", "status"]
+                available_cols = [c for c in display_cols if c in history.columns]
 
                 st.dataframe(
-                    site_stats,
+                    history[available_cols],
                     use_container_width=True,
                     hide_index=True,
                     column_config={
-                        "Code": st.column_config.TextColumn("Code", width="small"),
-                        "Site_name": st.column_config.TextColumn("Site"),
-                        "Active_Samples": st.column_config.NumberColumn("Samples", width="small"),
-                        "Documents": st.column_config.NumberColumn("Docs", width="small"),
-                        "High_Conc": st.column_config.NumberColumn("⚠️ High", width="small"),
-                        "Latest_Upload": st.column_config.DatetimeColumn("Last Upload", format="DD/MM/YYYY"),
+                        "upload_time": st.column_config.DatetimeColumn("When", format="DD/MM/YYYY HH:mm"),
+                        "filename": st.column_config.TextColumn("File"),
+                        "site_name": st.column_config.TextColumn("Site"),
+                        "site_code": st.column_config.TextColumn("Code", width="small"),
+                        "uploaded_by": st.column_config.TextColumn("User"),
+                        "num_records": st.column_config.NumberColumn("Extracted", width="small"),
+                        "num_duplicates_found": st.column_config.NumberColumn("Dupes", width="small"),
+                        "num_saved": st.column_config.NumberColumn("Saved", width="small"),
+                        "status": st.column_config.TextColumn("Status", width="small"),
                     }
                 )
 
                 st.markdown("---")
 
-                # ── Row Status Summary (like V1 Removal Summary) ──
-                col_left, col_right = st.columns(2)
+                # ── Upload Activity Chart ──
+                st.subheader("📅 Upload Activity")
+                if "upload_time" in history.columns:
+                    try:
+                        hist_copy = history.copy()
+                        hist_copy["upload_time"] = pd.to_datetime(hist_copy["upload_time"])
+                        hist_copy["upload_month"] = hist_copy["upload_time"].dt.to_period("M").astype(str)
+                        monthly_uploads = hist_copy.groupby("upload_month").size().reset_index(name="Uploads")
+                        monthly_uploads = monthly_uploads.tail(12)
+                        st.bar_chart(monthly_uploads.set_index("upload_month"), y="Uploads", use_container_width=True)
+                    except:
+                        st.info("Could not generate upload trend chart.")
 
-                with col_left:
-                    st.subheader("📋 Data Status Summary")
-                    if "row_status" in all_data.columns:
-                        status_counts = all_data["row_status"].value_counts().reset_index()
-                        status_counts.columns = ["Status", "Count"]
+            # ════════════════════════════════════════════════════════════
+            # ANALYTICS — KPIs, Site Overview, Data Quality
+            # ════════════════════════════════════════════════════════════
 
-                        # Color coding via HTML
-                        status_html = ""
-                        color_map = {"active": "#059669", "modified": "#d97706", "removed": "#dc2626"}
-                        for _, row in status_counts.iterrows():
-                            color = color_map.get(row["Status"], "#64748b")
-                            pct = row["Count"] / len(all_data) * 100
-                            status_html += (
-                                f'<div style="display:flex;justify-content:space-between;align-items:center;'
-                                f'padding:10px 14px;margin:6px 0;border-radius:8px;border:1px solid #e2e8f0;">'
-                                f'<div style="display:flex;align-items:center;gap:8px;">'
-                                f'<div style="width:10px;height:10px;border-radius:50%;background:{color};"></div>'
-                                f'<span style="font-weight:600;color:#1e293b;">{row["Status"]}</span></div>'
-                                f'<div><span style="font-size:1.1rem;font-weight:700;color:#1e293b;">{row["Count"]:,}</span>'
-                                f'<span style="color:#64748b;font-size:0.8rem;margin-left:6px;">({pct:.1f}%)</span></div>'
-                                f'</div>'
-                            )
-                        st.markdown(status_html, unsafe_allow_html=True)
+            from utils.db_utils import execute_query
 
-                        # Show removal_reason breakdown for removed records
-                        if "removal_reason" in all_data.columns:
-                            removed_data = all_data[all_data["row_status"] == "removed"].copy()
-                            if not removed_data.empty:
-                                # Normalize verbose reasons into clean categories
-                                def _normalize_reason(r):
-                                    if not r or r == "Unspecified":
-                                        return "Unspecified"
-                                    rl = str(r).lower()
-                                    if "duplicate" in rl:
-                                        return "Duplicate"
-                                    if "personal" in rl:
-                                        return "Personal sample"
-                                    if "manually deleted" in rl or r == "Deleted":
-                                        return "Deleted"
-                                    return r
-                                removed_data["_reason_clean"] = removed_data["removal_reason"].fillna("Unspecified").apply(_normalize_reason)
-                                reason_counts = removed_data["_reason_clean"].value_counts().reset_index()
-                                reason_counts.columns = ["Reason", "Count"]
-                                reason_html = '<div style="margin-top:8px;padding-left:24px;">'
-                                for _, rrow in reason_counts.iterrows():
-                                    reason_html += (
-                                        f'<div style="display:flex;justify-content:space-between;'
-                                        f'padding:4px 10px;margin:3px 0;font-size:0.78rem;color:#64748b;">'
-                                        f'<span>↳ {rrow["Reason"]}</span>'
-                                        f'<span style="font-weight:600;">{rrow["Count"]:,}</span></div>'
-                                    )
-                                reason_html += '</div>'
-                                st.markdown(reason_html, unsafe_allow_html=True)
+            try:
+                # Load all data for KPIs
+                # Filter by user's allowed sites
+                _allowed_codes = get_allowed_site_codes(user)
+                if _allowed_codes:
+                    _codes_sql = ", ".join([f"'{c}'" for c in _allowed_codes])
+                    _analytics_where = f"Code IN ({_codes_sql})"
+                else:
+                    _analytics_where = "1=0"
+                all_data = execute_query(f"SELECT * FROM {OUTPUT_TABLE} WHERE {_analytics_where}")
 
-                with col_right:
-                    st.subheader("🔬 Analysis Method Breakdown")
-                    if "Analysis_method" in active.columns:
-                        method_counts = active["Analysis_method"].value_counts().reset_index()
-                        method_counts.columns = ["Method", "Count"]
+                if all_data is not None and not all_data.empty:
+                    # ── Parse Sample_Date for year filtering ──
+                    if "Sample_Date" in all_data.columns:
+                        def _parse_sd(s):
+                            if pd.isna(s) or str(s).strip() in ('', 'None', 'NaT', 'Not specified', 'N/A', 'n/a', 'NA'):
+                                return pd.NaT
+                            for fmt in ('%d-%b-%Y', '%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'):
+                                try:
+                                    return pd.to_datetime(s, format=fmt)
+                                except Exception:
+                                    pass
+                            return pd.to_datetime(s, errors='coerce')
+                        all_data["_sample_date_parsed"] = all_data["Sample_Date"].apply(_parse_sd)
+                        all_data["_sample_year"] = all_data["_sample_date_parsed"].dt.year.astype("Int64")
+                    else:
+                        all_data["_sample_year"] = None
 
-                        method_html = ""
-                        method_colors = {"Optical Microscopy": "#2563eb", "Electron Microscopy": "#e8600a"}
-                        for _, row in method_counts.iterrows():
-                            color = method_colors.get(row["Method"], "#64748b")
-                            pct = row["Count"] / len(active) * 100
-                            method_html += (
-                                f'<div style="display:flex;justify-content:space-between;align-items:center;'
-                                f'padding:10px 14px;margin:6px 0;border-radius:8px;border:1px solid #e2e8f0;">'
-                                f'<div style="display:flex;align-items:center;gap:8px;">'
-                                f'<div style="width:10px;height:10px;border-radius:50%;background:{color};"></div>'
-                                f'<span style="font-weight:600;color:#1e293b;">{row["Method"]}</span></div>'
-                                f'<div><span style="font-size:1.1rem;font-weight:700;color:#1e293b;">{row["Count"]:,}</span>'
-                                f'<span style="color:#64748b;font-size:0.8rem;margin-left:6px;">({pct:.1f}%)</span></div>'
-                                f'</div>'
-                            )
-                        st.markdown(method_html, unsafe_allow_html=True)
+                    # ── Year Filter ──
+                    available_years = sorted(all_data["_sample_year"].dropna().unique().tolist(), reverse=True)
+                    available_years_str = [str(int(y)) for y in available_years]
+                    selected_years = st.multiselect("Filter by Sampling Year", available_years_str, default=available_years_str,
+                                                    help="Select which sampling years to include in the analytics")
+                    selected_years_int = [int(y) for y in selected_years] if selected_years else available_years
+
+                    # ── Apply filters ──
+                    active = all_data[all_data["row_status"].isin(["active", "modified"])] if "row_status" in all_data.columns else all_data
+                    active = active[active["_sample_year"].isin(selected_years_int) | active["_sample_year"].isna()]
+                    if _filtered_site_codes:
+                        active = active[active["Code"].isin(_filtered_site_codes)]
+                    total_records = len(active)
+                    total_sites = active["Code"].nunique() if "Code" in active.columns else 0
+                    total_docs = active["Document_name"].nunique() if "Document_name" in active.columns else 0
+                    high_conc = int(_to_bool(active["Flag_High_Concentration"]).sum()) if "Flag_High_Concentration" in active.columns else 0
+
+                    # ════════════════════════════════════════════════════════
+                    # CHIARA'S KPI DASHBOARD (3 categories)
+                    # ════════════════════════════════════════════════════════
+
+                    # ── 1. DATA SHARING (admin-only, unfiltered global view) ──
+                    if _is_admin_user and not _filtered_site_codes:
+                        # Expected plants list (26 — from Chiara's Jul 2026 email)
+                        EXPECTED_PLANTS_2026 = [
+                            "Aghires", "Athy", "Auneuil", "Branden", "Carpentras",
+                            "Dabrowa", "Für", "Goor", "Gresik", "KOB", "Lagos",
+                            "Maipú", "Manizales", "Mazan", "Meldreth", "Neubeckum",
+                            "Novo Mesto", "Ottmarshein", "Rantigny", "Rennes",
+                            "Roedding", "San Justo", "Santa Rosa", "Stirling",
+                            "Tisselt", "Saint Loubes"
+                        ]
+
+                        # ── 1. DATA SHARING ──
+                        st.subheader("📊 Data Sharing")
+                        plants_expected = len(EXPECTED_PLANTS_2026)  # 26
+                        # Case-insensitive match: normalize both lists to lowercase
+                        _expected_lower = {p.lower() for p in EXPECTED_PLANTS_2026}
+                        _actual_sites_lower = set(active["Site_name"].dropna().str.lower().unique()) if "Site_name" in active.columns else set()
+                        _matched_sites = _expected_lower & _actual_sites_lower
+                        sites_sampled = len(_matched_sites)
+                        sharing_pct = (sites_sampled / plants_expected * 100) if plants_expected > 0 else 0
+
+                        ds1, ds2, ds3 = st.columns(3)
+                        ds1.metric("Plants Expected", plants_expected)
+                        ds2.metric("Sites Sampled", sites_sampled)
+                        ds3.metric("Data Sharing %", f"{sharing_pct:.1f}%")
+
+                        with st.expander("📋 Expected Plants List (26)", expanded=False):
+                            _sampled_lower = set(active["Site_name"].dropna().str.lower().unique()) if "Site_name" in active.columns else set()
+                            _plant_status = []
+                            for p in sorted(EXPECTED_PLANTS_2026):
+                                _status = "✅" if p.lower() in _sampled_lower else "⏳"
+                                _plant_status.append(f"{_status} {p}")
+                            # Display in 3 columns
+                            _pc1, _pc2, _pc3 = st.columns(3)
+                            _third = len(_plant_status) // 3 + 1
+                            _pc1.markdown("\n".join(_plant_status[:_third]))
+                            _pc2.markdown("\n".join(_plant_status[_third:2*_third]))
+                            _pc3.markdown("\n".join(_plant_status[2*_third:]))
+
+                        st.markdown("---")
+
+                    # ── 2. COMPLIANCE ──
+                    st.subheader("✅ Compliance")
+                    total_samples = total_records
+
+                    # Filter for Electron Microscopy only for compliance
+                    em_mask = active["Analysis_method"] == "Electron Microscopy" if "Analysis_method" in active.columns else pd.Series([False] * len(active))
+                    em_data = active[em_mask]
+
+                    # Parse concentration for comparison
+                    def _safe_conc(val):
+                        try:
+                            s = str(val).replace("<", "").replace(",", ".").strip()
+                            return float(s) if s and s not in ("", "None", "Not specified", "N/A") else 0.0
+                        except (ValueError, TypeError):
+                            return 0.0
+
+                    if "Concentration_result_in_f_ml" in em_data.columns:
+                        em_conc = em_data["Concentration_result_in_f_ml"].apply(_safe_conc)
+                    else:
+                        em_conc = pd.Series(dtype=float)
+
+                    above_01 = int((em_conc > 0.1).sum())
+                    above_001 = int((em_conc > 0.01).sum())
+                    compliance_01 = ((total_samples - above_01) / total_samples * 100) if total_samples > 0 else 100.0
+                    compliance_001 = ((total_samples - above_001) / total_samples * 100) if total_samples > 0 else 100.0
+
+                    c1, c2, c3, c4, c5 = st.columns(5)
+                    c1.metric("Total Samples", f"{total_samples:,}")
+                    c2.metric("EM > 0.01 f/ml", above_001, help="Electron Microscopy samples exceeding 0.01 f/ml")
+                    c3.metric("EM > 0.1 f/ml", above_01, help="Electron Microscopy samples exceeding 0.1 f/ml")
+                    c4.metric("Compliance (0.01)", f"{compliance_001:.1f}%")
+                    c5.metric("Compliance (0.1)", f"{compliance_01:.1f}%")
+
+                    st.markdown("---")
+
+                    # ── 3. AUTOMATION ──
+                    st.subheader("🤖 Automation")
+                    # Total parsed by AI = all records (incl. removed), filtered by selected site(s)
+                    _auto_data = all_data if all_data is not None else pd.DataFrame()
+                    if _filtered_site_codes and not _auto_data.empty and "Code" in _auto_data.columns:
+                        _auto_data = _auto_data[_auto_data["Code"].isin(_filtered_site_codes)]
+                    total_parsed = len(_auto_data)
+                    # Manual corrections = modified rows
+                    corrections = int((_auto_data["row_status"] == "modified").sum()) if "row_status" in _auto_data.columns else 0
+                    error_pct = (corrections / total_parsed * 100) if total_parsed > 0 else 0
+
+                    a1, a2, a3 = st.columns(3)
+                    a1.metric("Total Parsed by AI", f"{total_parsed:,}")
+                    a2.metric("Manual Corrections", corrections)
+                    a3.metric("Automation Error %", f"{error_pct:.2f}%")
+
+                    st.markdown("---")
+
+                    # ── Legacy metrics (quick summary) ──
+                    k1, k2, k3, k4 = st.columns(4)
+                    k1.metric("Active Records", f"{total_records:,}")
+                    k2.metric("Active Sites", total_sites)
+                    k3.metric("Documents", total_docs)
+                    k4.metric(f"High Conc. (>{HIGH_CONC_THRESHOLD})", high_conc)
+
+                    st.markdown("---")
+
+                    # ── KPIs per Year ──
+                    st.subheader("📅 Samples per Year")
+                    if "_sample_year" in active.columns:
+                        year_stats = active.groupby("_sample_year", dropna=False).agg(
+                            Samples=("Code", "count"),
+                            Sites=("Code", "nunique"),
+                            Documents=("Document_name", "nunique"),
+                            High_Conc=("Flag_High_Concentration", lambda x: int(_to_bool(x).sum())),
+                            OM=("Analysis_method", lambda x: (x == "Optical Microscopy").sum()),
+                            EM=("Analysis_method", lambda x: (x == "Electron Microscopy").sum()),
+                        ).reset_index()
+                        year_stats["_sample_year"] = year_stats["_sample_year"].astype("Int64").astype(str).replace("<NA>", "Unknown")
+                        year_stats = year_stats.sort_values("_sample_year", ascending=False)
+                        st.dataframe(
+                            year_stats,
+                            use_container_width=True,
+                            hide_index=True,
+                            column_config={
+                                "_sample_year": st.column_config.TextColumn("Year", width="small"),
+                                "Samples": st.column_config.NumberColumn("Samples", width="small"),
+                                "Sites": st.column_config.NumberColumn("Sites", width="small"),
+                                "Documents": st.column_config.NumberColumn("Docs", width="small"),
+                                "High_Conc": st.column_config.NumberColumn("⚠️ High", width="small"),
+                                "OM": st.column_config.NumberColumn("OM", width="small",
+                                    help="Optical Microscopy samples"),
+                                "EM": st.column_config.NumberColumn("EM", width="small",
+                                    help="Electron Microscopy samples"),
+                            }
+                        )
+
+                    st.markdown("---")
+
+                    # ── Site Overview Table (like V1 Pipeline Overview) ──
+                    st.subheader("🏭 Site Overview")
+
+                    site_stats = active.groupby(["Code", "Site_name"]).agg(
+                        Active_Samples=("Code", "count"),
+                        Documents=("Document_name", "nunique"),
+                        High_Conc=("Flag_High_Concentration", lambda x: int(_to_bool(x).sum())),
+                        Latest_Upload=("upload_date", "max"),
+                    ).reset_index().sort_values("Active_Samples", ascending=False)
+
+                    st.dataframe(
+                        site_stats,
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            "Code": st.column_config.TextColumn("Code", width="small"),
+                            "Site_name": st.column_config.TextColumn("Site"),
+                            "Active_Samples": st.column_config.NumberColumn("Samples", width="small"),
+                            "Documents": st.column_config.NumberColumn("Docs", width="small"),
+                            "High_Conc": st.column_config.NumberColumn("⚠️ High", width="small"),
+                            "Latest_Upload": st.column_config.DatetimeColumn("Last Upload", format="DD/MM/YYYY"),
+                        }
+                    )
+
+                    st.markdown("---")
+
+                    # ── Row Status Summary (like V1 Removal Summary) ──
+                    # Apply site filter to all_data for status summary
+                    _status_data = all_data if all_data is not None else pd.DataFrame()
+                    if _filtered_site_codes and not _status_data.empty and "Code" in _status_data.columns:
+                        _status_data = _status_data[_status_data["Code"].isin(_filtered_site_codes)]
+
+                    col_left, col_right = st.columns(2)
+
+                    with col_left:
+                        st.subheader("📋 Data Status Summary")
+                        if "row_status" in _status_data.columns:
+                            status_counts = _status_data["row_status"].value_counts().reset_index()
+                            status_counts.columns = ["Status", "Count"]
+
+                            # Color coding via HTML
+                            status_html = ""
+                            color_map = {"active": "#059669", "modified": "#d97706", "removed": "#dc2626"}
+                            for _, row in status_counts.iterrows():
+                                color = color_map.get(row["Status"], "#64748b")
+                                pct = row["Count"] / len(_status_data) * 100
+                                status_html += (
+                                    f'<div style="display:flex;justify-content:space-between;align-items:center;'
+                                    f'padding:10px 14px;margin:6px 0;border-radius:8px;border:1px solid #e2e8f0;">'
+                                    f'<div style="display:flex;align-items:center;gap:8px;">'
+                                    f'<div style="width:10px;height:10px;border-radius:50%;background:{color};"></div>'
+                                    f'<span style="font-weight:600;color:#1e293b;">{row["Status"]}</span></div>'
+                                    f'<div><span style="font-size:1.1rem;font-weight:700;color:#1e293b;">{row["Count"]:,}</span>'
+                                    f'<span style="color:#64748b;font-size:0.8rem;margin-left:6px;">({pct:.1f}%)</span></div>'
+                                    f'</div>'
+                                )
+                            st.markdown(status_html, unsafe_allow_html=True)
+
+                            # Show removal_reason breakdown for removed records
+                            if "removal_reason" in _status_data.columns:
+                                removed_data = _status_data[_status_data["row_status"] == "removed"].copy()
+                                if not removed_data.empty:
+                                    # Normalize verbose reasons into clean categories
+                                    def _normalize_reason(r):
+                                        if not r or r == "Unspecified":
+                                            return "Unspecified"
+                                        rl = str(r).lower()
+                                        if "duplicate" in rl:
+                                            return "Duplicate"
+                                        if "personal" in rl:
+                                            return "Personal sample"
+                                        if "manually deleted" in rl or r == "Deleted":
+                                            return "Deleted"
+                                        return r
+                                    removed_data["_reason_clean"] = removed_data["removal_reason"].fillna("Unspecified").apply(_normalize_reason)
+                                    reason_counts = removed_data["_reason_clean"].value_counts().reset_index()
+                                    reason_counts.columns = ["Reason", "Count"]
+                                    reason_html = '<div style="margin-top:8px;padding-left:24px;">'
+                                    for _, rrow in reason_counts.iterrows():
+                                        reason_html += (
+                                            f'<div style="display:flex;justify-content:space-between;'
+                                            f'padding:4px 10px;margin:3px 0;font-size:0.78rem;color:#64748b;">'
+                                            f'<span>↳ {rrow["Reason"]}</span>'
+                                            f'<span style="font-weight:600;">{rrow["Count"]:,}</span></div>'
+                                        )
+                                    reason_html += '</div>'
+                                    st.markdown(reason_html, unsafe_allow_html=True)
+
+                    with col_right:
+                        st.subheader("🔬 Analysis Method Breakdown")
+                        if "Analysis_method" in active.columns:
+                            method_counts = active["Analysis_method"].value_counts().reset_index()
+                            method_counts.columns = ["Method", "Count"]
+
+                            method_html = ""
+                            method_colors = {"Optical Microscopy": "#2563eb", "Electron Microscopy": "#e8600a"}
+                            for _, row in method_counts.iterrows():
+                                color = method_colors.get(row["Method"], "#64748b")
+                                pct = row["Count"] / len(active) * 100
+                                method_html += (
+                                    f'<div style="display:flex;justify-content:space-between;align-items:center;'
+                                    f'padding:10px 14px;margin:6px 0;border-radius:8px;border:1px solid #e2e8f0;">'
+                                    f'<div style="display:flex;align-items:center;gap:8px;">'
+                                    f'<div style="width:10px;height:10px;border-radius:50%;background:{color};"></div>'
+                                    f'<span style="font-weight:600;color:#1e293b;">{row["Method"]}</span></div>'
+                                    f'<div><span style="font-size:1.1rem;font-weight:700;color:#1e293b;">{row["Count"]:,}</span>'
+                                    f'<span style="color:#64748b;font-size:0.8rem;margin-left:6px;">({pct:.1f}%)</span></div>'
+                                    f'</div>'
+                                )
+                            st.markdown(method_html, unsafe_allow_html=True)
 
 
 
-            else:
-                st.info("No data available yet. Upload and process some PDFs first.")
+                else:
+                    st.info("No data available yet. Upload and process some PDFs first.")
 
-        except Exception as e:
-            st.error(f"Could not load analytics: {e}")
+            except Exception as e:
+                st.error(f"Could not load analytics: {e}")
 
 
 # ════════════════════════════════════════════════════════════
@@ -1914,7 +1936,17 @@ with tab_admin:
     )
 
     if not is_admin(user):
-        st.warning("🔒 Admin access required. Contact your administrator if you need access.")
+        st.markdown(
+            '<div class="card" style="text-align:center;padding:3rem 2rem;margin-top:1rem;">'
+            '<div style="font-size:2.5rem;">🔒</div>'
+            '<h3 style="margin-top:0.5rem;">Admin Access Required</h3>'
+            '<p style="color:var(--text-muted);max-width:420px;margin:0.5rem auto 0;">'
+            'This section is restricted to app administrators. '
+            'If you need access to manage sites or users, please contact '
+            '<b>Chiara Senzolo</b> or <b>Sofie Staes</b>.</p>'
+            '</div>',
+            unsafe_allow_html=True
+        )
         st.stop()
 
     from utils.db_utils import execute_query, get_connection
