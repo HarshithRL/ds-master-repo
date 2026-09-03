@@ -1533,7 +1533,7 @@ with tab_history:
             _site_filter_options = _user_sites[["site_code", "site_name"]].drop_duplicates().sort_values("site_code")
             _site_filter_labels = [f"{row['site_code']} — {row['site_name']}" for _, row in _site_filter_options.iterrows()]
             _analytics_site_filter = st.multiselect(
-                "🔍 Filter by Site", _site_filter_labels, default=[],
+                "🔍 Filter by Site", _site_filter_labels, default=([] if _is_admin_user else _site_filter_labels),
                 help="Admins: leave empty to include all sites. Other users: leave empty to include all of your assigned sites." if _is_admin_user else "Leave empty to include all of your assigned sites — you will never see other sites' data.",
                 placeholder="All sites" if _is_admin_user else "All my sites",
                 key="analytics_site_filter"
@@ -1665,45 +1665,47 @@ with tab_history:
                     # CHIARA'S KPI DASHBOARD (3 categories)
                     # ════════════════════════════════════════════════════════
 
-                    # Expected plants list (26 — from Chiara's Jul 2026 email)
-                    EXPECTED_PLANTS_2026 = [
-                        "Aghires", "Athy", "Auneuil", "Branden", "Carpentras",
-                        "Dabrowa", "Für", "Goor", "Gresik", "KOB", "Lagos",
-                        "Maipú", "Manizales", "Mazan", "Meldreth", "Neubeckum",
-                        "Novo Mesto", "Ottmarshein", "Rantigny", "Rennes",
-                        "Roedding", "San Justo", "Santa Rosa", "Stirling",
-                        "Tisselt", "Saint Loubes"
-                    ]
+                    # ── 1. DATA SHARING (admin-only, unfiltered global view) ──
+                    if _is_admin_user and not _filtered_site_codes:
+                        # Expected plants list (26 — from Chiara's Jul 2026 email)
+                        EXPECTED_PLANTS_2026 = [
+                            "Aghires", "Athy", "Auneuil", "Branden", "Carpentras",
+                            "Dabrowa", "Für", "Goor", "Gresik", "KOB", "Lagos",
+                            "Maipú", "Manizales", "Mazan", "Meldreth", "Neubeckum",
+                            "Novo Mesto", "Ottmarshein", "Rantigny", "Rennes",
+                            "Roedding", "San Justo", "Santa Rosa", "Stirling",
+                            "Tisselt", "Saint Loubes"
+                        ]
 
-                    # ── 1. DATA SHARING ──
-                    st.subheader("📊 Data Sharing")
-                    plants_expected = len(EXPECTED_PLANTS_2026)  # 26
-                    # Case-insensitive match: normalize both lists to lowercase
-                    _expected_lower = {p.lower() for p in EXPECTED_PLANTS_2026}
-                    _actual_sites_lower = set(active["Site_name"].dropna().str.lower().unique()) if "Site_name" in active.columns else set()
-                    _matched_sites = _expected_lower & _actual_sites_lower
-                    sites_sampled = len(_matched_sites)
-                    sharing_pct = (sites_sampled / plants_expected * 100) if plants_expected > 0 else 0
+                        # ── 1. DATA SHARING ──
+                        st.subheader("📊 Data Sharing")
+                        plants_expected = len(EXPECTED_PLANTS_2026)  # 26
+                        # Case-insensitive match: normalize both lists to lowercase
+                        _expected_lower = {p.lower() for p in EXPECTED_PLANTS_2026}
+                        _actual_sites_lower = set(active["Site_name"].dropna().str.lower().unique()) if "Site_name" in active.columns else set()
+                        _matched_sites = _expected_lower & _actual_sites_lower
+                        sites_sampled = len(_matched_sites)
+                        sharing_pct = (sites_sampled / plants_expected * 100) if plants_expected > 0 else 0
 
-                    ds1, ds2, ds3 = st.columns(3)
-                    ds1.metric("Plants Expected", plants_expected)
-                    ds2.metric("Sites Sampled", sites_sampled)
-                    ds3.metric("Data Sharing %", f"{sharing_pct:.1f}%")
+                        ds1, ds2, ds3 = st.columns(3)
+                        ds1.metric("Plants Expected", plants_expected)
+                        ds2.metric("Sites Sampled", sites_sampled)
+                        ds3.metric("Data Sharing %", f"{sharing_pct:.1f}%")
 
-                    with st.expander("📋 Expected Plants List (26)", expanded=False):
-                        _sampled_lower = set(active["Site_name"].dropna().str.lower().unique()) if "Site_name" in active.columns else set()
-                        _plant_status = []
-                        for p in sorted(EXPECTED_PLANTS_2026):
-                            _status = "✅" if p.lower() in _sampled_lower else "⏳"
-                            _plant_status.append(f"{_status} {p}")
-                        # Display in 3 columns
-                        _pc1, _pc2, _pc3 = st.columns(3)
-                        _third = len(_plant_status) // 3 + 1
-                        _pc1.markdown("\n".join(_plant_status[:_third]))
-                        _pc2.markdown("\n".join(_plant_status[_third:2*_third]))
-                        _pc3.markdown("\n".join(_plant_status[2*_third:]))
+                        with st.expander("📋 Expected Plants List (26)", expanded=False):
+                            _sampled_lower = set(active["Site_name"].dropna().str.lower().unique()) if "Site_name" in active.columns else set()
+                            _plant_status = []
+                            for p in sorted(EXPECTED_PLANTS_2026):
+                                _status = "✅" if p.lower() in _sampled_lower else "⏳"
+                                _plant_status.append(f"{_status} {p}")
+                            # Display in 3 columns
+                            _pc1, _pc2, _pc3 = st.columns(3)
+                            _third = len(_plant_status) // 3 + 1
+                            _pc1.markdown("\n".join(_plant_status[:_third]))
+                            _pc2.markdown("\n".join(_plant_status[_third:2*_third]))
+                            _pc3.markdown("\n".join(_plant_status[2*_third:]))
 
-                    st.markdown("---")
+                        st.markdown("---")
 
                     # ── 2. COMPLIANCE ──
                     st.subheader("✅ Compliance")
@@ -1742,10 +1744,13 @@ with tab_history:
 
                     # ── 3. AUTOMATION ──
                     st.subheader("🤖 Automation")
-                    # Total parsed by AI = all records with row_status in (active, modified, removed)
-                    total_parsed = len(all_data) if all_data is not None else 0
+                    # Total parsed by AI = all records (incl. removed), filtered by selected site(s)
+                    _auto_data = all_data if all_data is not None else pd.DataFrame()
+                    if _filtered_site_codes and not _auto_data.empty and "Code" in _auto_data.columns:
+                        _auto_data = _auto_data[_auto_data["Code"].isin(_filtered_site_codes)]
+                    total_parsed = len(_auto_data)
                     # Manual corrections = modified rows
-                    corrections = int((all_data["row_status"] == "modified").sum()) if "row_status" in all_data.columns else 0
+                    corrections = int((_auto_data["row_status"] == "modified").sum()) if "row_status" in _auto_data.columns else 0
                     error_pct = (corrections / total_parsed * 100) if total_parsed > 0 else 0
 
                     a1, a2, a3 = st.columns(3)
@@ -1823,12 +1828,17 @@ with tab_history:
                     st.markdown("---")
 
                     # ── Row Status Summary (like V1 Removal Summary) ──
+                    # Apply site filter to all_data for status summary
+                    _status_data = all_data if all_data is not None else pd.DataFrame()
+                    if _filtered_site_codes and not _status_data.empty and "Code" in _status_data.columns:
+                        _status_data = _status_data[_status_data["Code"].isin(_filtered_site_codes)]
+
                     col_left, col_right = st.columns(2)
 
                     with col_left:
                         st.subheader("📋 Data Status Summary")
-                        if "row_status" in all_data.columns:
-                            status_counts = all_data["row_status"].value_counts().reset_index()
+                        if "row_status" in _status_data.columns:
+                            status_counts = _status_data["row_status"].value_counts().reset_index()
                             status_counts.columns = ["Status", "Count"]
 
                             # Color coding via HTML
@@ -1836,7 +1846,7 @@ with tab_history:
                             color_map = {"active": "#059669", "modified": "#d97706", "removed": "#dc2626"}
                             for _, row in status_counts.iterrows():
                                 color = color_map.get(row["Status"], "#64748b")
-                                pct = row["Count"] / len(all_data) * 100
+                                pct = row["Count"] / len(_status_data) * 100
                                 status_html += (
                                     f'<div style="display:flex;justify-content:space-between;align-items:center;'
                                     f'padding:10px 14px;margin:6px 0;border-radius:8px;border:1px solid #e2e8f0;">'
@@ -1850,8 +1860,8 @@ with tab_history:
                             st.markdown(status_html, unsafe_allow_html=True)
 
                             # Show removal_reason breakdown for removed records
-                            if "removal_reason" in all_data.columns:
-                                removed_data = all_data[all_data["row_status"] == "removed"].copy()
+                            if "removal_reason" in _status_data.columns:
+                                removed_data = _status_data[_status_data["row_status"] == "removed"].copy()
                                 if not removed_data.empty:
                                     # Normalize verbose reasons into clean categories
                                     def _normalize_reason(r):
