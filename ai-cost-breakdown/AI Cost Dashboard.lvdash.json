@@ -3,10 +3,10 @@
     {
       "name": "ai_usage",
       "displayName": "AI Usage Costs (Enriched)",
-      "catalog": "automation_s",
+      "catalog": "automation_d",
       "config": {
         "version": "1.1",
-        "source": "SELECT\n  cost_date,\n  subscriptionname,\n  resourcegroupname,\n  metername,\n  productname,\n  api_access,\n  COALESCE(spoke, 'Unassigned') AS spoke,\n  COALESCE(application, 'Untagged') AS application,\n  COALESCE(service, 'Unknown') AS service,\n  COALESCE(model, 'Not specified') AS model,\n  COALESCE(ai_capability, CASE WHEN api_access = 'Non-AI or unclassified' THEN 'Non-AI' ELSE 'Other AI' END) AS ai_capability,\n  CASE\n    WHEN UPPER(COALESCE(environment, '')) IN ('P', 'PRD', 'PROD', 'PRODUCTION') THEN 'Prod'\n    WHEN UPPER(COALESCE(environment, '')) IN ('D', 'DEV', 'DEVELOPMENT') THEN 'Dev'\n    WHEN UPPER(COALESCE(environment, '')) IN ('T', 'TST', 'TEST', 'QA', 'UAT', 'ACC', 'ACCEPTANCE') THEN 'Test'\n    WHEN environment IS NULL OR TRIM(environment) = '' THEN 'Unknown'\n    ELSE environment\n  END AS environment,\n  (api_access <> 'Non-AI or unclassified') AS is_ai,\n  application_inferred,\n  spoke_inferred,\n  model_inferred,\n  cost_eur,\n  cost_usd,\n  quantity\nFROM automation_s.pierre.ai_foundry_costs_enriched\nWHERE api_access <> 'Non-AI or unclassified'\n",
+        "source": "SELECT\n  cost_date,\n  subscriptionname,\n  resourcegroupname,\n  metername,\n  productname,\n  api_access,\n  COALESCE(spoke, 'Unassigned') AS spoke,\n  COALESCE(application, 'Untagged') AS application,\n  COALESCE(service, 'Unknown') AS service,\n  COALESCE(model, 'Not specified') AS model,\n  COALESCE(ai_capability, CASE WHEN api_access = 'Non-AI or unclassified' THEN 'Non-AI' ELSE 'Other AI' END) AS ai_capability,\n  CASE\n    WHEN UPPER(COALESCE(environment, '')) IN ('P', 'PRD', 'PROD', 'PRODUCTION') THEN 'Prod'\n    WHEN UPPER(COALESCE(environment, '')) IN ('D', 'DEV', 'DEVELOPMENT') THEN 'Dev'\n    WHEN UPPER(COALESCE(environment, '')) IN ('T', 'TST', 'TEST', 'QA', 'UAT', 'ACC', 'ACCEPTANCE') THEN 'Test'\n    WHEN environment IS NULL OR TRIM(environment) = '' THEN 'Unknown'\n    ELSE environment\n  END AS environment,\n  (api_access <> 'Non-AI or unclassified') AS is_ai,\n  application_inferred,\n  spoke_inferred,\n  model_inferred,\n  cost_eur,\n  cost_usd,\n  quantity\nFROM automation_d.pierre.ai_foundry_costs_enriched\nWHERE api_access <> 'Non-AI or unclassified'\n",
         "dimensions": [
           {
             "name": "cost_date",
@@ -168,7 +168,7 @@
       "displayName": "Copilot Costs",
       "config": {
         "version": "1.1",
-        "source": "SELECT\n  cost_date, subscriptionname, resourcegroupname, metername, productname,\n  api_access,\n  COALESCE(spoke, 'Unassigned') AS spoke,\n  COALESCE(application, 'Untagged') AS application,\n  COALESCE(service, 'Unknown') AS service,\n  COALESCE(model, 'Not specified') AS model,\n  COALESCE(ai_capability, 'Other AI') AS ai_capability,\n  CASE\n    WHEN UPPER(COALESCE(environment, '')) IN ('P','PRD','PROD','PRODUCTION') THEN 'Prod'\n    WHEN UPPER(COALESCE(environment, '')) IN ('D','DEV','DEVELOPMENT') THEN 'Dev'\n    WHEN UPPER(COALESCE(environment, '')) IN ('T','TST','TEST','QA','UAT','ACC','ACCEPTANCE') THEN 'Test'\n    WHEN environment IS NULL OR TRIM(environment) = '' THEN 'Unknown'\n    ELSE environment\n  END AS environment,\n  application_inferred, spoke_inferred, model_inferred,\n  cost_eur, cost_usd, quantity\nFROM automation_s.pierre.ai_foundry_costs_enriched\nWHERE api_access = 'Copilot'\n",
+        "source": "SELECT\n  cost_date, subscriptionname, resourcegroupname, metername, productname,\n  api_access,\n  COALESCE(spoke, 'Unassigned') AS spoke,\n  COALESCE(application, 'Untagged') AS application,\n  COALESCE(service, 'Unknown') AS service,\n  COALESCE(model, 'Not specified') AS model,\n  COALESCE(ai_capability, 'Other AI') AS ai_capability,\n  CASE\n    WHEN UPPER(COALESCE(environment, '')) IN ('P','PRD','PROD','PRODUCTION') THEN 'Prod'\n    WHEN UPPER(COALESCE(environment, '')) IN ('D','DEV','DEVELOPMENT') THEN 'Dev'\n    WHEN UPPER(COALESCE(environment, '')) IN ('T','TST','TEST','QA','UAT','ACC','ACCEPTANCE') THEN 'Test'\n    WHEN environment IS NULL OR TRIM(environment) = '' THEN 'Unknown'\n    ELSE environment\n  END AS environment,\n  application_inferred, spoke_inferred, model_inferred,\n  cost_eur, cost_usd, quantity\nFROM automation_d.pierre.ai_foundry_costs_enriched\nWHERE api_access = 'Copilot'\n",
         "dimensions": [
           {
             "name": "cost_date",
@@ -260,7 +260,7 @@
       "displayName": "Other AI Costs",
       "config": {
         "version": "1.1",
-        "source": "SELECT\n  cost_date, subscriptionname, resourcegroupname, metername, productname,\n  api_access,\n  COALESCE(spoke, 'Unassigned') AS spoke,\n  COALESCE(application, 'Untagged') AS application,\n  COALESCE(service, 'Unknown') AS service,\n  COALESCE(model, 'Not specified') AS model,\n  COALESCE(ai_capability, 'Other AI') AS ai_capability,\n  CASE\n    WHEN UPPER(COALESCE(environment, '')) IN ('P','PRD','PROD','PRODUCTION') THEN 'Prod'\n    WHEN UPPER(COALESCE(environment, '')) IN ('D','DEV','DEVELOPMENT') THEN 'Dev'\n    WHEN UPPER(COALESCE(environment, '')) IN ('T','TST','TEST','QA','UAT','ACC','ACCEPTANCE') THEN 'Test'\n    WHEN environment IS NULL OR TRIM(environment) = '' THEN 'Unknown'\n    ELSE environment\n  END AS environment,\n  application_inferred, spoke_inferred, model_inferred,\n  cost_eur, cost_usd, quantity\nFROM automation_s.pierre.ai_foundry_costs_enriched\nWHERE api_access = 'Other model access'\n",
+        "source": "SELECT\n  cost_date, subscriptionname, resourcegroupname, metername, productname,\n  api_access,\n  COALESCE(spoke, 'Unassigned') AS spoke,\n  COALESCE(application, 'Untagged') AS application,\n  COALESCE(service, 'Unknown') AS service,\n  COALESCE(model, 'Not specified') AS model,\n  COALESCE(ai_capability, 'Other AI') AS ai_capability,\n  CASE\n    WHEN UPPER(COALESCE(environment, '')) IN ('P','PRD','PROD','PRODUCTION') THEN 'Prod'\n    WHEN UPPER(COALESCE(environment, '')) IN ('D','DEV','DEVELOPMENT') THEN 'Dev'\n    WHEN UPPER(COALESCE(environment, '')) IN ('T','TST','TEST','QA','UAT','ACC','ACCEPTANCE') THEN 'Test'\n    WHEN environment IS NULL OR TRIM(environment) = '' THEN 'Unknown'\n    ELSE environment\n  END AS environment,\n  application_inferred, spoke_inferred, model_inferred,\n  cost_eur, cost_usd, quantity\nFROM automation_d.pierre.ai_foundry_costs_enriched\nWHERE api_access = 'Other model access'\n",
         "dimensions": [
           {
             "name": "cost_date",
@@ -352,7 +352,7 @@
       "displayName": "AI Foundry Costs",
       "config": {
         "version": "1.1",
-        "source": "SELECT\n  cost_date, subscriptionname, resourcegroupname, metername, productname,\n  api_access,\n  COALESCE(spoke, 'Unassigned') AS spoke,\n  COALESCE(application, 'Untagged') AS application,\n  COALESCE(service, 'Unknown') AS service,\n  COALESCE(model, 'Not specified') AS model,\n  COALESCE(ai_capability, 'Other AI') AS ai_capability,\n  CASE\n    WHEN UPPER(COALESCE(environment, '')) IN ('P','PRD','PROD','PRODUCTION') THEN 'Prod'\n    WHEN UPPER(COALESCE(environment, '')) IN ('D','DEV','DEVELOPMENT') THEN 'Dev'\n    WHEN UPPER(COALESCE(environment, '')) IN ('T','TST','TEST','QA','UAT','ACC','ACCEPTANCE') THEN 'Test'\n    WHEN environment IS NULL OR TRIM(environment) = '' THEN 'Unknown'\n    ELSE environment\n  END AS environment,\n  application_inferred, spoke_inferred, model_inferred,\n  cost_eur, cost_usd, quantity\nFROM automation_s.pierre.ai_foundry_costs_enriched\nWHERE api_access = 'AI Foundry / Azure AI'\n",
+        "source": "SELECT\n  cost_date, subscriptionname, resourcegroupname, metername, productname,\n  api_access,\n  COALESCE(spoke, 'Unassigned') AS spoke,\n  COALESCE(application, 'Untagged') AS application,\n  COALESCE(service, 'Unknown') AS service,\n  COALESCE(model, 'Not specified') AS model,\n  COALESCE(ai_capability, 'Other AI') AS ai_capability,\n  CASE\n    WHEN UPPER(COALESCE(environment, '')) IN ('P','PRD','PROD','PRODUCTION') THEN 'Prod'\n    WHEN UPPER(COALESCE(environment, '')) IN ('D','DEV','DEVELOPMENT') THEN 'Dev'\n    WHEN UPPER(COALESCE(environment, '')) IN ('T','TST','TEST','QA','UAT','ACC','ACCEPTANCE') THEN 'Test'\n    WHEN environment IS NULL OR TRIM(environment) = '' THEN 'Unknown'\n    ELSE environment\n  END AS environment,\n  application_inferred, spoke_inferred, model_inferred,\n  cost_eur, cost_usd, quantity\nFROM automation_d.pierre.ai_foundry_costs_enriched\nWHERE api_access = 'AI Foundry / Azure AI'\n",
         "dimensions": [
           {
             "name": "cost_date",
@@ -1261,7 +1261,7 @@
     },
     {
       "name": "ai_foundry",
-      "displayName": "AI Foundry / Azure AI",
+      "displayName": "Azure AI Foundry",
       "layout": [
         {
           "widget": {
@@ -1995,7 +1995,7 @@
     },
     {
       "name": "copilot",
-      "displayName": "Copilot",
+      "displayName": "Copilot Github",
       "layout": [
         {
           "widget": {

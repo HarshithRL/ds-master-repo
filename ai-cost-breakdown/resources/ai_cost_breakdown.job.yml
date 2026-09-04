@@ -11,7 +11,7 @@ resources:
       tasks:
         - task_key: enrich_ai_costs
           notebook_task:
-            notebook_path: ../src/RG Tag Mapping - AI Cost Enrichment.ipynb
+            notebook_path: ../src/RG Tag Mapping - AI Cost Enrichment.py
             base_parameters:
               CATALOG: ${var.catalog}
           job_cluster_key: ai_cost_breakdown_cluster
