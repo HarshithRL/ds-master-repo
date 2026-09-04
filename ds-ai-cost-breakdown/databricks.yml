@@ -38,7 +38,7 @@ targets:
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
       - user_name: AUTOMATION.DSAICOSTBREAKDOWN.CONSUMER.READ
-        level: CAN_READ
+        level: CAN_VIEW
 
   A:
     mode: production
