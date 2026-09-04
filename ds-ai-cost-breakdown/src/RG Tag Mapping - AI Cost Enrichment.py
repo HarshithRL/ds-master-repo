@@ -347,3 +347,4 @@ ORDER BY cost_eur DESC
 # MAGIC 1. Set the catalog and schema in the config cell.
 # MAGIC 2. Run all cells.
 # MAGIC 3. Validate the mapping and enriched cost output.
+
