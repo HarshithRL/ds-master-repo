@@ -37,6 +37,8 @@ targets:
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
+      - user_name: AUTOMATION.DSAICOSTBREAKDOWN.CONSUMER.READ
+        level: CAN_READ
 
   A:
     mode: production
@@ -53,6 +55,8 @@ targets:
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
+      - user_name: AUTOMATION.DSAICOSTBREAKDOWN.CONSUMER.READ
+        level: CAN_READ
 
   P:
     mode: production
@@ -69,3 +73,5 @@ targets:
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
+      - user_name: AUTOMATION.DSAICOSTBREAKDOWN.CONSUMER.READ
+        level: CAN_READ
