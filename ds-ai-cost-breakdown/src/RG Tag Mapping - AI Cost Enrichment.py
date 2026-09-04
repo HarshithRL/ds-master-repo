@@ -11,20 +11,29 @@ try:
   CATALOG = dbutils.widgets.get("CATALOG")
 except NameError:
   CATALOG = "automation_d"
-SCHEMA = "pierre"
+BRONZE_SCHEMA = "bronze"
+SILVER_SCHEMA = "silver"
+GOLD_SCHEMA = "gold"
 SOURCE_TABLE = "ingestion_azure_p.costs.azure_actual_cost"
-MAPPING_TABLE = f"{CATALOG}.{SCHEMA}.rg_tag_mapping"
-ENRICHED_TABLE = f"{CATALOG}.{SCHEMA}.ai_foundry_costs_enriched"
+BRONZE_TABLE = f"{CATALOG}.{BRONZE_SCHEMA}.azure_actual_cost"
+SILVER_TABLE = f"{CATALOG}.{SILVER_SCHEMA}.ai_costs_silver"
+MAPPING_TABLE = f"{CATALOG}.{SILVER_SCHEMA}.rg_tag_mapping"
+GOLD_TABLE = f"{CATALOG}.{GOLD_SCHEMA}.ai_foundry_costs_enriched"
 
 print(f"Catalog:       {CATALOG}")
-print(f"Schema:        {SCHEMA}")
+print(f"Bronze schema: {BRONZE_SCHEMA}")
+print(f"Silver schema: {SILVER_SCHEMA}")
+print(f"Gold schema:   {GOLD_SCHEMA}")
+print(f"Bronze table:  {BRONZE_TABLE}")
+print(f"Silver table:  {SILVER_TABLE}")
 print(f"Mapping table: {MAPPING_TABLE}")
-print(f"Enriched table:{ENRICHED_TABLE}")
+print(f"Gold table:    {GOLD_TABLE}")
 print(f"Source table:  {SOURCE_TABLE}")
 
 # COMMAND ----------
 
-spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{SCHEMA}")
+for schema in [BRONZE_SCHEMA, SILVER_SCHEMA, GOLD_SCHEMA]:
+  spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{schema}")
 
 spark.sql(f"""
 CREATE TABLE IF NOT EXISTS {MAPPING_TABLE} (
@@ -82,43 +91,66 @@ print(f"Mappings refreshed in {MAPPING_TABLE}")
 
 # COMMAND ----------
 
+# Bronze preserves the source cost rows and schema for reproducibility.
 spark.sql(f"""
-CREATE OR REPLACE TABLE {ENRICHED_TABLE} AS
-WITH source AS (
-  SELECT
-    a.*,
-    UPPER(COALESCE(a.resourcegroupname, '')) AS rg_upper,
-    LOWER(CONCAT_WS(' ',
-      COALESCE(a.subscriptionname, ''),
-      COALESCE(a.resourcegroupname, ''),
-      COALESCE(a.consumedservice, ''),
-      COALESCE(a.servicefamily, ''),
-      COALESCE(a.metercategory, ''),
-      COALESCE(a.metersubcategory, ''),
-      COALESCE(a.metername, ''),
-      COALESCE(a.productname, ''),
-      COALESCE(a.additionalinfo, ''),
-      COALESCE(a.serviceinfo1, ''),
-      COALESCE(a.serviceinfo2, ''),
-      COALESCE(a.tags, '')
-    )) AS search_text,
+CREATE OR REPLACE TABLE {BRONZE_TABLE} AS
+SELECT *
+FROM {SOURCE_TABLE}
+""")
 
-    CASE 
-      WHEN NULLIF(TRIM(get_json_object(a.tags, '$.Application')), '') = 'EtexMate' THEN 'Etex Mate'
-      WHEN NULLIF(TRIM(get_json_object(a.tags, '$.Application')), '') IN ('GenAI-Chatbot', 'GenAi-ChatBot', 'GenAi-Chatbot') THEN 'GenAI-ChatBot'
-      WHEN NULLIF(TRIM(get_json_object(a.tags, '$.Application')), '') IN ('Uipath', 'UiPAth') THEN 'UiPath'
-      ELSE NULLIF(TRIM(get_json_object(a.tags, '$.Application')), '')
-    END AS raw_application,
-    NULLIF(TRIM(get_json_object(a.tags, '$.Service')), '') AS raw_service,
-    CASE
-      WHEN LOWER(NULLIF(TRIM(get_json_object(a.tags, '$.Domain')), '')) = 'finance' THEN 'Finance'
-      ELSE NULLIF(TRIM(get_json_object(a.tags, '$.Domain')), '')
-    END AS raw_domain,
-    NULLIF(TRIM(get_json_object(a.tags, '$.deployment')), '') AS raw_deployment,
-    NULLIF(TRIM(get_json_object(a.tags, '$.EnvironmentType')), '') AS raw_environment,
-    NULLIF(TRIM(get_json_object(a.tags, '$.Company')), '') AS raw_company,
-    NULLIF(TRIM(get_json_object(a.tags, '$.BusinessOwner')), '') AS raw_business_owner
-  FROM {SOURCE_TABLE} a
+bronze_count = spark.sql(f"SELECT COUNT(*) AS row_count FROM {BRONZE_TABLE}").collect()[0]["row_count"]
+print(f"Created {BRONZE_TABLE} with {bronze_count:,} rows")
+
+# COMMAND ----------
+
+# Silver standardizes tag values and prepares searchable text for enrichment.
+spark.sql(f"""
+CREATE OR REPLACE TABLE {SILVER_TABLE} AS
+SELECT
+  a.*,
+  UPPER(COALESCE(a.resourcegroupname, '')) AS rg_upper,
+  LOWER(CONCAT_WS(' ',
+    COALESCE(a.subscriptionname, ''),
+    COALESCE(a.resourcegroupname, ''),
+    COALESCE(a.consumedservice, ''),
+    COALESCE(a.servicefamily, ''),
+    COALESCE(a.metercategory, ''),
+    COALESCE(a.metersubcategory, ''),
+    COALESCE(a.metername, ''),
+    COALESCE(a.productname, ''),
+    COALESCE(a.additionalinfo, ''),
+    COALESCE(a.serviceinfo1, ''),
+    COALESCE(a.serviceinfo2, ''),
+    COALESCE(a.tags, '')
+  )) AS search_text,
+  CASE
+    WHEN NULLIF(TRIM(get_json_object(a.tags, '$.Application')), '') = 'EtexMate' THEN 'Etex Mate'
+    WHEN NULLIF(TRIM(get_json_object(a.tags, '$.Application')), '') IN ('GenAI-Chatbot', 'GenAi-ChatBot', 'GenAi-Chatbot') THEN 'GenAI-ChatBot'
+    WHEN NULLIF(TRIM(get_json_object(a.tags, '$.Application')), '') IN ('Uipath', 'UiPAth') THEN 'UiPath'
+    ELSE NULLIF(TRIM(get_json_object(a.tags, '$.Application')), '')
+  END AS raw_application,
+  NULLIF(TRIM(get_json_object(a.tags, '$.Service')), '') AS raw_service,
+  CASE
+    WHEN LOWER(NULLIF(TRIM(get_json_object(a.tags, '$.Domain')), '')) = 'finance' THEN 'Finance'
+    ELSE NULLIF(TRIM(get_json_object(a.tags, '$.Domain')), '')
+  END AS raw_domain,
+  NULLIF(TRIM(get_json_object(a.tags, '$.deployment')), '') AS raw_deployment,
+  NULLIF(TRIM(get_json_object(a.tags, '$.EnvironmentType')), '') AS raw_environment,
+  NULLIF(TRIM(get_json_object(a.tags, '$.Company')), '') AS raw_company,
+  NULLIF(TRIM(get_json_object(a.tags, '$.BusinessOwner')), '') AS raw_business_owner
+FROM {BRONZE_TABLE} a
+""")
+
+silver_count = spark.sql(f"SELECT COUNT(*) AS row_count FROM {SILVER_TABLE}").collect()[0]["row_count"]
+print(f"Created {SILVER_TABLE} with {silver_count:,} rows")
+
+# COMMAND ----------
+
+spark.sql(f"""
+CREATE OR REPLACE TABLE {GOLD_TABLE} AS
+WITH source AS (
+  SELECT *
+  FROM {SILVER_TABLE}
 ),
 
 mapped AS (
@@ -296,8 +328,8 @@ SELECT
 FROM derived
 """)
 
-row_count = spark.sql(f"SELECT COUNT(*) AS row_count FROM {ENRICHED_TABLE}").collect()[0]["row_count"]
-print(f"Created {ENRICHED_TABLE} with {row_count:,} rows")
+row_count = spark.sql(f"SELECT COUNT(*) AS row_count FROM {GOLD_TABLE}").collect()[0]["row_count"]
+print(f"Created {GOLD_TABLE} with {row_count:,} rows")
 
 # COMMAND ----------
 
@@ -316,7 +348,7 @@ SELECT
   SUM(cost_eur) AS cost_eur,
   SUM(cost_usd) AS cost_usd,
   COUNT(*) AS row_count
-FROM {ENRICHED_TABLE}
+FROM {GOLD_TABLE}
 WHERE application IS NULL OR model IS NULL OR spoke IS NULL
 GROUP BY resourcegroupname, application, service, model, spoke, api_access
 ORDER BY cost_eur DESC
@@ -334,7 +366,7 @@ SELECT
   COUNT(*) AS row_count,
   ROUND(SUM(cost_eur), 2) AS cost_eur,
   ROUND(SUM(cost_usd), 2) AS cost_usd
-FROM {ENRICHED_TABLE}
+FROM {GOLD_TABLE}
 GROUP BY api_access, spoke, application, service, model
 ORDER BY cost_eur DESC
 """))
@@ -346,5 +378,4 @@ ORDER BY cost_eur DESC
 # MAGIC
 # MAGIC 1. Set the catalog and schema in the config cell.
 # MAGIC 2. Run all cells.
-# MAGIC 3. Validate the mapping and enriched cost output.
-
+# MAGIC 3. Validate the mapping and gold cost output.
