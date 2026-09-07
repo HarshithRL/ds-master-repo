@@ -1,0 +1,34 @@
+resources:
+  jobs:
+    copilot_dashboard_pipeline:
+      name: "Copilot Dashboard - Pipeline"
+      tags:
+        project: copilot-dashboard
+        purpose: data-refresh
+
+      schedule:
+        quartz_cron_expression: "0 0 7 ? * MON-FRI"
+        timezone_id: Europe/Brussels
+        pause_status: PAUSED
+
+      tasks:
+        - task_key: run_pipeline
+          notebook_task:
+            notebook_path: ../../src/run_pipeline
+            base_parameters:
+              catalog: ${var.catalog}
+              warehouse_id: ${var.warehouse_id}
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: Standard_DS3_v2
+            data_security_mode: USER_ISOLATION
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*]"
+            policy_id: ${var.policy_id}
+
+      permissions:
+        - user_name: "mustafaarda.bicakci@etexgroup.com"
+          level: "CAN_MANAGE"
+        - user_name: "pierre.delaguiche@etexgroup.com"
+          level: "CAN_MANAGE"
