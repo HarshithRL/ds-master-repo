@@ -14,7 +14,7 @@ resources:
       tasks:
         - task_key: run_pipeline
           notebook_task:
-            notebook_path: ../../src/run_pipeline
+            notebook_path: ../../src/run_pipeline.py
             base_parameters:
               catalog: ${var.catalog}
               warehouse_id: ${var.warehouse_id}
