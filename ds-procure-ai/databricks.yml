@@ -1,0 +1,115 @@
+# =============================================================================
+# DATABRICKS ASSET BUNDLE — ds-procure-ai
+# =============================================================================
+# Databricks App (Flask + React + AI Brain). Discovered by the shared
+# DS-Master-Repo CI/CD pipeline. Targets must be D / T / A / P.
+#
+# Lakebase Autoscaling reuses existing project ds-vendor-agent — do not
+# create a new one. Branch/database values are full resource paths.
+# The Postgres dbname is databricks_postgres; the resource ID is hyphenated
+# (databricks-postgres). App runtime env lives in app.yaml (not here).
+# Do not put PG passwords or DATABRICKS_CONFIG_PROFILE in bundle/app env.
+# =============================================================================
+
+bundle:
+  name: ds-procure-ai
+
+include:
+  - resources/*.yml
+
+variables:
+  lakebase_branch:
+    description: Lakebase Autoscaling branch resource path
+    default: projects/ds-vendor-agent/branches/production
+  lakebase_database:
+    description: Lakebase Autoscaling database resource path (hyphenated ID)
+    default: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
+  catalog:
+    description: The Unity Catalog to use (contains bronze/silver/gold schemas)
+
+sync:
+  include:
+    - frontend/dist/**
+  exclude:
+    - .venv/**
+    - frontend/node_modules/**
+    - graphify-out/**
+    - logs/**
+    - backend/logs/**
+    - data/**
+    - mlruns/**
+    - mlartifacts/**
+    - __pycache__/**
+    - .mate-dev.pids
+    - "*.pyc"
+    - premium-audit.json
+    # Local runtime DBs — Apps rejects files >10MB; Lakebase is the deployed store.
+    - mate.sqlite
+    - "*.sqlite"
+    - "*.sqlite-*"
+    - "*.db"
+
+targets:
+  D:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/Users/${workspace.current_user.userName}/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_d
+      lakebase_branch: projects/ds-vendor-agent/branches/production
+      lakebase_database: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
+
+  T:
+    mode: production
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_d
+      lakebase_branch: projects/ds-vendor-agent/branches/production
+      lakebase_database: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
+    permissions:
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: harshith.raghunath@etexgroup.com
+        level: CAN_MANAGE
+
+  A:
+    mode: production
+    workspace:
+      host: https://adb-4796304964978539.19.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_a
+      # Confirm ACC Lakebase paths before opening a PR (ACC pipeline deploys --target A).
+      lakebase_branch: projects/ds-vendor-agent/branches/production
+      lakebase_database: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
+    permissions:
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: harshith.raghunath@etexgroup.com
+        level: CAN_MANAGE
+
+  P:
+    mode: production
+    workspace:
+      host: https://adb-4844910598668398.18.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_p
+      # Confirm PRD Lakebase paths before merge to main (PRD pipeline deploys --target P).
+      lakebase_branch: projects/ds-vendor-agent/branches/production
+      lakebase_database: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
+    permissions:
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: harshith.raghunath@etexgroup.com
+        level: CAN_MANAGE

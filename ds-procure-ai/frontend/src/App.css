@@ -1,0 +1,391 @@
+/* =========================================================
+   GLOBAL RESET
+   ========================================================= */
+
+   *,
+   *::before,
+   *::after {
+     box-sizing: border-box;
+   }
+   
+   html,
+   body,
+   #root {
+     margin: 0;
+     min-height: 100%;
+   }
+   
+   body {
+     margin: 0;
+   }
+   
+   
+   /* =========================================================
+      APPLICATION SHELL
+      Used only under /app/*
+      ========================================================= */
+   
+   .application-layout {
+     min-height: 100vh;
+     background: var(--bg);
+   }
+   
+   
+   /*
+      Navbar is fixed at 250px.
+   
+      Therefore the application content must start
+      after those 250px.
+   */
+   
+   .application-main {
+     min-height: 100vh;
+   
+     margin-left: 250px;
+   
+     width: calc(100% - 250px);
+   
+     background: var(--bg);
+   }
+   
+   
+   /* =========================================================
+      RESPONSIVE APPLICATION SHELL
+      ========================================================= */
+   
+   @media (max-width: 700px) {
+   
+     .application-main {
+       margin-left: 70px;
+       width: calc(100% - 70px);
+     }
+   
+   }
+   
+   /*
+      Sidebar is fixed at 280px.
+   
+      Every application page must live inside
+      .app-main so content never goes underneath
+      the sidebar.
+   */
+   
+   .app-main {
+     min-height: 100vh;
+     margin-left: 280px;
+     width: calc(100% - 280px);
+     background: var(--bg);
+   }
+   
+   
+   /* =========================================================
+      FIRST VIEW / LANDING PAGE
+      ========================================================= */
+   
+   .page {
+     min-height: 100vh;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     background: white;
+   }
+   
+   .page h1 {
+     margin: 0;
+     font-size: 48px;
+     font-weight: 400;
+     color: var(--text);
+   }
+   
+   
+   /* =========================================================
+      FIRST VIEW
+      ========================================================= */
+   
+   .first-view {
+     position: relative;
+     min-height: 100vh;
+     overflow: hidden;
+   
+     display: flex;
+     align-items: center;
+     justify-content: center;
+   
+     background: var(--bg);
+     color: white;
+   }
+   
+   
+   /* =========================================================
+      FIRST VIEW CONTENT
+      ========================================================= */
+   
+   .first-view-content {
+     position: relative;
+     z-index: 2;
+   
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+   
+     width: min(520px, 90vw);
+   
+     text-align: center;
+   }
+   
+   
+   /* =========================================================
+      BRAND
+      ========================================================= */
+   
+   .brand {
+     display: flex;
+     flex-direction: column;
+     align-items: center;
+   }
+   
+   .brand-logos {
+     display: flex;
+     align-items: center;
+     gap: 18px;
+   }
+   
+   .etex-logo {
+     width: 102px;
+     height: auto;
+   }
+   
+   .brand-divider {
+     width: 1px;
+     height: 30px;
+     background: rgba(255, 255, 255, 0.45);
+   }
+   
+   .mate-name {
+     font-size: 28px;
+     font-weight: 400;
+     letter-spacing: -0.5px;
+   }
+   
+   .brand-tagline {
+     margin-top: 28px;
+   
+     font-size: 14px;
+     line-height: 1.5;
+   
+     color: var(--text-muted);
+   }
+   
+   .learn-more {
+     margin-top: 4px;
+   
+     color: var(--accent);
+     text-decoration: none;
+   
+     font-size: 14px;
+   }
+   
+   .learn-more:hover {
+     text-decoration: underline;
+   }
+   
+   
+   /* =========================================================
+      LOGIN
+      ========================================================= */
+   
+   .login-button {
+     width: 265px;
+     margin-top: 20px;
+   
+     padding: 11px 24px;
+   
+     border-radius: 999px;
+     border: none;
+   
+     background: var(--accent);
+     color: white;
+   
+     text-align: center;
+     text-decoration: none;
+   
+     font-size: 15px;
+     font-weight: 600;
+   
+     cursor: pointer;
+   
+     transition:
+       transform 0.2s ease,
+       background 0.2s ease;
+   }
+   
+   .login-button:hover {
+     background: var(--accent-hover);
+     transform: translateY(-1px);
+   }
+   
+   
+   /* =========================================================
+      ORANGE CORNER
+      ========================================================= */
+   
+   .corner-top-left {
+     position: absolute;
+   
+     top: 0;
+     left: 0;
+   
+     width: 210px;
+     height: 210px;
+   
+     background: var(--accent);
+   
+     clip-path: polygon(
+       0 0,
+       100% 0,
+       0 100%
+     );
+   }
+   
+   
+   /* =========================================================
+      CHEVRONS
+      ========================================================= */
+   
+   .chevron {
+     position: absolute;
+   
+     top: 50%;
+     z-index: 1;
+   
+     width: 44px;
+     height: 170px;
+   
+     border-top: 34px solid var(--accent);
+     border-bottom: 34px solid var(--accent);
+   }
+   
+   .chevron-left {
+     left: 22%;
+   
+     transform:
+       translateY(-50%)
+       skewX(-30deg);
+   }
+   
+   .chevron-right {
+     right: 22%;
+   
+     transform:
+       translateY(-50%)
+       skewX(30deg);
+   }
+   
+   
+   /* =========================================================
+      FOOTER
+      ========================================================= */
+   
+   .first-view-footer {
+     position: absolute;
+   
+     right: 28px;
+     bottom: 28px;
+   
+     display: flex;
+     align-items: center;
+     gap: 10px;
+   
+     color: var(--text-subtle);
+   
+     font-size: 13px;
+     line-height: 1.05;
+   }
+   
+   .footer-logo {
+     width: 85px;
+     opacity: 0.8;
+   }
+   
+   
+   /* =========================================================
+      LOADING
+      ========================================================= */
+   
+   .first-view-loading {
+     min-height: 100vh;
+   
+     display: flex;
+     align-items: center;
+     justify-content: center;
+   
+     background: var(--bg);
+     color: white;
+   }
+   
+   
+   /* =========================================================
+      RESPONSIVE
+      ========================================================= */
+   
+   @media (max-width: 900px) {
+   
+     .chevron-left {
+       left: 8%;
+     }
+   
+     .chevron-right {
+       right: 8%;
+     }
+   
+   }
+   
+   
+   @media (max-width: 768px) {
+   
+     /*
+        On smaller screens the sidebar should no longer
+        permanently consume 280px.
+     */
+   
+     .app-main {
+       margin-left: 0;
+       width: 100%;
+     }
+   
+   }
+   
+   
+   @media (max-width: 600px) {
+   
+     .corner-top-left {
+       width: 130px;
+       height: 130px;
+     }
+   
+     .brand-logos {
+       gap: 12px;
+     }
+   
+     .etex-logo {
+       width: 85px;
+     }
+   
+     .mate-name {
+       font-size: 24px;
+     }
+   
+     .chevron {
+       display: none;
+     }
+   
+     .login-button {
+       width: min(265px, 80vw);
+     }
+   
+     .first-view-footer {
+       right: 16px;
+       bottom: 16px;
+     }
+   
+   }

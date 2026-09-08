@@ -1,0 +1,154 @@
+.vendors-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.vendors-tab .section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.vendors-tab .section-eyebrow {
+  display: block;
+  color: #ff6900;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.vendors-tab .section-header h2 {
+  margin: 8px 0 6px;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.vendors-tab .section-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.vendor-total {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.vendor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.vendor-card {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.vendor-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.vendor-card-head h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.vendor-card-head span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.vendor-card-head em {
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.vendor-card-head em.responded {
+  background: rgba(69, 212, 131, 0.18);
+  color: #45d483;
+}
+
+.vendor-card-head em.invited {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+.vendor-headline {
+  margin: 0 0 14px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.vendor-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.vendor-facts div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vendor-facts dt {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.vendor-facts dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vendor-files {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.vendor-files li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kb-status-banner {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.kb-status-banner.is-error {
+  color: #ff7a7a;
+}
+
+@media (max-width: 900px) {
+  .vendor-grid {
+    grid-template-columns: 1fr;
+  }
+}

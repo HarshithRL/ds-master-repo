@@ -1,0 +1,8 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "nexus": "./ai_brain/studio.py:nexus",
+    "procura": "./ai_brain/studio.py:procura"
+  },
+  "env": ".env.studio"
+}

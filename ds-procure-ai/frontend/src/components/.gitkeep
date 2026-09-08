@@ -1,0 +1,2 @@
+# Global shared components live here (used by Hub and more than one Mate app).
+# App-only UI belongs in src/apps/<slug>/components/.

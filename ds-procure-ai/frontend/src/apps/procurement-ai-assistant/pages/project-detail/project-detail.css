@@ -1,0 +1,289 @@
+.project-detail-page {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.project-detail-page.is-workspace {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.project-detail-container {
+  max-width: 1450px;
+  margin: 0 auto;
+  padding: 42px;
+}
+
+.project-detail-container.is-workspace {
+  display: flex;
+  flex-direction: column;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 24px 24px 16px;
+  box-sizing: border-box;
+}
+
+.project-detail-container.is-workspace .project-tab-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* =========================
+   BREADCRUMB
+   ========================= */
+
+.project-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.project-detail-container.is-workspace .project-breadcrumb {
+  margin-bottom: 14px;
+}
+
+.project-breadcrumb a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.project-breadcrumb a:hover {
+  color: var(--accent);
+}
+
+.project-breadcrumb strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* =========================
+   HEADER
+   ========================= */
+
+.project-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.project-detail-container.is-workspace .project-detail-header {
+  margin-bottom: 12px;
+}
+
+.project-detail-container.is-workspace .project-detail-header h1 {
+  margin: 4px 0;
+  font-size: 26px;
+}
+
+.project-detail-eyebrow {
+  display: block;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.project-detail-header h1 {
+  margin: 8px 0;
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.project-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.project-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(69, 212, 131, 0.15);
+  color: var(--success);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.project-header-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.primary-button {
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.primary-button:hover {
+  background: var(--accent-hover);
+}
+
+.primary-button:active {
+  transform: translateY(1px);
+}
+
+.secondary-button {
+  padding: 12px 18px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.secondary-button:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.project-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* =========================
+   TABS
+   ========================= */
+
+.project-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.project-detail-container.is-workspace .project-tabs {
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.project-tab {
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.project-tab:hover {
+  color: var(--text);
+}
+
+.project-tab.active {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+}
+
+.project-tab-placeholder {
+  padding: 36px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.project-tab-placeholder p {
+  margin: 0;
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+
+@media (max-width: 900px) {
+  html:has(.procurement-main.is-workspace),
+  html:has(.procurement-main.is-workspace) body,
+  html:has(.procurement-main.is-workspace) #root {
+    height: auto;
+    max-height: none;
+    overflow: auto;
+    scrollbar-width: auto;
+  }
+
+  html:has(.procurement-main.is-workspace)::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+    display: block;
+  }
+
+  .procurement-app:has(.procurement-main.is-workspace) {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .procurement-main.is-workspace {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .project-detail-page.is-workspace {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .project-detail-container.is-workspace {
+    height: auto;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 700px) {
+  .project-detail-container {
+    padding: 24px 18px;
+  }
+
+  .project-detail-header {
+    flex-direction: column;
+  }
+
+  .project-detail-header h1 {
+    font-size: 26px;
+  }
+
+  .project-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
