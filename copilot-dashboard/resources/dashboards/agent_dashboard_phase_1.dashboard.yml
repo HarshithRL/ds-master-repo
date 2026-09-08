@@ -1,0 +1,6 @@
+resources:
+  dashboards:
+    agent_dashboard_phase_1:
+      display_name: "Agent Dashboard Phase 1"
+      file_path: ../../src/dashboards/agent_dashboard_phase_1.lvdash.json
+      warehouse_id: ${var.warehouse_id}
