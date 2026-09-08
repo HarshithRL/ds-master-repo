@@ -55,7 +55,7 @@ STEPS = [
         "name": "02_silver_dimensional",
         "path": f"{BASE}/02_silver_dimensional",
         "timeout": 30,
-        "params": {"catalog": CATALOG},
+        "params": {"catalog": CATALOG, "pipeline_schema": f"{CATALOG}.silver"},
     },
     {
         "name": "03_metrics_validate_publish",
