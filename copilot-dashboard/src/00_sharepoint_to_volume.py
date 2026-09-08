@@ -1,4 +1,8 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "5"
+# ///
 # DBTITLE 1,00 - SharePoint to Volume
 # MAGIC %md
 # MAGIC # 00 - SharePoint to Volume
@@ -595,6 +599,12 @@ if n_re:
 if n_fb:
     print(f"   {n_fb} file(s) not on SharePoint — using fallback from previous run (data may be stale).")
 print("   Next step: run 01_bronze_ingestion")
+
+# Pass run_folder to downstream tasks in multi-task job setup
+try:
+    dbutils.jobs.taskValues.set(key="run_folder", value=run_folder)
+except Exception:
+    pass  # Not running as a job task — ignore
 
 dbutils.notebook.exit(json.dumps({
     "run_folder": run_folder,

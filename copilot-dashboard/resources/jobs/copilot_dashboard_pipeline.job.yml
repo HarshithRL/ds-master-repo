@@ -32,3 +32,6 @@ resources:
           level: "CAN_MANAGE"
         - user_name: "pierre.delaguiche@etexgroup.com"
           level: "CAN_MANAGE"
+        - user_name: "pierre.delaguiche@etexgroup.com"
+          level: "CAN_MANAGE"  
+          sahil.ailsingani@etexgroup.com

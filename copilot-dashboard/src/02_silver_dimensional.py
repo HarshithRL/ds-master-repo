@@ -1,4 +1,8 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "5"
+# ///
 # DBTITLE 1,02 - Silver & Dimensional Layer
 # MAGIC %md
 # MAGIC # 02 - Silver & Dimensional Layer
@@ -14,7 +18,7 @@
 dbutils.widgets.text("catalog", "automation_d", "Catalog")
 CATALOG = dbutils.widgets.get("catalog")
 S = f"{CATALOG}.silver"  # shorthand for all SQL
-spark.conf.set("pipeline.schema", S)
+spark.sql(f"SET pipeline.schema = {S}")
 print(f"Target schema: {S}")
 
 # COMMAND ----------
