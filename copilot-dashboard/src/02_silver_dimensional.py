@@ -7,7 +7,7 @@
 # MAGIC %md
 # MAGIC # 02 - Silver & Dimensional Layer
 # MAGIC
-# MAGIC **Purpose:** Transforms bronze tables into silver normalize tables, then builds the full dimensional model (dims, facts, views) in `${pipeline.schema}`.
+# MAGIC **Purpose:** Transforms bronze tables into silver normalize tables, then builds the full dimensional model (dims, facts, views) in `${pipeline_schema}`.
 # MAGIC
 # MAGIC **Run after:** `01_bronze_ingestion`
 # MAGIC **Run before:** `03_metrics_validate_publish`
@@ -18,14 +18,14 @@
 dbutils.widgets.text("catalog", "automation_d", "Catalog")
 CATALOG = dbutils.widgets.get("catalog")
 S = f"{CATALOG}.silver"  # shorthand for all SQL
-spark.sql(f"SET pipeline.schema = {S}")
+dbutils.widgets.text("pipeline_schema", S, "Pipeline Schema")
 print(f"Target schema: {S}")
 
 # COMMAND ----------
 
 # DBTITLE 1,Silver | sl_purview_log
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.sl_purview_log AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.sl_purview_log AS
 # MAGIC SELECT
 # MAGIC     RecordId                          AS record_id,
 # MAGIC     CreationDate                      AS creation_date,
@@ -35,26 +35,26 @@ print(f"Target schema: {S}")
 # MAGIC     AuditData                         AS audit_data,
 # MAGIC     AssociatedAdminUnits              AS associated_admin_units,
 # MAGIC     AssociatedAdminUnitsNames         AS associated_admin_units_names
-# MAGIC FROM ${pipeline.schema}.microsoft_purview_audit_log
+# MAGIC FROM ${pipeline_schema}.microsoft_purview_audit_log
 # MAGIC WHERE LENGTH(AuditData) > 200;
 
 # COMMAND ----------
 
 # DBTITLE 1,Silver | silver_dim_environment
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.silver_dim_environment AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.silver_dim_environment AS
 # MAGIC SELECT DISTINCT
 # MAGIC     environment_id,
 # MAGIC     environment_name,
 # MAGIC     capacity_type
-# MAGIC FROM ${pipeline.schema}.environment_level_credit_consumption
+# MAGIC FROM ${pipeline_schema}.environment_level_credit_consumption
 # MAGIC WHERE environment_id IS NOT NULL AND environment_id != '';
 
 # COMMAND ----------
 
 # DBTITLE 1,Silver | silver_fact_interactions
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.silver_fact_interactions AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.silver_fact_interactions AS
 # MAGIC SELECT
 # MAGIC     b.record_id,
 # MAGIC     TRY_TO_TIMESTAMP(b.creation_date)                                                 AS creation_ts,
@@ -114,13 +114,13 @@ print(f"Target schema: {S}")
 # MAGIC         GET_JSON_OBJECT(b.associated_admin_units_names, '$[0]'),
 # MAGIC         b.associated_admin_units_names
 # MAGIC     )                                                                                 AS admin_unit_name
-# MAGIC FROM ${pipeline.schema}.sl_purview_log b;
+# MAGIC FROM ${pipeline_schema}.sl_purview_log b;
 
 # COMMAND ----------
 
 # DBTITLE 1,Silver | sl_agent_inventory
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.sl_agent_inventory AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.sl_agent_inventory AS
 # MAGIC SELECT
 # MAGIC   Item_name AS item_name, Created_in AS created_in, Item_ID AS item_id,
 # MAGIC   Status AS status, Owner AS owner, Model AS model,
@@ -130,13 +130,13 @@ print(f"Target schema: {S}")
 # MAGIC   Blueprint_ID AS blueprint_id,
 # MAGIC   Created_On AS created_on, Published_On AS published_on,
 # MAGIC   Created_By AS created_by
-# MAGIC FROM ${pipeline.schema}.agents_inventory;
+# MAGIC FROM ${pipeline_schema}.agents_inventory;
 
 # COMMAND ----------
 
 # DBTITLE 1,Silver | sl_agent_credit
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.sl_agent_credit AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.sl_agent_credit AS
 # MAGIC SELECT
 # MAGIC   Agent_Name AS agent_name, Agent_Id AS agent_id, Product AS product,
 # MAGIC   AI_Feature_Billable_Feature AS ai_feature_billable_feature,
@@ -145,13 +145,13 @@ print(f"Target schema: {S}")
 # MAGIC   Channel AS channel, Knowledge_Sources AS knowledge_sources,
 # MAGIC   Tool_Used AS tool_used, LLM_Model AS llm_model,
 # MAGIC   Environment_Name AS environment_name
-# MAGIC FROM ${pipeline.schema}.agent_level_credit_consumption;
+# MAGIC FROM ${pipeline_schema}.agent_level_credit_consumption;
 
 # COMMAND ----------
 
 # DBTITLE 1,Silver | sl_environment_credit
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.sl_environment_credit AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.sl_environment_credit AS
 # MAGIC SELECT
 # MAGIC   BillingPlan_Id AS billing_plan_id, BillingPlan_Name AS billing_plan_name,
 # MAGIC   Environment_Id AS environment_id, Environment_Name AS environment_name,
@@ -161,26 +161,26 @@ print(f"Target schema: {S}")
 # MAGIC   CAST(ROUND(TRY_CAST(Pay_As_You_Go_Consumed_Quantity AS DOUBLE), 0) AS BIGINT) AS pay_as_you_go_consumed_quantity,
 # MAGIC   TRY_TO_DATE(Usage_Date, 'M/d/yyyy') AS usage_date,
 # MAGIC   DATE_FORMAT(TRY_TO_DATE(Usage_Date, 'M/d/yyyy'), 'dd/MM/yyyy') AS usage_date_eu
-# MAGIC FROM ${pipeline.schema}.environment_level_credit_consumption;
+# MAGIC FROM ${pipeline_schema}.environment_level_credit_consumption;
 
 # COMMAND ----------
 
 # DBTITLE 1,Silver | sl_user_credit
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.sl_user_credit AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.sl_user_credit AS
 # MAGIC SELECT
 # MAGIC   User_Id AS user_id, User_Email AS user_email,
 # MAGIC   Agent_Id AS agent_id, Agent_Name AS agent_name,
 # MAGIC   CAST(ROUND(TRY_CAST(Billable_credit_used AS DOUBLE), 0) AS BIGINT) AS billable_credit_used,
 # MAGIC   CAST(Credits_used AS DECIMAL(21,1)) AS credits_used,
 # MAGIC   M365_Copilot_Licensed AS m365_copilot_licensed
-# MAGIC FROM ${pipeline.schema}.user_level_credit_consumption;
+# MAGIC FROM ${pipeline_schema}.user_level_credit_consumption;
 
 # COMMAND ----------
 
 # DBTITLE 1,Reference | ref_credit_rate
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.ref_credit_rate AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.ref_credit_rate AS
 # MAGIC SELECT
 # MAGIC   CAST(0.006932 AS DOUBLE)  AS credit_to_eur,
 # MAGIC   'EUR'                     AS currency,
@@ -191,7 +191,7 @@ print(f"Target schema: {S}")
 
 # DBTITLE 1,Dimension | dim_date
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.dim_date AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.dim_date AS
 # MAGIC SELECT
 # MAGIC   CAST(DATE_FORMAT(d, 'yyyyMMdd') AS INT) AS date_key,
 # MAGIC   d AS date,
@@ -207,27 +207,27 @@ print(f"Target schema: {S}")
 
 # DBTITLE 1,Dimension | dim_user
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.dim_user AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.dim_user AS
 # MAGIC SELECT
 # MAGIC   XXHASH64(user_id) AS user_key,
 # MAGIC   user_id, user_email, m365_copilot_licensed
 # MAGIC FROM (
 # MAGIC   SELECT DISTINCT user_id, LOWER(user_email) AS user_email, m365_copilot_licensed
-# MAGIC   FROM ${pipeline.schema}.sl_user_credit
+# MAGIC   FROM ${pipeline_schema}.sl_user_credit
 # MAGIC );
 
 # COMMAND ----------
 
 # DBTITLE 1,Dimension | dim_environment
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.dim_environment AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.dim_environment AS
 # MAGIC WITH inv AS (
 # MAGIC   SELECT LOWER(Environment_Name) AS environment_name_norm, Environment_Name AS environment_name,
 # MAGIC          NULLIF(NULLIF(Environment_ID, ''), '-') AS environment_id,
 # MAGIC          NULLIF(NULLIF(Environment_Type, ''), '-') AS environment_type,
 # MAGIC          NULLIF(NULLIF(Location, ''), '-') AS environment_region,
 # MAGIC          CASE WHEN LOWER(COALESCE(Managed_State, '')) IN ('true','yes','1','managed') THEN TRUE ELSE FALSE END AS is_managed
-# MAGIC   FROM ${pipeline.schema}.copilot_studio_kit_all_records
+# MAGIC   FROM ${pipeline_schema}.copilot_studio_kit_all_records
 # MAGIC   WHERE Environment_Name IS NOT NULL AND Environment_Name != ''
 # MAGIC ),
 # MAGIC ranked AS (
@@ -243,8 +243,8 @@ print(f"Target schema: {S}")
 
 # DBTITLE 1,Dimension | dim_agent
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.dim_agent AS
-# MAGIC WITH dedup AS (SELECT * FROM ${pipeline.schema}.sl_agent_inventory),
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.dim_agent AS
+# MAGIC WITH dedup AS (SELECT * FROM ${pipeline_schema}.sl_agent_inventory),
 # MAGIC parsed_all AS (
 # MAGIC   SELECT
 # MAGIC     item_id, item_name, created_in,
@@ -262,15 +262,15 @@ print(f"Target schema: {S}")
 # MAGIC          Environment_Name AS environment, Environment_Type AS environment_type,
 # MAGIC          Location AS environment_region,
 # MAGIC          CASE WHEN LOWER(COALESCE(Managed_State, '')) IN ('true','yes','1','managed') THEN TRUE ELSE FALSE END AS is_managed
-# MAGIC   FROM ${pipeline.schema}.copilot_studio_kit_all_records
+# MAGIC   FROM ${pipeline_schema}.copilot_studio_kit_all_records
 # MAGIC ),
 # MAGIC credit_agents AS (
 # MAGIC   SELECT LOWER(agent_name) AS agent_name_norm, agent_name,
 # MAGIC          MAX(CASE WHEN product = 'Dataverse' THEN 'Platform Tool' ELSE 'Copilot Studio' END) AS agent_category
-# MAGIC   FROM ${pipeline.schema}.sl_agent_credit GROUP BY LOWER(agent_name), agent_name
+# MAGIC   FROM ${pipeline_schema}.sl_agent_credit GROUP BY LOWER(agent_name), agent_name
 # MAGIC ),
 # MAGIC used_agents AS (
-# MAGIC   SELECT LOWER(agent_name) AS agent_name_norm FROM ${pipeline.schema}.sl_user_credit GROUP BY LOWER(agent_name)
+# MAGIC   SELECT LOWER(agent_name) AS agent_name_norm FROM ${pipeline_schema}.sl_user_credit GROUP BY LOWER(agent_name)
 # MAGIC ),
 # MAGIC enriched AS (
 # MAGIC   SELECT p.*,
@@ -300,24 +300,24 @@ print(f"Target schema: {S}")
 # DBTITLE 1,Bridge | _agent_name_bridge
 # MAGIC %sql
 # MAGIC -- Agent name bridge for fuzzy join between credit tables and inventory
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}._agent_name_bridge AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}._agent_name_bridge AS
 # MAGIC SELECT
 # MAGIC   LOWER(a.agent_name) AS agent_name_norm,
 # MAGIC   a.agent_key,
 # MAGIC   a.agent_name AS inventory_agent_name
-# MAGIC FROM ${pipeline.schema}.dim_agent a
+# MAGIC FROM ${pipeline_schema}.dim_agent a
 # MAGIC WHERE a.is_valid_agent;
 
 # COMMAND ----------
 
 # DBTITLE 1,Fact | fact_environment_credit
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.fact_environment_credit AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.fact_environment_credit AS
 # MAGIC WITH parsed AS (
 # MAGIC   SELECT environment_id, environment_name, capacity_type,
 # MAGIC          prepaid_consumed_quantity, entitled_quantity, pay_as_you_go_consumed_quantity,
 # MAGIC          usage_date, usage_date_eu
-# MAGIC   FROM ${pipeline.schema}.sl_environment_credit
+# MAGIC   FROM ${pipeline_schema}.sl_environment_credit
 # MAGIC   WHERE usage_date IS NOT NULL
 # MAGIC )
 # MAGIC SELECT
@@ -332,7 +332,7 @@ print(f"Target schema: {S}")
 
 # DBTITLE 1,Fact | fact_agent_credit
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.fact_agent_credit AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.fact_agent_credit AS
 # MAGIC SELECT
 # MAGIC   XXHASH64(LOWER(c.environment_name)) AS environment_key,
 # MAGIC   CASE WHEN c.product = 'Copilot Studio' THEN b.agent_key END AS inventory_agent_key,
@@ -351,16 +351,16 @@ print(f"Target schema: {S}")
 # MAGIC   c.environment_name,
 # MAGIC   c.billed_credit,
 # MAGIC   c.non_billed_credit
-# MAGIC FROM ${pipeline.schema}.sl_agent_credit c
-# MAGIC LEFT JOIN ${pipeline.schema}._agent_name_bridge b ON b.agent_name_norm = LOWER(c.agent_name);
+# MAGIC FROM ${pipeline_schema}.sl_agent_credit c
+# MAGIC LEFT JOIN ${pipeline_schema}._agent_name_bridge b ON b.agent_name_norm = LOWER(c.agent_name);
 
 # COMMAND ----------
 
 # DBTITLE 1,Fact | fact_user_agent_credit
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.fact_user_agent_credit AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.fact_user_agent_credit AS
 # MAGIC WITH bridge AS (
-# MAGIC   SELECT agent_name_norm, agent_key FROM ${pipeline.schema}._agent_name_bridge
+# MAGIC   SELECT agent_name_norm, agent_key FROM ${pipeline_schema}._agent_name_bridge
 # MAGIC )
 # MAGIC SELECT
 # MAGIC   u.user_key,
@@ -370,27 +370,27 @@ print(f"Target schema: {S}")
 # MAGIC   COALESCE(ac.agent_category, 'Copilot Studio') AS agent_category,
 # MAGIC   c.billable_credit_used,
 # MAGIC   c.credits_used
-# MAGIC FROM ${pipeline.schema}.sl_user_credit c
-# MAGIC INNER JOIN ${pipeline.schema}.dim_user u ON u.user_id = c.user_id
+# MAGIC FROM ${pipeline_schema}.sl_user_credit c
+# MAGIC INNER JOIN ${pipeline_schema}.dim_user u ON u.user_id = c.user_id
 # MAGIC LEFT JOIN bridge b ON b.agent_name_norm = LOWER(c.agent_name)
 # MAGIC LEFT JOIN (
 # MAGIC   SELECT LOWER(agent_name) AS agent_name_norm,
 # MAGIC          MAX(CASE WHEN product = 'Dataverse' THEN 'Platform Tool' ELSE 'Copilot Studio' END) AS agent_category
-# MAGIC   FROM ${pipeline.schema}.sl_agent_credit GROUP BY LOWER(agent_name)
+# MAGIC   FROM ${pipeline_schema}.sl_agent_credit GROUP BY LOWER(agent_name)
 # MAGIC ) ac ON ac.agent_name_norm = LOWER(c.agent_name);
 
 # COMMAND ----------
 
 # DBTITLE 1,Fact | fact_agent_knowledge_source
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.fact_agent_knowledge_source AS
-# MAGIC WITH inv AS (SELECT DISTINCT item_id FROM ${pipeline.schema}.sl_agent_inventory),
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.fact_agent_knowledge_source AS
+# MAGIC WITH inv AS (SELECT DISTINCT item_id FROM ${pipeline_schema}.sl_agent_inventory),
 # MAGIC kit AS (
 # MAGIC   SELECT Agent_ID AS agent_id, Name AS agent_name, Agent_Owner AS agent_owner,
 # MAGIC          Agent_Owner_Email AS agent_owner_email, Environment_Name AS environment_name,
 # MAGIC          Environment_Type AS environment_type, Published AS published,
 # MAGIC          Agent_Created_By AS created_by, Model AS model, Knowledge_Sources AS knowledge_sources_raw
-# MAGIC   FROM ${pipeline.schema}.copilot_studio_kit_all_records
+# MAGIC   FROM ${pipeline_schema}.copilot_studio_kit_all_records
 # MAGIC ),
 # MAGIC exploded AS (
 # MAGIC   SELECT k.*, kb.DisplayName AS kb_display_name, kb.KnowledgeType AS kb_type, kb.Value AS kb_value
@@ -413,16 +413,16 @@ print(f"Target schema: {S}")
 # MAGIC FROM exploded e
 # MAGIC INNER JOIN kb_counts c ON c.kb_value = e.kb_value
 # MAGIC LEFT JOIN inv i ON i.item_id = e.agent_id
-# MAGIC LEFT JOIN ${pipeline.schema}.dim_agent da ON da.agent_id = e.agent_id;
+# MAGIC LEFT JOIN ${pipeline_schema}.dim_agent da ON da.agent_id = e.agent_id;
 
 # COMMAND ----------
 
 # DBTITLE 1,View | vw_agent_governance
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.vw_agent_governance AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.vw_agent_governance AS
 # MAGIC WITH env_credit AS (
 # MAGIC   SELECT DISTINCT LOWER(environment_name) AS environment_name_norm
-# MAGIC   FROM ${pipeline.schema}.sl_environment_credit
+# MAGIC   FROM ${pipeline_schema}.sl_environment_credit
 # MAGIC )
 # MAGIC SELECT
 # MAGIC   d.agent_key, d.agent_id, d.agent_name, d.platform, d.agent_category,
@@ -435,16 +435,16 @@ print(f"Target schema: {S}")
 # MAGIC   d.credit_agent_name, d.environment_name, d.environment_type, d.environment_region,
 # MAGIC   e.environment_id, d.is_managed,
 # MAGIC   (ec.environment_name_norm IS NOT NULL) AS environment_has_credit
-# MAGIC FROM ${pipeline.schema}.dim_agent d
-# MAGIC LEFT JOIN ${pipeline.schema}.dim_environment e ON e.environment_key = d.environment_key
+# MAGIC FROM ${pipeline_schema}.dim_agent d
+# MAGIC LEFT JOIN ${pipeline_schema}.dim_environment e ON e.environment_key = d.environment_key
 # MAGIC LEFT JOIN env_credit ec ON ec.environment_name_norm = LOWER(d.environment_name);
 
 # COMMAND ----------
 
 # DBTITLE 1,View | vw_agent_knowledge
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.vw_agent_knowledge AS
-# MAGIC WITH inv AS (SELECT DISTINCT item_id FROM ${pipeline.schema}.sl_agent_inventory),
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.vw_agent_knowledge AS
+# MAGIC WITH inv AS (SELECT DISTINCT item_id FROM ${pipeline_schema}.sl_agent_inventory),
 # MAGIC kit AS (
 # MAGIC   SELECT Agent_ID AS agent_id, Name AS agent_name, Agent_Owner AS agent_owner,
 # MAGIC          Agent_Owner_Email AS agent_owner_email, Environment_Name AS environment_name,
@@ -453,7 +453,7 @@ print(f"Target schema: {S}")
 # MAGIC          Knowledge_Sources AS knowledge_sources_raw,
 # MAGIC          Uses_Knowledge_Sources AS uses_knowledge_flag,
 # MAGIC          Web_Search_Enabled AS web_search_enabled
-# MAGIC   FROM ${pipeline.schema}.copilot_studio_kit_all_records
+# MAGIC   FROM ${pipeline_schema}.copilot_studio_kit_all_records
 # MAGIC ),
 # MAGIC parsed AS (
 # MAGIC   SELECT k.*,
@@ -462,7 +462,7 @@ print(f"Target schema: {S}")
 # MAGIC     END AS knowledge_source_count
 # MAGIC   FROM kit k
 # MAGIC ),
-# MAGIC da AS (SELECT agent_id, is_valid_agent, platform FROM ${pipeline.schema}.dim_agent)
+# MAGIC da AS (SELECT agent_id, is_valid_agent, platform FROM ${pipeline_schema}.dim_agent)
 # MAGIC SELECT p.agent_id, p.agent_name, p.agent_owner, p.agent_owner_email,
 # MAGIC        p.environment_name, p.environment_type, p.published, p.created_by, p.model,
 # MAGIC        p.uses_knowledge_flag, p.web_search_enabled, p.knowledge_source_count,
@@ -478,9 +478,9 @@ print(f"Target schema: {S}")
 
 # DBTITLE 1,View | vw_agent_credit_detail
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.vw_agent_credit_detail AS
-# MAGIC WITH rate AS (SELECT MAX(credit_to_eur) AS credit_to_eur FROM ${pipeline.schema}.ref_credit_rate),
-# MAGIC bridge AS (SELECT agent_name_norm, agent_key, inventory_agent_name FROM ${pipeline.schema}._agent_name_bridge)
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.vw_agent_credit_detail AS
+# MAGIC WITH rate AS (SELECT MAX(credit_to_eur) AS credit_to_eur FROM ${pipeline_schema}.ref_credit_rate),
+# MAGIC bridge AS (SELECT agent_name_norm, agent_key, inventory_agent_name FROM ${pipeline_schema}._agent_name_bridge)
 # MAGIC SELECT
 # MAGIC   f.credit_agent_id, f.agent_name, f.agent_category, f.product, f.ai_feature, f.channel,
 # MAGIC   f.knowledge_sources, f.tool_used, f.llm_model, f.environment_name,
@@ -490,18 +490,18 @@ print(f"Target schema: {S}")
 # MAGIC   f.billed_credit, f.non_billed_credit,
 # MAGIC   CAST(f.billed_credit + f.non_billed_credit AS DECIMAL(22, 1)) AS total_credit,
 # MAGIC   CAST((f.billed_credit + f.non_billed_credit) * r.credit_to_eur AS DOUBLE) AS total_credit_cost_eur
-# MAGIC FROM ${pipeline.schema}.fact_agent_credit f
+# MAGIC FROM ${pipeline_schema}.fact_agent_credit f
 # MAGIC CROSS JOIN rate r
-# MAGIC LEFT JOIN ${pipeline.schema}.dim_environment e ON e.environment_key = f.environment_key
+# MAGIC LEFT JOIN ${pipeline_schema}.dim_environment e ON e.environment_key = f.environment_key
 # MAGIC LEFT JOIN bridge b ON b.agent_key = f.inventory_agent_key
-# MAGIC LEFT JOIN ${pipeline.schema}.dim_agent d ON d.agent_key = f.inventory_agent_key;
+# MAGIC LEFT JOIN ${pipeline_schema}.dim_agent d ON d.agent_key = f.inventory_agent_key;
 
 # COMMAND ----------
 
 # DBTITLE 1,View | vw_environment_daily
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.vw_environment_daily AS
-# MAGIC WITH rate AS (SELECT MAX(credit_to_eur) AS credit_to_eur FROM ${pipeline.schema}.ref_credit_rate)
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.vw_environment_daily AS
+# MAGIC WITH rate AS (SELECT MAX(credit_to_eur) AS credit_to_eur FROM ${pipeline_schema}.ref_credit_rate)
 # MAGIC SELECT
 # MAGIC   f.environment_name, e.environment_type, e.environment_region, e.is_managed,
 # MAGIC   f.usage_date AS date, f.usage_date_eu AS date_eu,
@@ -509,18 +509,18 @@ print(f"Target schema: {S}")
 # MAGIC   f.capacity_type,
 # MAGIC   f.prepaid_consumed_quantity, f.entitled_quantity, f.pay_as_you_go_consumed_quantity,
 # MAGIC   CAST(f.prepaid_consumed_quantity * r.credit_to_eur AS DOUBLE) AS prepaid_cost_eur
-# MAGIC FROM ${pipeline.schema}.fact_environment_credit f
+# MAGIC FROM ${pipeline_schema}.fact_environment_credit f
 # MAGIC CROSS JOIN rate r
-# MAGIC LEFT JOIN ${pipeline.schema}.dim_environment e ON e.environment_key = f.environment_key
-# MAGIC LEFT JOIN ${pipeline.schema}.dim_date dd ON dd.date_key = f.date_key;
+# MAGIC LEFT JOIN ${pipeline_schema}.dim_environment e ON e.environment_key = f.environment_key
+# MAGIC LEFT JOIN ${pipeline_schema}.dim_date dd ON dd.date_key = f.date_key;
 
 # COMMAND ----------
 
 # DBTITLE 1,View | vw_user_agent_usage
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.vw_user_agent_usage AS
-# MAGIC WITH rate AS (SELECT MAX(credit_to_eur) AS credit_to_eur FROM ${pipeline.schema}.ref_credit_rate),
-# MAGIC bridge AS (SELECT agent_name_norm, agent_key, inventory_agent_name FROM ${pipeline.schema}._agent_name_bridge)
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.vw_user_agent_usage AS
+# MAGIC WITH rate AS (SELECT MAX(credit_to_eur) AS credit_to_eur FROM ${pipeline_schema}.ref_credit_rate),
+# MAGIC bridge AS (SELECT agent_name_norm, agent_key, inventory_agent_name FROM ${pipeline_schema}._agent_name_bridge)
 # MAGIC SELECT
 # MAGIC   f.user_key, u.user_email, u.m365_copilot_licensed,
 # MAGIC   f.credit_agent_id, f.agent_name, f.agent_category,
@@ -531,17 +531,17 @@ print(f"Target schema: {S}")
 # MAGIC   f.billable_credit_used, f.credits_used,
 # MAGIC   CAST(f.credits_used * r.credit_to_eur AS DOUBLE) AS consumption_cost_eur,
 # MAGIC   CAST(f.billable_credit_used * r.credit_to_eur AS DOUBLE) AS spend_cost_eur
-# MAGIC FROM ${pipeline.schema}.fact_user_agent_credit f
+# MAGIC FROM ${pipeline_schema}.fact_user_agent_credit f
 # MAGIC CROSS JOIN rate r
-# MAGIC INNER JOIN ${pipeline.schema}.dim_user u ON u.user_key = f.user_key
+# MAGIC INNER JOIN ${pipeline_schema}.dim_user u ON u.user_key = f.user_key
 # MAGIC LEFT JOIN bridge b ON b.agent_key = f.inventory_agent_key
-# MAGIC LEFT JOIN ${pipeline.schema}.dim_agent d ON d.agent_key = f.inventory_agent_key;
+# MAGIC LEFT JOIN ${pipeline_schema}.dim_agent d ON d.agent_key = f.inventory_agent_key;
 
 # COMMAND ----------
 
 # DBTITLE 1,Bot usage | bot_usage
 # MAGIC %sql
-# MAGIC CREATE OR REPLACE TABLE ${pipeline.schema}.bot_usage AS
+# MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.bot_usage AS
 # MAGIC SELECT
 # MAGIC   k.Do_Not_Modify_PVA_Bot_Usage AS pva_bot_usage_id,
 # MAGIC   k.Do_Not_Modify_Row_Checksum AS row_checksum,
@@ -571,5 +571,5 @@ print(f"Target schema: {S}")
 # MAGIC     WHEN LOWER(k.Bot_Environment_Display_Name_PVA_Bot_PVA_Bot) LIKE '%default%' THEN 'Default environment'
 # MAGIC     ELSE 'Dev / Test / Other'
 # MAGIC   END AS env_type
-# MAGIC FROM ${pipeline.schema}.bot_usage_pp_coe_kit k
+# MAGIC FROM ${pipeline_schema}.bot_usage_pp_coe_kit k
 # MAGIC WHERE k.Do_Not_Modify_PVA_Bot_Usage IS NOT NULL;
