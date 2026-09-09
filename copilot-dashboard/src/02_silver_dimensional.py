@@ -159,8 +159,8 @@ print(f"Target schema: {S}")
 # MAGIC   CAST(ROUND(TRY_CAST(Entitled_Quantity AS DOUBLE), 0) AS BIGINT) AS entitled_quantity,
 # MAGIC   CAST(ROUND(TRY_CAST(Prepaid_Consumed_Quantity AS DOUBLE), 0) AS BIGINT) AS prepaid_consumed_quantity,
 # MAGIC   CAST(ROUND(TRY_CAST(Pay_As_You_Go_Consumed_Quantity AS DOUBLE), 0) AS BIGINT) AS pay_as_you_go_consumed_quantity,
-# MAGIC   TRY_TO_DATE(Usage_Date, 'M/d/yyyy') AS usage_date,
-# MAGIC   DATE_FORMAT(TRY_TO_DATE(Usage_Date, 'M/d/yyyy'), 'dd/MM/yyyy') AS usage_date_eu
+# MAGIC   to_date(Usage_Date, 'M/d/yyyy') AS usage_date,
+# MAGIC   DATE_FORMAT(to_date(Usage_Date, 'M/d/yyyy'), 'dd/MM/yyyy') AS usage_date_eu
 # MAGIC FROM ${pipeline_schema}.environment_level_credit_consumption;
 
 # COMMAND ----------
@@ -252,8 +252,8 @@ print(f"Target schema: {S}")
 # MAGIC     NULLIF(model, '-') AS model, NULLIF(authentication, '-') AS authentication,
 # MAGIC     NULLIF(orchestration, '-') AS orchestration,
 # MAGIC     microsoft_entra_app_id, microsoft_entra_agent_id, blueprint_id,
-# MAGIC     TRY_TO_DATE(created_on, 'M/d/yyyy h:mm:ss a') AS created_on_date,
-# MAGIC     TRY_TO_DATE(published_on, 'M/d/yyyy h:mm:ss a') AS published_on_date,
+# MAGIC     to_date(created_on, 'M/d/yyyy h:mm:ss a') AS created_on_date,
+# MAGIC     to_date(published_on, 'M/d/yyyy h:mm:ss a') AS published_on_date,
 # MAGIC     created_by
 # MAGIC   FROM dedup
 # MAGIC ),
@@ -549,9 +549,9 @@ print(f"Target schema: {S}")
 # MAGIC   k.Bot_Environment_Display_Name_PVA_Bot_PVA_Bot AS environment,
 # MAGIC   k.PVA_Bot AS bot_name,
 # MAGIC   COALESCE(
-# MAGIC     TRY_TO_DATE(k.Date, 'yyyy-MM-dd HH:mm:ss'),
-# MAGIC     TRY_TO_DATE(k.Date, 'M/d/yyyy'),
-# MAGIC     TRY_TO_DATE(k.Date, 'M/d/yy')
+# MAGIC     to_date(k.Date, 'yyyy-MM-dd HH:mm:ss'),
+# MAGIC     to_date(k.Date, 'M/d/yyyy'),
+# MAGIC     to_date(k.Date, 'M/d/yy')
 # MAGIC   ) AS usage_date,
 # MAGIC   CAST(ROUND(TRY_CAST(k.Conversations AS DOUBLE), 0) AS BIGINT) AS conversations,
 # MAGIC   TRY_TO_TIMESTAMP(k.Created_On) AS created_on,

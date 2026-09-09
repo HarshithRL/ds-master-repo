@@ -5,6 +5,10 @@ include:
   - resources/jobs/*.yml
   - resources/dashboards/*.yml
 
+sync:
+  exclude:
+    - src/dashboards/DEV*
+
 variables:
   catalog:
     description: Unity Catalog catalog (automation_d / automation_a / automation_p)

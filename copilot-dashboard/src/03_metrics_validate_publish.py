@@ -437,173 +437,27 @@ else:
 
 # COMMAND ----------
 
-# DBTITLE 1,Publish Dashboard
-import json
-from databricks.sdk import WorkspaceClient
-
-w = WorkspaceClient()
-
-# Resolve pipeline folder dynamically (same folder as this notebook)
-import os as _os
-PIPELINE_FOLDER = _os.path.dirname(dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get())
-
+# DBTITLE 1,Exit with Validation Results
 # ---------------------------------------------------------------------------
-# 1. Ensure dashboard exists — create from template if missing
+# Exit with validation results + renamed metric view info
+# Dashboard publish is handled by notebook 04_promote_dev_dashboard
 # ---------------------------------------------------------------------------
-def _save_config(dashboard_id):
-    """Persist current dashboard ID so future runs find it."""
-    cfg = {"dashboard_id": dashboard_id}
-    with open(CONFIG_FILE, "w") as f:
-        json.dump(cfg, f, indent=2)
-    print(f"  Config saved: {CONFIG_FILE}")
+import json as _json_exit
 
+exit_payload = {
+    "status": "VALIDATED",
+    "renamed": renamed,   # {mv_name: "mv_name_v2"} for permission-fallback names
+    "ok": ok,             # list of metric views created with original name
+    "catalog": CATALOG,
+}
 
-def _get_or_create_dashboard():
-    """Return (dashboard_id, serialized_dashboard_json, display_name)."""
-    global DASHBOARD_ID
+print("Metric view status:")
+for mv_name, v2_name in renamed.items():
+    print(f"  {mv_name} → {v2_name} (renamed)")
+for mv_name in ok:
+    print(f"  {mv_name} (original)")
 
-    # Try to read the existing dashboard (skip if no ID)
-    if DASHBOARD_ID:
-        try:
-            draft = w.lakeview.get(DASHBOARD_ID)
-            # Check lifecycle state — TRASHED dashboards can't be published
-            state = getattr(draft, 'lifecycle_state', None)
-            state_val = getattr(state, 'value', str(state)).upper() if state else ''
-            if 'TRASHED' in state_val:
-                print(f"Dashboard {DASHBOARD_ID} is TRASHED. Creating fresh from template...")
-            else:
-                ser = draft.serialized_dashboard
-                name = draft.display_name
-                print(f"Dashboard found: {name} ({DASHBOARD_ID})")
-                return DASHBOARD_ID, ser, name
-        except Exception as e:
-            err_str = str(e).upper()
-            if not any(k in err_str for k in ["NOT_FOUND", "NOTFOUND", "404", "RESOURCE_DOES_NOT_EXIST", "TRASHED"]):
-                raise
-            print(f"Dashboard {DASHBOARD_ID} unavailable ({type(e).__name__}). Creating from template...")
-    else:
-        print("No dashboard ID configured. Searching workspace...")
+print(f"\n✅ Notebook 03 complete — metric views created & validated.")
+print(f"   Dashboard publish is handled by 04_promote_dev_dashboard.")
 
-    # ---------------------------------------------------------------------------
-    # Fallback: search for bundle-deployed dashboard by name in pipeline folder
-    # This handles first run in a new environment where config doesn't exist yet
-    # but bundle deploy already created the dashboard.
-    # ---------------------------------------------------------------------------
-    DASHBOARD_NAME = "Agent Dashboard Phase 1"
-    try:
-        for d in w.lakeview.list():
-            if d.display_name == DASHBOARD_NAME:
-                # Verify it's in our pipeline folder (not some other dashboard)
-                d_path = getattr(d, 'parent_path', '') or ''
-                if PIPELINE_FOLDER.rstrip('/') in d_path.rstrip('/'):
-                    DASHBOARD_ID = d.dashboard_id
-                    draft = w.lakeview.get(DASHBOARD_ID)
-                    ser = draft.serialized_dashboard
-                    print(f"  Found existing dashboard by name: {DASHBOARD_NAME} ({DASHBOARD_ID})")
-                    _save_config(DASHBOARD_ID)
-                    return DASHBOARD_ID, ser, DASHBOARD_NAME
-        # Also check dashboards folder (bundle deploys to src/dashboards/)
-        dashboards_folder = f"{PIPELINE_FOLDER}/dashboards"
-        for d in w.lakeview.list():
-            if d.display_name == DASHBOARD_NAME:
-                d_path = getattr(d, 'parent_path', '') or ''
-                if dashboards_folder.rstrip('/') in d_path.rstrip('/'):
-                    DASHBOARD_ID = d.dashboard_id
-                    draft = w.lakeview.get(DASHBOARD_ID)
-                    ser = draft.serialized_dashboard
-                    print(f"  Found bundle-deployed dashboard: {DASHBOARD_NAME} ({DASHBOARD_ID})")
-                    _save_config(DASHBOARD_ID)
-                    return DASHBOARD_ID, ser, DASHBOARD_NAME
-    except Exception as e:
-        print(f"  Dashboard search failed: {e}. Falling back to template...")
-
-    # Load template and adapt to current catalog
-    with open(TEMPLATE_FILE) as f:
-        tmpl = json.load(f)
-    ser = tmpl["serialized_dashboard"]
-    name = tmpl.get("display_name", "Agent Dashboard Phase 1")
-
-    # Template was saved from automation_d — replace with current catalog
-    if CATALOG != "automation_d":
-        ser = ser.replace("automation_d.silver", f"{CATALOG}.silver")
-        ser = ser.replace("automation_d.bronze", f"{CATALOG}.bronze")
-        print(f"  Template adapted: automation_d -> {CATALOG}")
-
-    # Create new dashboard in the pipeline folder (REST API for compatibility)
-    resp = w.api_client.do("POST", "/api/2.0/lakeview/dashboards", body={
-        "display_name": name,
-        "serialized_dashboard": ser,
-        "warehouse_id": WAREHOUSE_ID,
-        "parent_path": PIPELINE_FOLDER,
-    })
-    new_id = resp.get("dashboard_id") if isinstance(resp, dict) else getattr(resp, "dashboard_id", None)
-    if not new_id:
-        raise RuntimeError(f"Dashboard creation returned no ID: {resp}")
-    print(f"  Created new dashboard: {name} ({new_id})")
-
-    # Persist the new ID
-    DASHBOARD_ID = new_id
-    _save_config(new_id)
-
-    # Also update the template with the new default
-    return new_id, ser, name
-
-
-dash_id, ser_raw, display_name = _get_or_create_dashboard()
-
-# ---------------------------------------------------------------------------
-# 2. Sync dashboard JSON with metric view names
-#    - renamed has _v2 entries     → old -> _v2 in dashboard
-#    - ok has originals (no rename) → _v2 -> old in dashboard (revert)
-# ---------------------------------------------------------------------------
-updated_json = ser_raw
-changes_made = 0
-
-ALL_METRIC_VIEWS = ["bot_usage_metrics", "copilot_analytics_metrics", "metric_agent_governance",
-                    "metric_credit_consumption", "metric_agent_feature_credit", "metric_environment_consumption"]
-
-for mv in ALL_METRIC_VIEWS:
-    v2_ref = f"{S}.{mv}_v2"
-    orig_ref = f"{S}.{mv}"
-
-    if mv in renamed:
-        # We created _v2 this run — dashboard should point to _v2
-        if orig_ref in updated_json and v2_ref not in updated_json:
-            updated_json = updated_json.replace(orig_ref, v2_ref)
-            print(f"  {orig_ref} -> {v2_ref}")
-            changes_made += 1
-    else:
-        # Original succeeded this run — revert any leftover _v2 references
-        if v2_ref in updated_json:
-            updated_json = updated_json.replace(v2_ref, orig_ref)
-            print(f"  {v2_ref} -> {orig_ref} (reverted to original)")
-            changes_made += 1
-
-if changes_made > 0:
-    w.lakeview.update(dashboard_id=dash_id, serialized_dashboard=updated_json)
-    print(f"  Dashboard updated ({changes_made} reference(s) changed).")
-
-    # Also update the template so future auto-creates use current names
-    try:
-        with open(TEMPLATE_FILE) as f:
-            tmpl = json.load(f)
-        tmpl["serialized_dashboard"] = updated_json
-        with open(TEMPLATE_FILE, "w") as f:
-            json.dump(tmpl, f, indent=2)
-        print(f"  Template also updated.")
-    except Exception:
-        pass  # non-critical
-else:
-    print("  Dashboard references already correct.")
-
-# ---------------------------------------------------------------------------
-# 3. Publish
-# ---------------------------------------------------------------------------
-print(f"\nPublishing {display_name}...")
-w.lakeview.publish(dashboard_id=dash_id, warehouse_id=WAREHOUSE_ID, embed_credentials=True)
-
-# Confirm
-w.lakeview.get_published(dash_id)
-print(f"Published OK.")
-
-dbutils.notebook.exit(json.dumps({"status": "PUBLISHED", "dashboard_id": dash_id}))
+dbutils.notebook.exit(_json_exit.dumps(exit_payload))
