@@ -367,6 +367,14 @@ import copy
 main_draft = w.lakeview.get(MAIN_DASHBOARD_ID)
 main_ser_str = main_draft.serialized_dashboard
 
+# Patch catalog references to match the current environment.
+# The lvdash.json source file is seeded from DEV and has automation_d hardcoded
+# in every dataset's "catalog" field and SQL source strings.
+if CATALOG != "automation_d" and "automation_d" in main_ser_str:
+    main_ser_str = main_ser_str.replace('"automation_d"', f'"{CATALOG}"')
+    main_ser_str = main_ser_str.replace("automation_d.silver", f"{CATALOG}.silver")
+    print(f"  Catalog patched: automation_d \u2192 {CATALOG}")
+
 v2_changes = 0
 for mv, actual in metric_view_names.items():
     if actual is None:
@@ -425,6 +433,12 @@ elif has_dev_changes and AUTO_PROMOTE:
     print(f"Promoting {total_changes} DEV change(s) to Main...")
     dev_draft = w.lakeview.get(DEV_DASHBOARD_ID)
     final_ser_str = dev_draft.serialized_dashboard
+
+    # Patch catalog references from DEV to current environment
+    if CATALOG != "automation_d" and "automation_d" in final_ser_str:
+        final_ser_str = final_ser_str.replace('"automation_d"', f'"{CATALOG}"')
+        final_ser_str = final_ser_str.replace("automation_d.silver", f"{CATALOG}.silver")
+        print(f"  Catalog patched: automation_d \u2192 {CATALOG}")
 
     # Apply _v2 metric view sync to the promoted DEV JSON
     for mv, actual in metric_view_names.items():

@@ -366,7 +366,7 @@ def _run_ddl(sql_text):
     resp = _w.statement_execution.execute_statement(
         warehouse_id=WAREHOUSE_ID,
         statement=sql_text,
-        wait_timeout="60s",
+        wait_timeout="50s",
     )
     if resp.status and resp.status.state == StatementState.FAILED:
         raise RuntimeError(resp.status.error.message if resp.status.error else "Statement failed")
@@ -410,7 +410,7 @@ if failed:
 # COMMAND ----------
 
 # DBTITLE 1,Validate
-S = "automation_d.silver"
+# S is set by cell 2 from the catalog widget (e.g. automation_a.silver in ACC)
 failures = []
 
 # Smoke counts
