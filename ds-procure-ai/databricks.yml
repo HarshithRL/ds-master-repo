@@ -88,6 +88,8 @@ targets:
       fast_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
       thinking_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
     permissions:
+      - service_principal_name: ${workspace.current_user.userName}
+        level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
@@ -108,6 +110,8 @@ targets:
       lakebase_branch: ${resources.postgres_projects.ds_vendor_agent.id}/branches/production
       lakebase_database: ${resources.postgres_projects.ds_vendor_agent.id}/branches/production/databases/databricks-postgres
     permissions:
+      - service_principal_name: ${workspace.current_user.userName}
+        level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
@@ -121,6 +125,10 @@ targets:
           display_name: ds-vendor-agent
           pg_version: 17
           permissions:
+            - service_principal_name: ${workspace.current_user.userName}
+              level: CAN_MANAGE
+            - service_principal_name: ${resources.apps.ds_procure_ai.service_principal_client_id}
+              level: CAN_CONNECT_AND_CREATE
             - user_name: pierre.delaguiche@etexgroup.com
               level: CAN_MANAGE
             - user_name: mustafaarda.bicakci@etexgroup.com
@@ -142,6 +150,8 @@ targets:
       lakebase_branch: projects/ds-vendor-agent/branches/production
       lakebase_database: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
     permissions:
+      - service_principal_name: ${workspace.current_user.userName}
+        level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
