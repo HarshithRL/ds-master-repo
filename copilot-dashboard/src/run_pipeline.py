@@ -7,7 +7,7 @@
 # MAGIC %md
 # MAGIC # Copilot Dashboard — Pipeline Orchestrator
 # MAGIC
-# MAGIC Runs the full pipeline end-to-end:
+# MAGIC Runs the full pipeline end-to-end :
 # MAGIC
 # MAGIC | Step | Notebook | Purpose |
 # MAGIC |------|----------|---------|
