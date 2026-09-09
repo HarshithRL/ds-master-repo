@@ -333,7 +333,7 @@ def _bound_project_id(project_id: str | None = None) -> str:
     if pid:
         return pid
     try:
-        from ai_brain.core.kb.search import current_project_id
+        from ai_brain.core.kb.store.search import current_project_id
 
         return current_project_id()
     except Exception:

@@ -103,7 +103,7 @@ def load_matrix_source(project_id: str) -> MatrixSource:
 
 
 def _load_matrix_source(project_id: str) -> MatrixSource:
-    from ai_brain.core.kb.materialize import list_bid_ids
+    from ai_brain.core.kb.store.materialize import list_bid_ids
 
     sql_bids = list(list_bid_ids(project_id))
     with session_scope() as session:

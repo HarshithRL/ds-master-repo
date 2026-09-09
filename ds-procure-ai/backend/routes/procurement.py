@@ -9,7 +9,7 @@ from shared.db.repos.artifacts import ArtifactNotFoundError, UploadFile
 from shared.db.repos.projects import ProjectNotFoundError, ProjectValidationError
 from shared.db.repos.users import get_user
 from shared.logger_global import bind_context, get_logger
-from ai_brain.core.kb.ingest import enqueue_ingest
+from ai_brain.core.kb.extract.ingest import enqueue_ingest
 from services import chat_sessions
 from services import procurement_chat
 from services.procurement_serializers import (

@@ -10,16 +10,16 @@ from typing import Any, Optional
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Send
 
-from ai_brain.core.kb.materialize import list_bid_ids, vendor_paths
-from ai_brain.core.kb.persist import (
+from ai_brain.core.kb.store.materialize import list_bid_ids, vendor_paths
+from ai_brain.core.kb.store.persist import (
     fill_extraction_failed,
     seed_swift_requirements,
     upsert_bid_profile,
     upsert_evidence_bundle,
     upsert_pricing,
 )
-from ai_brain.core.kb.schemas import BidProfile, PricingExtraction, VendorEvidenceBundle
-from ai_brain.core.kb.search import set_current_project_id
+from ai_brain.core.kb.api.schemas import BidProfile, PricingExtraction, VendorEvidenceBundle
+from ai_brain.core.kb.store.search import set_current_project_id
 from ai_brain.server.tracing import is_checkpoint_sync_error
 from shared.logger_global import get_logger
 
@@ -30,7 +30,7 @@ ANALYZE_BID_TIMEOUT_S = 240.0
 
 def classify_unpinned_artifacts(project_id: str) -> int:
     """Filename/LLM/stem pin for artifacts that still have null vendor_id / doc_role."""
-    from ai_brain.core.kb.classify import classify_and_pin
+    from ai_brain.core.kb.extract.classify import classify_and_pin
     from ai_brain.core.procurement_ai.project_context import load_artifacts, load_project
 
     project = load_project(project_id)
@@ -58,7 +58,7 @@ def ensure_vendor_bids(project_id: str) -> list[str]:
     bids = list_bid_ids(project_id)
     if bids:
         return bids
-    from ai_brain.core.kb.classify import classify_and_pin
+    from ai_brain.core.kb.extract.classify import classify_and_pin
     from ai_brain.core.procurement_ai.project_context import load_artifacts, load_project
 
     project = load_project(project_id)
@@ -198,7 +198,7 @@ def plan_publish(state: dict[str, Any]) -> list[Send]:
 
 
 def fill_overview(task: dict[str, Any]) -> dict[str, Any]:
-    from ai_brain.core.kb.views import build_overview_view, write_view
+    from ai_brain.core.kb.api.views import build_overview_view, write_view
 
     project_id = str(task.get("project_id") or "").strip()
     payload = build_overview_view(project_id, kb_audit=task.get("kb_audit"))
@@ -207,7 +207,7 @@ def fill_overview(task: dict[str, Any]) -> dict[str, Any]:
 
 
 def fill_requirements(task: dict[str, Any]) -> dict[str, Any]:
-    from ai_brain.core.kb.views import build_requirements_view, write_view
+    from ai_brain.core.kb.api.views import build_requirements_view, write_view
 
     project_id = str(task.get("project_id") or "").strip()
     payload = build_requirements_view(project_id)
@@ -216,7 +216,7 @@ def fill_requirements(task: dict[str, Any]) -> dict[str, Any]:
 
 
 def fill_vendors(task: dict[str, Any]) -> dict[str, Any]:
-    from ai_brain.core.kb.views import build_vendors_view, write_view
+    from ai_brain.core.kb.api.views import build_vendors_view, write_view
 
     project_id = str(task.get("project_id") or "").strip()
     payload = build_vendors_view(project_id)
@@ -232,7 +232,7 @@ async def invoke_requirement_extractor(
     if os.getenv("KB_REQUIREMENT_AGENT", "").strip() not in {"1", "true", "yes"}:
         return None
     try:
-        from ai_brain.core.kb.agents import build_requirement_extractor, invoke_payload
+        from ai_brain.core.kb.extract.agents import build_requirement_extractor, invoke_payload
         from ai_brain.server.tracing import child_runnable_config
 
         agent = build_requirement_extractor()
@@ -265,7 +265,7 @@ async def invoke_vendor_analyst(
     config: Optional[RunnableConfig] = None,  # noqa: UP045
 ) -> tuple[VendorEvidenceBundle, PricingExtraction | None, int, BidProfile | None]:
     """Phase A deep-agent research (files + MCP), then ToolStrategy emit."""
-    from ai_brain.core.kb.agents import (
+    from ai_brain.core.kb.extract.agents import (
         MAX_COVERAGE_REFILLS,
         bid_invoke_payload,
         build_pricing_extractor,
@@ -275,8 +275,8 @@ async def invoke_vendor_analyst(
         coverage_refill_message,
         emit_user_message,
     )
-    from ai_brain.core.kb.coverage import CoverageState, coverage_scope
-    from ai_brain.core.kb.mcp_tools import list_bid_chunk_ids, list_bid_chunk_rows, mcp_kb_tools_context
+    from ai_brain.core.kb.build.coverage import CoverageState, coverage_scope
+    from ai_brain.core.kb.api.mcp_tools import list_bid_chunk_ids, list_bid_chunk_rows, mcp_kb_tools_context
     from ai_brain.server.tracing import child_runnable_config, is_checkpoint_sync_error
 
     payload = bid_invoke_payload(project_id, bid_id)

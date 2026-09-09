@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from ai_brain.core.kb.schemas import BidProfile, EvidenceItem, VendorEvidenceBundle
+from ai_brain.core.kb.api.schemas import BidProfile, EvidenceItem, VendorEvidenceBundle
 from shared.db.models import utc_now_iso
 
 
@@ -85,7 +85,7 @@ def _seed_project():
 
 
 def _seed_extracted():
-    from ai_brain.core.kb.persist import seed_swift_requirements, upsert_bid_profile, upsert_evidence_bundle
+    from ai_brain.core.kb.store.persist import seed_swift_requirements, upsert_bid_profile, upsert_evidence_bundle
 
     seed_swift_requirements("p1")
     upsert_evidence_bundle(
@@ -119,7 +119,7 @@ def _seed_extracted():
 def test_views_from_sql_evidence_and_profile(db_env, tmp_path, monkeypatch):
     import sys
 
-    from ai_brain.core.kb.views import (
+    from ai_brain.core.kb.api.views import (
         build_overview_view,
         build_requirements_view,
         build_vendors_view,
@@ -180,7 +180,7 @@ def test_views_from_sql_evidence_and_profile(db_env, tmp_path, monkeypatch):
 
 
 def test_fill_nodes_write_view_files(db_env, tmp_path, monkeypatch):
-    from ai_brain.core.kb.pipeline import fill_overview, fill_requirements, fill_vendors, plan_publish
+    from ai_brain.core.kb.build.pipeline import fill_overview, fill_requirements, fill_vendors, plan_publish
     from ai_brain.core.procurement_ai.packs.store import read_view
     from langgraph.types import Send
 

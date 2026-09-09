@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import select
 
-from ai_brain.core.kb.graph import (
+from ai_brain.core.kb.store.graph import (
     ClosedVocabularyViolation,
     GraphEdge,
     GraphProposal,
@@ -17,7 +17,7 @@ from ai_brain.core.kb.graph import (
     resolve_entities_and_write_graph,
     validate_and_filter_edges,
 )
-from ai_brain.core.kb.schemas import EntityMention
+from ai_brain.core.kb.api.schemas import EntityMention
 from shared.db.models import KbEdge, QualityFlag, utc_now_iso
 
 

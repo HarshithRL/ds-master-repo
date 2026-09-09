@@ -16,7 +16,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 from sqlalchemy import select, text
 
-from ai_brain.core.kb.schemas import EntityMention
+from ai_brain.core.kb.api.schemas import EntityMention
 from shared.db.connection import session_scope
 from shared.db.models import KB_EDGE_TYPES, KB_NODE_TYPES, KbEdge, KbNode, QualityFlag, Vendor, utc_now_iso
 from shared.logger_global import get_logger

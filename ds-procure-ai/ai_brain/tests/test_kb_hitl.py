@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from ai_brain.core.kb.hitl import (
+from ai_brain.core.kb.build.hitl import (
     GATE_ORDER,
     HitlDecision,
     apply_resume,

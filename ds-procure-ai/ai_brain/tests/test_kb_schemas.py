@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from ai_brain.core.kb.schemas import (
+from ai_brain.core.kb.api.schemas import (
     EvidenceItem,
     apply_grounding_gate,
     verify_grounding,
@@ -224,7 +224,7 @@ def test_ungrounded_claim_persists_quality_flag(db_env):
 
 
 def test_files_for_invoke_wraps_create_file_data(db_env):
-    from ai_brain.core.kb.agents import files_for_invoke, invoke_payload
+    from ai_brain.core.kb.extract.agents import files_for_invoke, invoke_payload
 
     _seed_project()
     wrapped = files_for_invoke("p1")
@@ -243,7 +243,7 @@ def test_vendor_analyst_checkpointer_none_and_no_todo_middleware():
     from langchain.agents.middleware import TodoListMiddleware
     from langchain_core.language_models.fake_chat_models import FakeListChatModel
 
-    from ai_brain.core.kb.agents import build_vendor_analyst, extraction_middleware
+    from ai_brain.core.kb.extract.agents import build_vendor_analyst, extraction_middleware
 
     fake = FakeListChatModel(responses=["ok"])
     names = [type(item).__name__ for item in extraction_middleware(fake)]
@@ -254,7 +254,7 @@ def test_vendor_analyst_checkpointer_none_and_no_todo_middleware():
     checkpointer = getattr(agent, "checkpointer", "missing")
     assert checkpointer is None
 
-    from ai_brain.core.kb.agents import build_vendor_emit, emit_middleware
+    from ai_brain.core.kb.extract.agents import build_vendor_emit, emit_middleware
 
     emit_names = [type(item).__name__ for item in emit_middleware(fake)]
     assert "ToolCallLimitMiddleware" not in emit_names
@@ -265,7 +265,7 @@ def test_vendor_analyst_checkpointer_none_and_no_todo_middleware():
 def test_plan_kb_build_emits_send_per_bid(db_env):
     from langgraph.types import Send
 
-    from ai_brain.core.kb.pipeline import ANALYZE_BID_TIMEOUT_S, plan_kb_build
+    from ai_brain.core.kb.build.pipeline import ANALYZE_BID_TIMEOUT_S, plan_kb_build
 
     _seed_project()
     out = plan_kb_build({"project_id": "p1"})
@@ -280,7 +280,7 @@ def test_plan_kb_build_emits_send_per_bid(db_env):
 
 
 def test_plan_kb_build_without_bids_routes_to_audit():
-    from ai_brain.core.kb.pipeline import plan_kb_build
+    from ai_brain.core.kb.build.pipeline import plan_kb_build
 
     assert plan_kb_build({"project_id": ""}) == "audit_kb"
 
@@ -288,7 +288,7 @@ def test_plan_kb_build_without_bids_routes_to_audit():
 def test_plan_publish_sends_three_fill_nodes():
     from langgraph.types import Send
 
-    from ai_brain.core.kb.pipeline import plan_publish
+    from ai_brain.core.kb.build.pipeline import plan_publish
 
     out = plan_publish(
         {
@@ -312,9 +312,9 @@ def test_plan_publish_sends_three_fill_nodes():
 async def test_analyze_bid_persists_grounded_bundle(db_env, monkeypatch):
     from sqlalchemy import select
 
-    from ai_brain.core.kb import pipeline
-    from ai_brain.core.kb.persist import seed_swift_requirements
-    from ai_brain.core.kb.schemas import (
+    from ai_brain.core.kb.build import pipeline
+    from ai_brain.core.kb.store.persist import seed_swift_requirements
+    from ai_brain.core.kb.api.schemas import (
         EvidenceItem,
         PricingExtraction,
         PricingLineItem,
@@ -382,7 +382,7 @@ async def test_analyze_bid_persists_grounded_bundle(db_env, monkeypatch):
 
 
 def test_langchain_kb_tools_include_search():
-    from ai_brain.core.kb.mcp_tools import langchain_kb_tools, search_project_kb
+    from ai_brain.core.kb.api.mcp_tools import langchain_kb_tools, search_project_kb
 
     names = {getattr(t, "__name__", str(t)) for t in langchain_kb_tools()}
     assert "search_project_kb" in names
@@ -397,7 +397,7 @@ def test_langchain_kb_tools_include_search():
 
 @pytest.mark.asyncio
 async def test_mcp_adapter_lists_in_process_kb_tools():
-    from ai_brain.core.kb.mcp_tools import mcp_kb_tools_context
+    from ai_brain.core.kb.api.mcp_tools import mcp_kb_tools_context
 
     async with mcp_kb_tools_context() as tools:
         names = {getattr(t, "name", "") for t in tools}
@@ -410,8 +410,8 @@ async def test_mcp_adapter_lists_in_process_kb_tools():
 
 
 def test_bundle_from_result_reads_structured_response():
-    from ai_brain.core.kb.pipeline import bundle_from_result
-    from ai_brain.core.kb.schemas import VendorEvidenceBundle
+    from ai_brain.core.kb.build.pipeline import bundle_from_result
+    from ai_brain.core.kb.api.schemas import VendorEvidenceBundle
 
     bundle = bundle_from_result(
         {"structured_response": {"bid_id": "kpmg", "items": []}},
@@ -424,7 +424,7 @@ def test_bundle_from_result_reads_structured_response():
 def test_bundle_from_result_reads_tool_call_args():
     from langchain_core.messages import AIMessage, HumanMessage
 
-    from ai_brain.core.kb.pipeline import bundle_from_result
+    from ai_brain.core.kb.build.pipeline import bundle_from_result
 
     result = {
         "messages": [
@@ -448,8 +448,8 @@ def test_bundle_from_result_reads_tool_call_args():
 
 @pytest.mark.asyncio
 async def test_extract_requirements_seeds_swift(db_env):
-    from ai_brain.core.kb.pipeline import extract_requirements
-    from ai_brain.core.kb.persist import requirement_ids
+    from ai_brain.core.kb.build.pipeline import extract_requirements
+    from ai_brain.core.kb.store.persist import requirement_ids
 
     _seed_project()
     out = await extract_requirements({"project_id": "p1"})
@@ -479,7 +479,7 @@ def test_kb_build_capability_routes_to_extract_requirements():
 def test_analyze_bid_is_async_for_send_timeout():
     import inspect
 
-    from ai_brain.core.kb.pipeline import analyze_bid
+    from ai_brain.core.kb.build.pipeline import analyze_bid
 
     assert inspect.iscoroutinefunction(analyze_bid)
 
@@ -487,9 +487,9 @@ def test_analyze_bid_is_async_for_send_timeout():
 @pytest.mark.asyncio
 async def test_kb_build_ainvoke_accepts_analyze_bid_timeout(db_env, tmp_path, monkeypatch):
     """Regression: Send(..., timeout=) requires an async analyze_bid + graph.ainvoke."""
-    from ai_brain.core.kb import pipeline
-    from ai_brain.core.kb.runner import arun_kb_build
-    from ai_brain.core.kb.schemas import VendorEvidenceBundle
+    from ai_brain.core.kb.build import pipeline
+    from ai_brain.core.kb.extract.runner import arun_kb_build
+    from ai_brain.core.kb.api.schemas import VendorEvidenceBundle
     from ai_brain.core.procurement_ai.packs.store import read_status
 
     monkeypatch.setenv("MATE_PROJECTS_DATA_ROOT", str(tmp_path))
@@ -578,9 +578,10 @@ async def test_invoke_vendor_analyst_uses_research_transcript_fallback(db_env, m
 
     from langchain_core.messages import AIMessage, HumanMessage
 
-    from ai_brain.core.kb import agents, pipeline
-    from ai_brain.core.kb import mcp_tools
-    from ai_brain.core.kb.schemas import VendorEvidenceBundle
+    from ai_brain.core.kb.extract import agents
+    from ai_brain.core.kb.build import pipeline
+    from ai_brain.core.kb.api import mcp_tools
+    from ai_brain.core.kb.api.schemas import VendorEvidenceBundle
 
     _seed_project()
     seen: dict[str, list] = {}
@@ -625,8 +626,8 @@ async def test_invoke_vendor_analyst_uses_research_transcript_fallback(db_env, m
 
 @pytest.mark.asyncio
 async def test_analyze_bid_extraction_failed_makes_source_warm(db_env, monkeypatch):
-    from ai_brain.core.kb import pipeline
-    from ai_brain.core.kb.persist import seed_swift_requirements
+    from ai_brain.core.kb.build import pipeline
+    from ai_brain.core.kb.store.persist import seed_swift_requirements
     from ai_brain.core.procurement_ai.packs.matrix_from_evidence import load_matrix_source
 
     _seed_project()
@@ -647,9 +648,9 @@ async def test_analyze_bid_extraction_failed_makes_source_warm(db_env, monkeypat
 
 @pytest.mark.asyncio
 async def test_analyze_bid_keeps_evidence_if_pricing_persist_fails(db_env, monkeypatch):
-    from ai_brain.core.kb import pipeline
-    from ai_brain.core.kb.persist import seed_swift_requirements
-    from ai_brain.core.kb.schemas import (
+    from ai_brain.core.kb.build import pipeline
+    from ai_brain.core.kb.store.persist import seed_swift_requirements
+    from ai_brain.core.kb.api.schemas import (
         EvidenceItem,
         PricingExtraction,
         PricingLineItem,
@@ -708,7 +709,7 @@ async def test_nested_ainvoke_does_not_call_async_sqlite_sync_methods():
 
     from langchain_core.language_models.fake_chat_models import FakeListChatModel
 
-    from ai_brain.core.kb.agents import build_vendor_analyst
+    from ai_brain.core.kb.extract.agents import build_vendor_analyst
     from ai_brain.core.procurement_ai.packs import matrix_extract
     from ai_brain.server.tracing import child_runnable_config
 

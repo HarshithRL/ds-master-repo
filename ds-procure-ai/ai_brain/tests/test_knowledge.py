@@ -218,7 +218,7 @@ def test_create_agent_wires_kb_middleware(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_main_agent_sets_kb_project_id_for_search(monkeypatch):
-    from ai_brain.core.kb.search import current_project_id
+    from ai_brain.core.kb.store.search import current_project_id
     from ai_brain.core.procurement_ai.subagents import main_agent as ma
 
     seen: list[str] = []

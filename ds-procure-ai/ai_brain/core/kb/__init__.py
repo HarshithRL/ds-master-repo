@@ -1,1 +1,1 @@
-"""KB package: quality, classification, materialize, schemas, extraction agents."""
+"""KB package split into extract/store/build/api so Apps workspace/list stays under 60s."""

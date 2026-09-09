@@ -7,14 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from ai_brain.core.kb.classify import (
+from ai_brain.core.kb.extract.classify import (
     BidClassification,
     LegalEntity,
     classify_snippets,
     confirm_classification,
     roster_names,
 )
-from ai_brain.core.kb.quality import run_quality_detectors, scan_project
+from ai_brain.core.kb.build.quality import run_quality_detectors, scan_project
 from shared.artifacts.blocks import make_content_block
 from shared.artifacts.models import ArtifactDocument, ArtifactMetadata, ArtifactType, BlockType, SourceLocation
 from shared.db.models import Artifact, utc_now_iso
@@ -101,7 +101,7 @@ def test_low_yield_csr_like_ratio():
 
 
 def test_filename_heuristics_swift_dump():
-    from ai_brain.core.kb.classify import classify_from_filename
+    from ai_brain.core.kb.extract.classify import classify_from_filename
 
     bdo = classify_from_filename(BDO_FILENAME)
     assert bdo is not None and bdo.bid_id == "bdo"

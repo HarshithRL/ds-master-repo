@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from ai_brain.core.kb.embed import (
+from ai_brain.core.kb.store.embed import (
     EMBEDDING_DIM,
     DEFAULT_BATCH_SIZE,
     embed_pending_chunks,
@@ -17,7 +17,7 @@ from ai_brain.core.kb.embed import (
     fake_embed_fn,
     load_embeddings,
 )
-from ai_brain.core.kb.search import graph_expand_entities, rrf, search_kb
+from ai_brain.core.kb.store.search import graph_expand_entities, rrf, search_kb
 from shared.db.models import utc_now_iso
 
 

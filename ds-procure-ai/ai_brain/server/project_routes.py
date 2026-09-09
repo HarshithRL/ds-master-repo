@@ -69,7 +69,7 @@ def register_project_routes(app: FastAPI) -> None:
 
     @app.post("/v1/projects/{project_id}/kb/quality-scan")
     def kb_quality_scan(project_id: str) -> dict[str, Any]:
-        from ai_brain.core.kb.quality import scan_project
+        from ai_brain.core.kb.build.quality import scan_project
 
         if load_project(project_id) is None:
             raise HTTPException(status_code=404, detail="project not found")
@@ -78,7 +78,7 @@ def register_project_routes(app: FastAPI) -> None:
 
     @app.post("/v1/projects/{project_id}/kb/confirm")
     def kb_confirm(project_id: str, body: dict[str, Any]) -> dict[str, Any]:
-        from ai_brain.core.kb.classify import BidClassification, confirm_classification
+        from ai_brain.core.kb.extract.classify import BidClassification, confirm_classification
 
         if load_project(project_id) is None:
             raise HTTPException(status_code=404, detail="project not found")

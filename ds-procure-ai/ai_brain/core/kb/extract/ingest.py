@@ -94,7 +94,7 @@ def _parse_and_store(artifact: Artifact) -> Artifact:
 
 async def extract_artifact(artifact: Artifact, doc: Any = None) -> None:
     """Classify vendor_id + doc_role (filename first). Deep-agent extract is kb_build."""
-    from ai_brain.core.kb.classify import classify_and_pin
+    from ai_brain.core.kb.extract.classify import classify_and_pin
 
     project_id = getattr(artifact, "project_id", "") or ""
     name = getattr(artifact, "original_name", "") or ""
@@ -158,7 +158,7 @@ def _emit(on_event: EventFn | None, event: str, **fields: Any) -> None:
 
 
 def _run_quality(artifact: Artifact) -> Any:
-    from ai_brain.core.kb.quality import document_from_artifact, persist_flags, run_quality_detectors
+    from ai_brain.core.kb.build.quality import document_from_artifact, persist_flags, run_quality_detectors
 
     doc = document_from_artifact(artifact)
     flags = run_quality_detectors(artifact, doc)
@@ -348,7 +348,7 @@ def _run_kb_build_thread(project_id: str) -> None:
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     try:
-        from ai_brain.core.kb.runner import run_kb_build
+        from ai_brain.core.kb.extract.runner import run_kb_build
 
         run_kb_build(project_id)
     except Exception:

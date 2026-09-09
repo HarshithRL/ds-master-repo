@@ -134,7 +134,7 @@ def _kb_status(project_id: str, file_count: int, packs: dict[str, Any]) -> tuple
     if not file_count:
         return "empty", None
     try:
-        from ai_brain.core.kb.persist import kb_counts
+        from ai_brain.core.kb.store.persist import kb_counts
 
         counts = kb_counts(project_id) if project_id else {}
     except Exception:

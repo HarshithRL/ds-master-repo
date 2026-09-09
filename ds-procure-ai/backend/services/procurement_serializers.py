@@ -152,7 +152,7 @@ def project_shell_payload(project: Project) -> dict[str, Any]:
 
 
 def overview_payload(project: Project, artifacts: list[Artifact]) -> dict[str, Any]:
-    from ai_brain.core.kb.views import build_overview_view
+    from ai_brain.core.kb.api.views import build_overview_view
 
     payload = build_overview_view(project.id, project=project, artifacts=artifacts)
     payload["documents"] = {
@@ -167,13 +167,13 @@ def overview_payload(project: Project, artifacts: list[Artifact]) -> dict[str, A
 
 
 def requirements_payload(project_id: str) -> dict[str, Any]:
-    from ai_brain.core.kb.views import build_requirements_view
+    from ai_brain.core.kb.api.views import build_requirements_view
 
     return build_requirements_view(project_id)
 
 
 def vendors_payload(project_id: str) -> dict[str, Any]:
-    from ai_brain.core.kb.views import build_vendors_view
+    from ai_brain.core.kb.api.views import build_vendors_view
 
     return build_vendors_view(project_id)
 

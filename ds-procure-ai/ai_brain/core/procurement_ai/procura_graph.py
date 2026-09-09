@@ -103,7 +103,7 @@ def skip_deepagent(state: ProcuraState) -> dict:
 
 
 def build_procura_ai(*, checkpointer=None, store=None):
-    from ai_brain.core.kb.pipeline import (
+    from ai_brain.core.kb.build.pipeline import (
         analyze_bid,
         audit_kb,
         extract_requirements,

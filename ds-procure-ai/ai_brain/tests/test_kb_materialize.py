@@ -123,7 +123,7 @@ def _seed_project():
 
 
 def test_materialize_tree_includes_quality_for_failed_artifact(db_env):
-    from ai_brain.core.kb.materialize import list_bid_ids, project_files
+    from ai_brain.core.kb.store.materialize import list_bid_ids, project_files
 
     _seed_project()
     files = project_files("p1")

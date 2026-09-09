@@ -22,10 +22,10 @@ from typing import Any, AsyncIterator
 
 from sqlalchemy import text
 
-from ai_brain.core.kb.coverage import record_chunk_ids, record_path
-from ai_brain.core.kb.materialize import project_files
-from ai_brain.core.kb.schemas import load_chunk_text
-from ai_brain.core.kb.search import search_kb as _search_kb
+from ai_brain.core.kb.build.coverage import record_chunk_ids, record_path
+from ai_brain.core.kb.store.materialize import project_files
+from ai_brain.core.kb.api.schemas import load_chunk_text
+from ai_brain.core.kb.store.search import search_kb as _search_kb
 from shared.db.connection import session_scope
 from shared.logger_global import get_logger
 
@@ -38,7 +38,7 @@ READ_CHUNK_WINDOW_DEFAULT = 8
 
 def _current_project_id() -> str:
     try:
-        from ai_brain.core.kb.search import current_project_id
+        from ai_brain.core.kb.store.search import current_project_id
 
         return current_project_id()
     except Exception:  # noqa: BLE001
@@ -207,7 +207,7 @@ def list_bid_chunk_rows(project_id: str | None, bid_id: str) -> list[dict[str, A
     bid = (bid_id or "").strip()
     if not pid or not bid:
         return []
-    from ai_brain.core.kb.search import _heading_from_json, _locator_from_location
+    from ai_brain.core.kb.store.search import _heading_from_json, _locator_from_location
 
     sql = """
         SELECT c.id AS chunk_id, c.artifact_id, c.ordinal, c.token_count,

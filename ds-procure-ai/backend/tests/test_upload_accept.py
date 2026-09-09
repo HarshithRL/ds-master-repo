@@ -103,7 +103,7 @@ def test_upload_returns_202_without_inline_parse(client, db_env, monkeypatch):
 
     monkeypatch.setattr("routes.procurement.enqueue_ingest", fake_enqueue)
     monkeypatch.setattr("services.artifact_parse.parse_and_store", fake_parse)
-    monkeypatch.setattr("ai_brain.core.kb.ingest._parse_and_store", fake_parse)
+    monkeypatch.setattr("ai_brain.core.kb.extract.ingest._parse_and_store", fake_parse)
     monkeypatch.setattr("routes.procurement.parse_and_store", fake_parse, raising=False)
 
     response = _post_upload(client, created.id)
@@ -127,7 +127,7 @@ def test_upload_accept_under_one_second_when_parse_is_slow(client, db_env, monke
     threads: list = []
 
     def tracking_enqueue(project_id, artifact_ids):
-        from ai_brain.core.kb.ingest import enqueue_ingest as real_enqueue
+        from ai_brain.core.kb.extract.ingest import enqueue_ingest as real_enqueue
 
         thread = real_enqueue(project_id, artifact_ids)
         threads.append(thread)
@@ -135,7 +135,7 @@ def test_upload_accept_under_one_second_when_parse_is_slow(client, db_env, monke
 
     monkeypatch.setattr("routes.procurement.parse_and_store", slow_parse, raising=False)
     monkeypatch.setattr("services.artifact_parse.parse_and_store", slow_parse)
-    monkeypatch.setattr("ai_brain.core.kb.ingest._parse_and_store", slow_parse)
+    monkeypatch.setattr("ai_brain.core.kb.extract.ingest._parse_and_store", slow_parse)
     monkeypatch.setattr("routes.procurement.enqueue_ingest", tracking_enqueue)
 
     started = time.perf_counter()

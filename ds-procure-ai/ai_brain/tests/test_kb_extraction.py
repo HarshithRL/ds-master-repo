@@ -12,7 +12,7 @@ import pytest
 from langgraph.types import Send
 from openpyxl import load_workbook
 
-from ai_brain.core.kb.schemas import EvidenceItem, VendorEvidenceBundle
+from ai_brain.core.kb.api.schemas import EvidenceItem, VendorEvidenceBundle
 from shared.db.models import utc_now_iso
 
 
@@ -94,7 +94,7 @@ def _add_chunk(
 
 
 def test_classify_from_stem_unknown_filename():
-    from ai_brain.core.kb.classify import STEM_FALLBACK_CONFIDENCE, classify_from_stem
+    from ai_brain.core.kb.extract.classify import STEM_FALLBACK_CONFIDENCE, classify_from_stem
 
     result = classify_from_stem("Acme_Offer.pdf")
     assert result is not None
@@ -104,11 +104,11 @@ def test_classify_from_stem_unknown_filename():
 
 
 def test_classify_and_pin_stem_when_llm_fails(db_env, monkeypatch):
-    from ai_brain.core.kb.classify import classify_and_pin, classify_from_stem
-    from ai_brain.core.kb.materialize import list_bid_ids
+    from ai_brain.core.kb.extract.classify import classify_and_pin, classify_from_stem
+    from ai_brain.core.kb.store.materialize import list_bid_ids
 
     monkeypatch.setattr(
-        "ai_brain.core.kb.classify.classify_snippets",
+        "ai_brain.core.kb.extract.classify.classify_snippets",
         lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("no llm")),
     )
     now = utc_now_iso()
@@ -133,10 +133,10 @@ def test_classify_and_pin_stem_when_llm_fails(db_env, monkeypatch):
 
 
 def test_plan_kb_build_fans_out_for_stem_bids(db_env, monkeypatch):
-    from ai_brain.core.kb.pipeline import plan_kb_build
+    from ai_brain.core.kb.build.pipeline import plan_kb_build
 
     monkeypatch.setattr(
-        "ai_brain.core.kb.classify.classify_snippets",
+        "ai_brain.core.kb.extract.classify.classify_snippets",
         lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("no llm")),
     )
     now = utc_now_iso()
@@ -173,8 +173,8 @@ def test_plan_kb_build_fans_out_for_stem_bids(db_env, monkeypatch):
 
 
 def test_list_bid_chunks_returns_every_seeded_chunk_including_sheet(db_env):
-    from ai_brain.core.kb.mcp_tools import list_bid_chunk_ids, list_bid_chunks
-    from ai_brain.core.kb.search import ChunkHit, _locator_from_location, render_with_provenance
+    from ai_brain.core.kb.api.mcp_tools import list_bid_chunk_ids, list_bid_chunks
+    from ai_brain.core.kb.store.search import ChunkHit, _locator_from_location, render_with_provenance
     from shared.db.connection import session_scope
 
     now = utc_now_iso()
@@ -239,8 +239,8 @@ def test_list_bid_chunks_returns_every_seeded_chunk_including_sheet(db_env):
 
 
 def test_read_chunks_records_coverage_and_pages_at_cap(db_env):
-    from ai_brain.core.kb.coverage import CoverageState, coverage_scope
-    from ai_brain.core.kb.mcp_tools import read_chunk, read_chunks
+    from ai_brain.core.kb.build.coverage import CoverageState, coverage_scope
+    from ai_brain.core.kb.api.mcp_tools import read_chunk, read_chunks
     from shared.db.connection import session_scope
 
     now = utc_now_iso()
@@ -297,7 +297,7 @@ def test_read_chunks_records_coverage_and_pages_at_cap(db_env):
 
 
 def test_coverage_middleware_counts_read_chunk_ids():
-    from ai_brain.core.kb.coverage import CoverageMiddleware, CoverageState, coverage_scope, record_tool_request
+    from ai_brain.core.kb.build.coverage import CoverageMiddleware, CoverageState, coverage_scope, record_tool_request
 
     state = CoverageState(required={"c1", "c2"})
     mw = CoverageMiddleware()
@@ -317,8 +317,9 @@ async def test_invoke_vendor_analyst_prefetch_skips_coverage_refill(db_env, monk
 
     from langchain_core.messages import AIMessage
 
-    from ai_brain.core.kb import agents, pipeline
-    from ai_brain.core.kb import mcp_tools
+    from ai_brain.core.kb.extract import agents
+    from ai_brain.core.kb.build import pipeline
+    from ai_brain.core.kb.api import mcp_tools
     from shared.db.connection import session_scope
 
     now = utc_now_iso()
@@ -380,7 +381,7 @@ async def test_invoke_vendor_analyst_prefetch_skips_coverage_refill(db_env, monk
 
 
 def test_bid_invoke_payload_indexes_chunks_without_pasting_files(db_env):
-    from ai_brain.core.kb.agents import bid_invoke_payload
+    from ai_brain.core.kb.extract.agents import bid_invoke_payload
     from shared.db.connection import session_scope
 
     now = utc_now_iso()
@@ -430,9 +431,9 @@ def test_bid_invoke_payload_indexes_chunks_without_pasting_files(db_env):
 
 
 def test_prefetch_marks_coverage_read_before_research(db_env):
-    from ai_brain.core.kb.agents import bid_invoke_payload
-    from ai_brain.core.kb.coverage import CoverageState
-    from ai_brain.core.kb.mcp_tools import list_bid_chunk_ids, prefetch_bid_chunks
+    from ai_brain.core.kb.extract.agents import bid_invoke_payload
+    from ai_brain.core.kb.build.coverage import CoverageState
+    from ai_brain.core.kb.api.mcp_tools import list_bid_chunk_ids, prefetch_bid_chunks
     from shared.db.connection import session_scope
 
     now = utc_now_iso()
@@ -481,8 +482,8 @@ def test_prefetch_marks_coverage_read_before_research(db_env):
 
 
 def test_read_chunk_window_pages_by_offset(db_env):
-    from ai_brain.core.kb.coverage import CoverageState, coverage_scope
-    from ai_brain.core.kb.mcp_tools import read_chunk_window
+    from ai_brain.core.kb.build.coverage import CoverageState, coverage_scope
+    from ai_brain.core.kb.api.mcp_tools import read_chunk_window
     from shared.db.connection import session_scope
 
     now = utc_now_iso()
@@ -539,8 +540,8 @@ def test_filesystem_middleware_allowlist_hides_writes():
 def test_chunk_id_only_citation_grounds_against_sql_chunk(db_env):
     from sqlalchemy import select
 
-    from ai_brain.core.kb.persist import upsert_evidence_bundle
-    from ai_brain.core.kb.schemas import apply_grounding_gate
+    from ai_brain.core.kb.store.persist import upsert_evidence_bundle
+    from ai_brain.core.kb.api.schemas import apply_grounding_gate
     from shared.db.connection import session_scope
     from shared.db.models import Evidence
 
@@ -592,8 +593,8 @@ def test_chunk_id_only_citation_grounds_against_sql_chunk(db_env):
 def test_upsert_pricing_writes_lines(db_env):
     from sqlalchemy import select
 
-    from ai_brain.core.kb.persist import upsert_pricing
-    from ai_brain.core.kb.schemas import PricingExtraction, PricingLineItem
+    from ai_brain.core.kb.store.persist import upsert_pricing
+    from ai_brain.core.kb.api.schemas import PricingExtraction, PricingLineItem
     from shared.db.connection import session_scope
     from shared.db.models import PricingLine
 
@@ -622,8 +623,8 @@ def test_upsert_pricing_writes_lines(db_env):
 
 
 def test_matrix_from_profile_and_evidence_fills_xlsx(db_env):
-    from ai_brain.core.kb.persist import seed_swift_requirements, upsert_bid_profile, upsert_evidence_bundle
-    from ai_brain.core.kb.schemas import BidProfile
+    from ai_brain.core.kb.store.persist import seed_swift_requirements, upsert_bid_profile, upsert_evidence_bundle
+    from ai_brain.core.kb.api.schemas import BidProfile
     from ai_brain.core.procurement_ai.insights import build_insight_payload
     from ai_brain.core.procurement_ai.packs.compare_xlsx import build_comparison_xlsx
     from ai_brain.core.procurement_ai.packs.matrix_from_evidence import load_matrix_source, matrix_from_source
@@ -733,7 +734,7 @@ def test_matrix_from_profile_and_evidence_fills_xlsx(db_env):
 def test_databricks_safe_messages_strip_tool_result_ids():
     from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
-    from ai_brain.core.kb.pipeline import _databricks_safe_messages
+    from ai_brain.core.kb.build.pipeline import _databricks_safe_messages
 
     raw = [
         HumanMessage(content="Analyse bid `pwc` only."),
@@ -765,8 +766,9 @@ async def test_invoke_vendor_analyst_emit_gets_plain_transcript(db_env, monkeypa
 
     from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
-    from ai_brain.core.kb import agents, pipeline
-    from ai_brain.core.kb import mcp_tools
+    from ai_brain.core.kb.extract import agents
+    from ai_brain.core.kb.build import pipeline
+    from ai_brain.core.kb.api import mcp_tools
 
     _seed_project()
     seen: dict[str, list] = {}
@@ -839,9 +841,10 @@ async def test_invoke_vendor_analyst_emit_pricing_profile_start_in_parallel(
 
     from langchain_core.messages import AIMessage
 
-    from ai_brain.core.kb import agents, pipeline
-    from ai_brain.core.kb import mcp_tools
-    from ai_brain.core.kb.schemas import BidProfile, PricingExtraction
+    from ai_brain.core.kb.extract import agents
+    from ai_brain.core.kb.build import pipeline
+    from ai_brain.core.kb.api import mcp_tools
+    from ai_brain.core.kb.api.schemas import BidProfile, PricingExtraction
 
     _seed_project()
     started = 0

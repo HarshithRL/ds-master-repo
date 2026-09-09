@@ -7,7 +7,7 @@ import time
 
 import pytest
 
-from ai_brain.core.kb.ingest import ingest_project, is_rfp_priority
+from ai_brain.core.kb.extract.ingest import ingest_project, is_rfp_priority
 from shared.db.models import Artifact, utc_now_iso
 
 

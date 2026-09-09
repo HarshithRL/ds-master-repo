@@ -8,7 +8,7 @@ from typing import Any
 
 from sqlalchemy import select
 
-from ai_brain.core.kb.schemas import (
+from ai_brain.core.kb.api.schemas import (
     BidProfile,
     EvidenceItem,
     PricingExtraction,

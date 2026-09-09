@@ -15,7 +15,7 @@ from typing import Any, Iterable, Sequence
 
 from sqlalchemy import bindparam, text
 
-from ai_brain.core.kb.embed import embed_query, load_embeddings
+from ai_brain.core.kb.store.embed import embed_query, load_embeddings
 from shared.db.connection import session_scope
 from shared.logger_global import get_logger
 

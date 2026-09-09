@@ -114,7 +114,7 @@ def _retrieved_excerpts(
 
 def _hybrid_excerpts(project_id: str, query: str) -> str:
     try:
-        from ai_brain.core.kb.search import search_kb
+        from ai_brain.core.kb.store.search import search_kb
 
         return (search_kb(query, k=HIT_LIMIT, project_id=project_id) or "").strip()
     except Exception:

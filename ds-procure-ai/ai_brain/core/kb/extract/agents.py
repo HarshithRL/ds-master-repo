@@ -22,9 +22,9 @@ from langchain.agents.middleware import (
     ToolRetryMiddleware,
 )
 
-from ai_brain.core.kb.coverage import CoverageMiddleware
-from ai_brain.core.kb.materialize import project_files, vendor_paths
-from ai_brain.core.kb.schemas import BidProfile, PricingExtraction, VendorEvidenceBundle
+from ai_brain.core.kb.build.coverage import CoverageMiddleware
+from ai_brain.core.kb.store.materialize import project_files, vendor_paths
+from ai_brain.core.kb.api.schemas import BidProfile, PricingExtraction, VendorEvidenceBundle
 from ai_brain.core.procurement_ai.packs.matrix_layout import EXTRACT_MAX_TOKENS
 
 STABLE_RULES = (
@@ -88,7 +88,7 @@ def files_for_bid(project_id: str, bid_id: str) -> tuple[dict[str, dict[str, str
     """Path-scope: README + RFP + this vendor folder + packed chunks + skills."""
     from deepagents.backends.utils import create_file_data
 
-    from ai_brain.core.kb.mcp_tools import prefetch_bid_chunks
+    from ai_brain.core.kb.api.mcp_tools import prefetch_bid_chunks
 
     files = files_for_invoke(project_id)
     keep: dict[str, dict[str, str]] = {}
@@ -135,7 +135,7 @@ def invoke_payload(project_id: str, user_content: str) -> dict[str, Any]:
 
 
 def bid_invoke_payload(project_id: str, bid_id: str) -> dict[str, Any]:
-    from ai_brain.core.kb.mcp_tools import chunk_manifest_block
+    from ai_brain.core.kb.api.mcp_tools import chunk_manifest_block
 
     files, packed_ids = files_for_bid(project_id, bid_id)
     index = chunk_manifest_block(project_id, bid_id)
@@ -209,7 +209,7 @@ def build_vendor_analyst(
     from deepagents.backends import StateBackend
     from deepagents.middleware.filesystem import FilesystemMiddleware
 
-    from ai_brain.core.kb.mcp_tools import langchain_kb_tools
+    from ai_brain.core.kb.api.mcp_tools import langchain_kb_tools
 
     del store
     thinking = model or _llm("thinking")
@@ -312,7 +312,7 @@ def build_requirement_extractor(
     """RFP-only extractor. Stateless. Align to R01–R40."""
     from langchain.agents import create_agent
 
-    from ai_brain.core.kb.mcp_tools import langchain_kb_tools
+    from ai_brain.core.kb.api.mcp_tools import langchain_kb_tools
 
     del store
     thinking = model or _llm("thinking")

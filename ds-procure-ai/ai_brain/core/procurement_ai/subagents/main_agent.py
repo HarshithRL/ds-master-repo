@@ -10,7 +10,7 @@ from langchain.agents.middleware import ModelRequest, dynamic_prompt
 from langchain_core.runnables import RunnableConfig
 from mlflow.entities import SpanType
 
-from ai_brain.core.kb.search import set_current_project_id
+from ai_brain.core.kb.store.search import set_current_project_id
 from ai_brain.core.procurement_ai.capabilities import project_id_from_state
 from ai_brain.core.procurement_ai.knowledge import knowledge_prompt_block
 from ai_brain.core.utils import read_prompt

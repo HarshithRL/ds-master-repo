@@ -187,7 +187,7 @@ def map_brain_event(
 
 def _interrupt_event(custom: dict[str, Any]) -> dict[str, Any]:
     """HITL interrupt — SSE `event: interrupt`, never a generic error."""
-    from ai_brain.core.kb.hitl import ACTIONS, GATE_ORDER, hitl_request_from_interrupts
+    from ai_brain.core.kb.build.hitl import ACTIONS, GATE_ORDER, hitl_request_from_interrupts
 
     interrupts = custom.get("interrupts") or []
     request = hitl_request_from_interrupts(interrupts)
