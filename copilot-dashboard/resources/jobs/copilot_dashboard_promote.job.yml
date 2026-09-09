@@ -1,0 +1,24 @@
+resources:
+  jobs:
+    copilot_dashboard_promote:
+      name: "Copilot Dashboard - Promote & Publish"
+      tags:
+        project: copilot-dashboard
+        purpose: dashboard-publish
+
+      tasks:
+        - task_key: promote_dev_dashboard
+          notebook_task:
+            notebook_path: ../../src/04_promote_dev_dashboard.py
+            base_parameters:
+              catalog: ${var.catalog}
+              warehouse_id: ${var.warehouse_id}
+              auto_promote: "no"
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: Standard_DS3_v2
+            data_security_mode: USER_ISOLATION
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*]"
+            policy_id: ${var.policy_id}
