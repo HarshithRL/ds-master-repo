@@ -1,0 +1,166 @@
+.documents-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.documents-tab .section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.documents-tab .section-eyebrow {
+  display: block;
+  color: #ff6900;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.documents-tab .section-header h2 {
+  margin: 8px 0 6px;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.documents-tab .section-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.documents-tab .file-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 480px;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.documents-tab .file-search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+
+.documents-tab .file-search input::placeholder {
+  color: var(--text-muted);
+}
+
+.documents-tab .file-search:focus-within {
+  border-color: #ff6900;
+}
+
+.documents-tab .file-group h3 {
+  margin: 0 0 12px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.documents-tab .file-list {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.documents-tab .file-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.documents-tab .file-row:last-child {
+  border-bottom: 0;
+}
+
+.documents-tab .file-row:hover {
+  background: var(--surface-2);
+}
+
+.documents-tab .file-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.documents-tab .file-icon.pdf {
+  background: rgba(255, 90, 90, 0.18);
+  color: #ff7a7a;
+}
+
+.documents-tab .file-icon.docx {
+  background: rgba(74, 144, 226, 0.18);
+  color: #6aadff;
+}
+
+.documents-tab .file-icon.xlsx {
+  background: rgba(69, 212, 131, 0.18);
+  color: #45d483;
+}
+
+.documents-tab .file-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.documents-tab .file-info strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.documents-tab .file-info span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.documents-tab .file-action {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.documents-tab .file-action:hover {
+  color: var(--text);
+}
+
+@media (max-width: 700px) {
+  .documents-tab .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .documents-tab .file-search {
+    max-width: none;
+  }
+}

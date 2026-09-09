@@ -1,0 +1,93 @@
+Flask
+flask-cors
+
+
+# Procure AI Workspace — Requirements (Databricks Apps runtime: Linux/Ubuntu 22.04, Python 3.11)
+#
+# HAND-MAINTAINED. Do NOT run `uv pip compile` on Windows and commit the result:
+# it pins Windows-only wheels (pywin32, win32-setctime) with no platform markers,
+# which breaks the Databricks Apps build ("No matching distribution found for pywin32").
+# If a full lock is ever needed, use: uv pip compile pyproject.toml --python-platform linux
+#
+# Keep constraints loose; let pip resolve on the Linux build host.
+
+# Core AI Framework (pin exact — KB build W0)
+langchain==1.3.15
+langchain-core==1.5.6
+langgraph==1.2.11
+deepagents==0.7.5
+databricks-langchain
+langgraph-checkpoint-sqlite
+langgraph-checkpoint-postgres==3.0.5
+aiosqlite
+tiktoken==0.12.0
+pgvector==0.3.6
+
+# API & Web Server
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+sse-starlette>=1.8.0
+flask>=3.0.0
+flask-cors>=6.0.0
+gunicorn>=21.0.0
+# Windows-only fallback WSGI server for ops/deployment/run_app.py (gunicorn
+# needs POSIX `fcntl`). Pure Python — harmless on the Linux Apps build host.
+waitress>=3.0.0
+httpx>=0.27.0
+python-multipart>=0.0.9
+
+# Configuration & Validation
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+PyYAML>=6.0.0
+
+# LangChain Components
+langchain-openai>=0.3.0
+langchain-community>=0.3.0
+langchain-text-splitters>=0.3.0
+langchain-mcp-adapters>=0.3.2
+mcp>=1.29,<2
+
+# Document Parsing & Imaging
+# docling is the primary parser engine; the native fallback in
+# agent_server/file_handler/parser/engines/native_engine.py uses only the four
+# below, so the app still parses if docling's model weights are unavailable.
+docling>=2.120.0
+pymupdf>=1.24.0
+python-docx>=1.1.0
+python-pptx>=1.0.0
+openpyxl>=3.1.0
+pillow>=10.0.0
+# shared/artifacts PDF parser (pdf_parser.py)
+pdfplumber>=0.11.0
+pypdf>=5.0.0
+# Optional OCR for scanned PDFs (ParseOptions.use_ocr / test.py --ocr)
+pytesseract>=0.3.10
+
+# Vector Database
+faiss-cpu>=1.8.0
+
+# Logging & Observability
+loguru>=0.7.2
+mlflow>=3,<4
+
+# SQLAlchemy for ORM (existing web_app)
+sqlalchemy>=2.0.52
+psycopg[binary,pool]>=3.1
+
+# Testing
+pytest>=8.0.0,<9.0
+pytest-asyncio>=0.23.0,<1.0
+
+# Code quality
+ruff>=0.5.0,<1.0
+
+# Databricks SDK & utilities
+databricks-sdk==0.125.0
+urllib3>=2.2.0,<3.0
+
+langgraph-cli[inmem]
+
+# Artifact parse: Azure Document Intelligence layout
+azure-ai-formrecognizer>=3.3.0
+azure-ai-documentintelligence>=1.0.2

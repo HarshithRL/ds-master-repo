@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <!-- Lightbulb -->
+  <path
+    fill="#ffffff"
+    d="M12 2.6a6.4 6.4 0 0 0-3.2 11.95V16.2a1.4 1.4 0 0 0 1.4 1.4h3.6a1.4 1.4 0 0 0 1.4-1.4v-1.65A6.4 6.4 0 0 0 12 2.6Zm-1.1 15.7h2.2v.7a1.1 1.1 0 0 1-2.2 0v-.7Z"
+  />
+  <path fill="#ffffff" d="M10.2 20.4h3.6v1.5h-3.6z"/>
+</svg>

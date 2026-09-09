@@ -1,0 +1,396 @@
+.projects-page {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.projects-container {
+  max-width: 1450px;
+  margin: 0 auto;
+  padding: 42px;
+}
+
+/* =========================
+   HEADER
+   ========================= */
+
+.projects-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.projects-eyebrow {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.projects-header h1 {
+  margin: 8px 0;
+  font-size: 34px;
+  font-weight: 400;
+}
+
+.projects-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* =========================
+   BUTTONS
+   ========================= */
+
+.primary-button {
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.primary-button:hover {
+  background: var(--accent-hover);
+}
+
+.primary-button:active {
+  transform: translateY(1px);
+}
+
+.primary-button:focus-visible,
+.reset-button:focus-visible,
+.project-row-clickable:focus-visible,
+.pagination button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* =========================
+   SUMMARY
+   ========================= */
+
+.project-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.summary-card {
+  min-height: 105px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.summary-card span {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.summary-card strong {
+  display: block;
+  font-size: 26px;
+  font-weight: 500;
+}
+
+.summary-card small {
+  display: block;
+  margin-top: 7px;
+  color: var(--success);
+  font-size: 11px;
+}
+
+/* =========================
+   CONTENT
+   ========================= */
+
+.projects-content {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+/* =========================
+   TOOLBAR
+   ========================= */
+
+.projects-toolbar {
+  display: flex;
+  gap: 10px;
+  padding: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.projects-toolbar input,
+.projects-toolbar select {
+  height: 40px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text);
+  outline: none;
+}
+
+.projects-toolbar input {
+  width: 280px;
+}
+
+.projects-toolbar select {
+  min-width: 140px;
+}
+
+.projects-toolbar input::placeholder {
+  color: var(--text-subtle);
+}
+
+.projects-toolbar input:focus,
+.projects-toolbar select:focus {
+  border-color: var(--accent);
+}
+
+.reset-button {
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.reset-button:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* =========================
+   TABLE
+   ========================= */
+
+.projects-table {
+  width: 100%;
+}
+
+.project-row {
+  display: grid;
+  grid-template-columns: 2.2fr 1.3fr 1.1fr 1.3fr 0.9fr 1fr 1.3fr;
+  align-items: center;
+  width: 100%;
+  min-height: 72px;
+  padding: 0 18px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  text-align: left;
+  font-size: 13px;
+}
+
+.project-row-header {
+  min-height: 48px;
+  color: var(--text-subtle);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+/* =========================
+   CLICKABLE PROJECT
+   ========================= */
+
+.project-row-clickable {
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.project-row-clickable:hover {
+  background: var(--surface-2);
+}
+
+.project-row-clickable:hover .project-name-cell strong {
+  color: var(--accent);
+}
+
+/* =========================
+   PROJECT NAME
+   ========================= */
+
+.project-name-cell strong {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.project-name-cell small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-subtle);
+  font-size: 11px;
+}
+
+/* =========================
+   STATUS
+   ========================= */
+
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #777777;
+}
+
+.status-dot.active {
+  background: var(--success);
+}
+
+.status-dot.evaluation {
+  background: #4d8dff;
+}
+
+.status-dot.negotiation {
+  background: #a96aff;
+}
+
+.status-dot.decision-pending {
+  background: #ff8b00;
+}
+
+.status-dot.completed {
+  background: #777777;
+}
+
+/* =========================
+   PRIORITY
+   ========================= */
+
+.priority-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+}
+
+.priority-badge.high {
+  border: 1px solid #8a4c00;
+  background: #382000;
+  color: #ff9a00;
+}
+
+.priority-badge.medium {
+  border: 1px solid #735800;
+  background: #302700;
+  color: #e9b400;
+}
+
+.priority-badge.low {
+  border: 1px solid #285b39;
+  background: #142a1c;
+  color: #51c879;
+}
+
+/* =========================
+   PROGRESS
+   ========================= */
+
+.progress-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-bar {
+  display: block;
+  width: 70px;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--border-strong);
+}
+
+.progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: var(--accent);
+}
+
+/* =========================
+   FOOTER
+   ========================= */
+
+.projects-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 15px 18px;
+  color: var(--text-subtle);
+  font-size: 11px;
+}
+
+.pagination {
+  display: flex;
+  gap: 5px;
+}
+
+.pagination button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.pagination button:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.pagination button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+
+@media (max-width: 1200px) {
+  .project-summary-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .projects-container {
+    padding: 30px;
+  }
+
+  .projects-content {
+    overflow-x: auto;
+  }
+
+  .projects-table {
+    min-width: 1050px;
+  }
+}

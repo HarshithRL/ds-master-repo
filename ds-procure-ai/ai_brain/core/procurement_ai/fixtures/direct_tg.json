@@ -1,0 +1,124 @@
+{
+  "process_type": "direct_tg",
+  "ontology_version": "1.0.0",
+  "currency": "EUR",
+  "internal_day_rate": 800.0,
+  "requirements": [
+    {
+      "id": "R01",
+      "text": "RFP requirement slot. Filled from the uploaded RFP for this project, not from a fixed catalog.",
+      "category": "scope",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R02",
+      "text": "RFP requirement slot. Filled from the uploaded RFP for this project, not from a fixed catalog.",
+      "category": "timeline",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R03",
+      "text": "RFP requirement slot. Filled from the uploaded RFP for this project, not from a fixed catalog.",
+      "category": "commercial",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R04",
+      "text": "RFP requirement slot. Filled from the uploaded RFP for this project, not from a fixed catalog.",
+      "category": "legal",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R05",
+      "text": "RFP requirement slot. Filled from the uploaded RFP for this project, not from a fixed catalog.",
+      "category": "deliverable",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R06",
+      "text": "RFP requirement slot. Filled from the uploaded RFP for this project, not from a fixed catalog.",
+      "category": "commercial_tco",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R07",
+      "text": "RFP requirement slot. Filled from the uploaded RFP for this project, not from a fixed catalog.",
+      "category": "risk",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R08",
+      "text": "RFP requirement slot. Filled from the uploaded RFP for this project, not from a fixed catalog.",
+      "category": "scope",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R09",
+      "text": "RFP requirement slot. Filled from the uploaded RFP for this project, not from a fixed catalog.",
+      "category": "timeline",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R10",
+      "text": "RFP requirement slot. Filled from the uploaded RFP for this project, not from a fixed catalog.",
+      "category": "commercial",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R11",
+      "text": "RFP requirement slot. Filled from the uploaded RFP for this project, not from a fixed catalog.",
+      "category": "legal",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R12",
+      "text": "RFP requirement slot. Filled from the uploaded RFP for this project, not from a fixed catalog.",
+      "category": "deliverable",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    }
+  ],
+  "vendors": [],
+  "offerings": [],
+  "tco": [],
+  "key_flags": [],
+  "sources": [],
+  "bafo_rows": [
+    "Material / specification",
+    "Quantity and unit of measure",
+    "Incoterm and delivery point",
+    "Lead time",
+    "Unit price (empty until evidenced)",
+    "Tooling or one-off cost (empty until evidenced)",
+    "Quality certificates and deviations",
+    "Payment terms",
+    "Warranty",
+    "Risk and deviation",
+    "Score Card score ? placeholder To be scored by Etex evaluation team"
+  ],
+  "weights_locked": false,
+  "scorecard_owner": "Etex evaluation team"
+}
