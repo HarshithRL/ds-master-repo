@@ -482,7 +482,40 @@ def _get_or_create_dashboard():
                 raise
             print(f"Dashboard {DASHBOARD_ID} unavailable ({type(e).__name__}). Creating from template...")
     else:
-        print("No dashboard ID configured. Creating from template...")
+        print("No dashboard ID configured. Searching workspace...")
+
+    # ---------------------------------------------------------------------------
+    # Fallback: search for bundle-deployed dashboard by name in pipeline folder
+    # This handles first run in a new environment where config doesn't exist yet
+    # but bundle deploy already created the dashboard.
+    # ---------------------------------------------------------------------------
+    DASHBOARD_NAME = "Agent Dashboard Phase 1"
+    try:
+        for d in w.lakeview.list():
+            if d.display_name == DASHBOARD_NAME:
+                # Verify it's in our pipeline folder (not some other dashboard)
+                d_path = getattr(d, 'parent_path', '') or ''
+                if PIPELINE_FOLDER.rstrip('/') in d_path.rstrip('/'):
+                    DASHBOARD_ID = d.dashboard_id
+                    draft = w.lakeview.get(DASHBOARD_ID)
+                    ser = draft.serialized_dashboard
+                    print(f"  Found existing dashboard by name: {DASHBOARD_NAME} ({DASHBOARD_ID})")
+                    _save_config(DASHBOARD_ID)
+                    return DASHBOARD_ID, ser, DASHBOARD_NAME
+        # Also check dashboards folder (bundle deploys to src/dashboards/)
+        dashboards_folder = f"{PIPELINE_FOLDER}/dashboards"
+        for d in w.lakeview.list():
+            if d.display_name == DASHBOARD_NAME:
+                d_path = getattr(d, 'parent_path', '') or ''
+                if dashboards_folder.rstrip('/') in d_path.rstrip('/'):
+                    DASHBOARD_ID = d.dashboard_id
+                    draft = w.lakeview.get(DASHBOARD_ID)
+                    ser = draft.serialized_dashboard
+                    print(f"  Found bundle-deployed dashboard: {DASHBOARD_NAME} ({DASHBOARD_ID})")
+                    _save_config(DASHBOARD_ID)
+                    return DASHBOARD_ID, ser, DASHBOARD_NAME
+    except Exception as e:
+        print(f"  Dashboard search failed: {e}. Falling back to template...")
 
     # Load template and adapt to current catalog
     with open(TEMPLATE_FILE) as f:
