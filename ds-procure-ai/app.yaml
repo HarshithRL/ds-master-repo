@@ -1,0 +1,43 @@
+command:
+  - python
+  - run_app.py
+env:
+  # FLASK_SECRET_KEY is set by the bundle (config.env). Do not valueFrom
+  # secret-key here: ACC/PRD have no procure-ai/secret-key scope.
+  - name: MATE_ENV
+    value: prod
+  - name: BRAIN_BASE_URL
+    value: http://127.0.0.1:8004
+  - name: BRAIN_HOST
+    value: 127.0.0.1
+  - name: BRAIN_PORT
+    value: "8004"
+  - name: MLFLOW_TRACKING_URI
+    value: databricks
+  - name: MLFLOW_EXPERIMENT_NAME
+    value: /Shared/ds-procure-ai/ai_brain
+  - name: DATABRICKS_MODEL
+    value: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+  # Lakebase STM/LTM (ai_brain). YAML defaults: ai_brain/core/config/memory.yaml.
+  # Password is OAuth via generate_database_credential(endpoint=LAKEBASE_ENDPOINT).token
+  # — never put a native PG password here.
+  #
+  # Platform injects PGHOST, PGPORT, PGUSER, PGSSLMODE when `postgres` is attached.
+  # Omit PGHOST locally: runtime uses endpoint.status.hosts.host (direct). The
+  # Neon-style -pooler host rejects search_path as a startup GUC and failed SASL
+  # with OAuth tokens. Do not set DATABRICKS_CONFIG_PROFILE here — Apps runtime
+  # uses WorkspaceClient() when DATABRICKS_APP_NAME or client id/secret is set.
+  - name: LAKEBASE_ENDPOINT
+    valueFrom: postgres
+  - name: LAKEBASE_SCHEMA
+    value: mate_agent
+  - name: PGDATABASE
+    value: databricks_postgres
+  - name: PGSSLMODE
+    value: require
+  - name: BRAIN_CHECKPOINT_BACKEND
+    value: lakebase
+  - name: BRAIN_STORE_BACKEND
+    value: lakebase
+  - name: DATABRICKS_EMBEDDING_ENDPOINT
+    value: databricks-gte-large-en

@@ -1,0 +1,146 @@
+.requirements-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.requirements-tab .section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.requirements-tab .section-eyebrow {
+  display: block;
+  color: #ff6900;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.requirements-tab .section-header h2 {
+  margin: 8px 0 6px;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.requirements-tab .section-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.req-total {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.req-group h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.req-list {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.req-row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  min-height: 72px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.req-row:last-child {
+  border-bottom: 0;
+}
+
+.req-id {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.req-id strong {
+  font-size: 13px;
+}
+
+.req-id em {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.req-body p {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+.req-body span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.coverage-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.coverage-chip.met {
+  background: rgba(69, 212, 131, 0.18);
+  color: #45d483;
+}
+
+.coverage-chip.partial {
+  background: rgba(255, 176, 32, 0.18);
+  color: #ffb020;
+}
+
+.coverage-chip.gap {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+.kb-status-banner {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.kb-status-banner.is-error {
+  color: #ff7a7a;
+}
+
+.kb-status-banner.is-empty {
+  color: var(--text-muted);
+}
+
+@media (max-width: 700px) {
+  .req-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .req-id {
+    grid-column: 1 / -1;
+  }
+}

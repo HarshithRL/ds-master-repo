@@ -1,0 +1,44 @@
+resources:
+  apps:
+    ds_procure_ai:
+      name: ds-procure-ai
+      description: Mate procurement AI assistant (Flask + React + AI Brain)
+      source_code_path: ..
+      compute_size: LARGE
+      lifecycle:
+        started: true
+      user_api_scopes:
+        # iam.current-user:read is a platform default; sending it on create
+        # returns 400 INVALID_PARAMETER_VALUE on this workspace.
+        - serving.serving-endpoints
+      config:
+        env:
+          - name: DATABRICKS_MODEL
+            value: ${var.databricks_model}
+          - name: DATABRICKS_FAST_MODEL
+            value: ${var.fast_model}
+          - name: DATABRICKS_THINKING_MODEL
+            value: ${var.thinking_model}
+          - name: FLASK_SECRET_KEY
+            value: ${bundle.name}-${bundle.target}
+      resources:
+        # Keep existing attachments. Replacing this array wholesale (update_mask=resources)
+        # would detach anything omitted here.
+        - name: serving-endpoint
+          serving_endpoint:
+            name: databricks-claude-sonnet-5
+            permission: CAN_QUERY
+        - name: embedding-endpoint
+          serving_endpoint:
+            name: databricks-gte-large-en
+            permission: CAN_QUERY
+        # secret-key (scope procure-ai) is attached only on D/T, where it exists.
+        # Autoscaling Lakebase — use `postgres` (branch + database paths).
+        # Legacy `database` / instance_name is Provisioned-only and will fail.
+        # Schema mate_agent is created by the app SP on first ACC boot.
+        # Do not DROP it on later deploys.
+        - name: postgres
+          postgres:
+            branch: ${var.lakebase_branch}
+            database: ${var.lakebase_database}
+            permission: CAN_CONNECT_AND_CREATE

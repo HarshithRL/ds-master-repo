@@ -1,0 +1,54 @@
+.procurement-app {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.procurement-main {
+  min-height: 100vh;
+  margin-left: var(--sidebar-width);
+  width: calc(100% - var(--sidebar-width));
+  background: var(--bg);
+  box-sizing: border-box;
+}
+
+/* Workspace uses inner panel scroll only — no document/page scrollbar. */
+html:has(.procurement-main.is-workspace),
+html:has(.procurement-main.is-workspace) body,
+html:has(.procurement-main.is-workspace) #root {
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  scrollbar-width: none;
+}
+
+html:has(.procurement-main.is-workspace)::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.procurement-app:has(.procurement-main.is-workspace) {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.procurement-main.is-workspace {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 700px) {
+  .procurement-main {
+    margin-left: 70px;
+    width: calc(100% - 70px);
+  }
+
+  .procurement-main.is-workspace {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+}

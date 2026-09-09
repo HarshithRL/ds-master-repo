@@ -1,0 +1,391 @@
+.overview-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kb-status-banner {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.kb-status-banner.is-error {
+  color: #ff7a7a;
+}
+
+.empty-row {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.overview-card {
+  grid-column: span 4;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.overview-card-progress {
+  grid-column: span 5;
+}
+
+.overview-card-metrics {
+  grid-column: span 7;
+}
+
+.overview-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.overview-card-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.overview-card-head span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.progress-body {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.progress-ring {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+}
+
+.progress-ring svg {
+  transform: rotate(-90deg);
+}
+
+.progress-ring-track,
+.progress-ring-value {
+  fill: none;
+  stroke-width: 10;
+}
+
+.progress-ring-track {
+  stroke: var(--border);
+}
+
+.progress-ring-value {
+  stroke: #ff6900;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.4s ease;
+}
+
+.progress-ring-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-ring-label strong {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.progress-ring-label span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.progress-stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.progress-stages li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.progress-stages li.done {
+  color: #45d483;
+}
+
+.progress-stages li.current {
+  color: #ff8a3d;
+  font-weight: 600;
+}
+
+.stage-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-subtle);
+}
+
+.progress-stages li.done .stage-dot {
+  background: #45d483;
+}
+
+.progress-stages li.current .stage-dot {
+  background: #ff6900;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metric-tile {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.metric-tile span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.metric-tile strong {
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.milestone-list,
+.insight-list,
+.approval-list,
+.recent-docs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.milestone-list li,
+.approval-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.milestone-list li:last-child,
+.approval-list li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.milestone-list strong,
+.approval-list strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.milestone-list span,
+.approval-list span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.milestone-status,
+.approval-status {
+  flex-shrink: 0;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+.milestone-status.in-progress,
+.approval-status.pending {
+  background: rgba(255, 105, 0, 0.15);
+  color: #ff8a3d;
+}
+
+.approval-status.approved {
+  background: rgba(69, 212, 131, 0.15);
+  color: #45d483;
+}
+
+.insight-list li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.insight-list li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.insight-list strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.insight-list p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.insight-opportunity strong {
+  color: #45d483;
+}
+
+.insight-risk strong {
+  color: #ff7a7a;
+}
+
+.insight-info strong {
+  color: #6aadff;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  gap: 10px;
+}
+
+.stat-row span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.stat-row strong {
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.doc-type-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.doc-chip {
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.doc-chip.pdf {
+  background: rgba(255, 90, 90, 0.18);
+  color: #ff7a7a;
+}
+
+.doc-chip.docx {
+  background: rgba(74, 144, 226, 0.18);
+  color: #6aadff;
+}
+
+.doc-chip.xlsx {
+  background: rgba(69, 212, 131, 0.18);
+  color: #45d483;
+}
+
+.recent-docs li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.recent-docs li:last-child {
+  border-bottom: 0;
+}
+
+.overview-quick-actions {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.quick-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.quick-action-btn {
+  padding: 12px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.quick-action-btn:hover {
+  border-color: #ff6900;
+  color: var(--text);
+}
+
+@media (max-width: 1100px) {
+  .overview-card,
+  .overview-card-progress,
+  .overview-card-metrics {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 700px) {
+  .overview-card,
+  .overview-card-progress,
+  .overview-card-metrics {
+    grid-column: span 12;
+  }
+
+  .progress-body {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

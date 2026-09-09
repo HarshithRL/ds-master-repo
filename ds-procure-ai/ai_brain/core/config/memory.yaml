@@ -1,0 +1,25 @@
+# ai_brain memory — Lakebase (existing project ds-vendor-agent; do not create a new one)
+# Env vars with the same names override these values when set (see app.yaml on deploy).
+# Schema mate_agent already exists — do not DROP it. If tables were created locally,
+# the schema is owned by the user role, not the Databricks App service principal;
+# grant USAGE/CREATE (or transfer ownership) instead of stealing ownership blindly.
+checkpoint:
+  backend: lakebase   # lakebase | sqlite | memory
+store:
+  backend: lakebase   # lakebase | memory
+lakebase:
+  endpoint: projects/ds-vendor-agent/branches/production/endpoints/primary
+  schema: mate_agent
+  database: databricks_postgres
+  # Host optional (resolved from endpoint.status.hosts.host if omitted).
+  # Do not use the Neon-style -pooler host: it rejects search_path as a startup
+  # GUC and currently fails SASL with Lakebase OAuth tokens.
+  sslmode: require
+  pool_recycle_seconds: 3000
+  token_refresh_seconds: 2400
+databricks:
+  config_profile: adb-7181820732839861
+  # Serving endpoint name (DatabricksEmbeddings.endpoint), not the UC entity.
+  # Workspace FM API: databricks-gte-large-en → system.ai.gte_large_en_v1_5 (1024-d).
+  embedding_endpoint: databricks-gte-large-en
+  embedding_dims: 1024

@@ -1,0 +1,25 @@
+# local runtime and secrets
+.env
+.env.*
+!.env.studio.example
+.venv/
+frontend/node_modules/
+# Built UI is committed so the shared DAB pipeline can deploy the app
+# without an npm build step. Rebuild with `npm run build` in frontend/.
+__pycache__/
+*.pyc
+*.log
+logs/
+backend/logs/
+mlartifacts/
+mlruns/
+graphify-out/
+ai_brain/graphify-out/
+.checkpoints/
+ai_brain/.checkpoints/
+.mate-dev.pids
+premium-audit.json
+data/
+*.sqlite
+*.sqlite-*
+*.db

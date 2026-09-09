@@ -1,0 +1,830 @@
+/* =========================================================
+   PROCUREMENT DASHBOARD
+   ========================================================= */
+
+.dashboard-page {
+  min-height: 100vh;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.status-chart {
+  display: contents;
+}
+  
+  .dashboard-container {
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+  
+    padding: 40px 36px 60px;
+  
+    box-sizing: border-box;
+  }
+  
+  
+  /* =========================================================
+     HEADER
+     ========================================================= */
+  
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  
+    gap: 30px;
+    margin-bottom: 32px;
+  }
+  
+  .dashboard-eyebrow {
+    display: block;
+  
+    margin-bottom: 8px;
+  
+    color: var(--accent);
+  
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+  }
+  
+  .dashboard-header h1 {
+    margin: 0;
+  
+    color: var(--text);
+  
+    font-size: 30px;
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+  
+  .dashboard-header p {
+    margin: 9px 0 0;
+  
+    color: var(--text-muted);
+  
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  
+  /* =========================================================
+     BUTTON
+     ========================================================= */
+  
+  .primary-button {
+    flex-shrink: 0;
+  
+    border: none;
+    border-radius: 7px;
+  
+    padding: 12px 18px;
+  
+    background: var(--accent);
+    color: var(--text);
+  
+    font-size: 13px;
+    font-weight: 600;
+  
+    cursor: pointer;
+  
+    transition:
+      background 0.2s ease,
+      transform 0.2s ease;
+  }
+  
+  .primary-button:hover {
+    background: var(--accent-hover);
+  }
+  
+  .primary-button:active {
+    transform: translateY(1px);
+  }
+  
+  
+  /* =========================================================
+     KPI SECTION
+     ========================================================= */
+  
+  .dashboard-kpis {
+    display: grid;
+  
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  
+    gap: 14px;
+  
+    margin-bottom: 20px;
+  }
+  
+  .kpi-card {
+    min-width: 0;
+    min-height: 105px;
+  
+    box-sizing: border-box;
+  
+    padding: 18px;
+  
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+
+    background: var(--surface);
+  }
+  
+  .kpi-label {
+    display: block;
+  
+    margin-bottom: 10px;
+  
+    color: var(--text-muted);
+  
+    font-size: 12px;
+    line-height: 1.3;
+  
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .kpi-card strong {
+    display: block;
+  
+    margin-bottom: 9px;
+  
+    color: var(--text);
+  
+    font-size: 25px;
+    line-height: 1;
+  
+    font-weight: 500;
+  }
+  
+  .kpi-change {
+    display: block;
+  
+    font-size: 11px;
+    line-height: 1.3;
+  
+    white-space: nowrap;
+  }
+  
+  .kpi-change.positive {
+    color: var(--success);
+  }
+  
+  
+  /* =========================================================
+     MAIN ANALYTICS GRID
+     ========================================================= */
+  
+  .dashboard-grid {
+    display: grid;
+  
+    /*
+      IMPORTANT:
+      Project Status gets more space because it contains
+      both the donut and the legend.
+    */
+    grid-template-columns:
+      minmax(330px, 1.25fr)
+      minmax(300px, 1.15fr)
+      minmax(270px, 1fr)
+      minmax(300px, 1.15fr);
+  
+    gap: 16px;
+  
+    width: 100%;
+  }
+  
+  .dashboard-grid > * {
+    min-width: 0;
+  }
+  
+  
+  /* =========================================================
+     DASHBOARD CARDS
+     ========================================================= */
+  
+  .dashboard-card {
+    min-width: 0;
+    min-height: 388px;
+  
+    box-sizing: border-box;
+  
+    padding: 24px;
+  
+    border: 1px solid var(--border);
+    border-radius: 9px;
+  
+    background: var(--surface-2);
+  
+    overflow: hidden;
+  }
+  
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  
+    gap: 15px;
+  
+    margin-bottom: 28px;
+  }
+  
+  .card-header h2 {
+    min-width: 0;
+  
+    margin: 0;
+  
+    color: var(--text);
+  
+    font-size: 15px;
+    line-height: 1.35;
+    font-weight: 600;
+  }
+  
+  .card-header span {
+    flex-shrink: 0;
+  
+    color: var(--text-muted);
+  
+    font-size: 11px;
+    line-height: 1.4;
+  
+    white-space: nowrap;
+  }
+  
+  
+  /* =========================================================
+     PROJECT STATUS
+     ========================================================= */
+  
+  .project-status {
+    display: grid;
+  
+    /*
+      Donut gets a controlled column.
+      Legend gets remaining space.
+    */
+    grid-template-columns: 150px minmax(0, 1fr);
+  
+    align-items: center;
+  
+    column-gap: 24px;
+  
+    width: 100%;
+    min-width: 0;
+  
+    padding-top: 8px;
+  }
+  
+  
+  /* -------------------------
+     DONUT
+     ------------------------- */
+  
+  .status-circle {
+    width: 150px;
+    height: 150px;
+  
+    flex-shrink: 0;
+  
+    border-radius: 50%;
+  
+    background:
+      conic-gradient(
+        var(--success) 0deg 180deg,
+        #586ee8 180deg 270deg,
+        #8b5fd3 270deg 315deg,
+        var(--accent) 315deg 345deg,
+        var(--text-subtle) 345deg 360deg
+      );
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .status-circle-inner {
+    width: 102px;
+    height: 102px;
+  
+    border-radius: 50%;
+  
+    background: var(--surface-2);
+  
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .status-circle-inner strong {
+    color: var(--text);
+  
+    font-size: 26px;
+    line-height: 1;
+    font-weight: 600;
+  }
+  
+  .status-circle-inner span {
+    margin-top: 6px;
+  
+    color: var(--text-muted);
+  
+    font-size: 10px;
+    line-height: 1;
+  }
+  
+  
+  /* -------------------------
+     STATUS LEGEND
+     ------------------------- */
+  
+  .status-list {
+    display: flex;
+    flex-direction: column;
+  
+    gap: 14px;
+  
+    min-width: 0;
+  }
+  
+  .status-item {
+    display: grid;
+  
+    /*
+      dot | label | value
+    */
+    grid-template-columns: 9px minmax(0, 1fr) auto;
+  
+    align-items: center;
+  
+    column-gap: 9px;
+  
+    min-width: 0;
+  
+    font-size: 11px;
+    line-height: 1.3;
+  }
+  
+  .status-item > span:nth-child(2) {
+    min-width: 0;
+  
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .status-item strong {
+    min-width: 16px;
+  
+    color: var(--text);
+  
+    font-size: 11px;
+    font-weight: 500;
+  
+    text-align: right;
+  }
+  
+  .status-dot {
+    width: 7px;
+    height: 7px;
+  
+    border-radius: 50%;
+  }
+  
+  .status-dot.active {
+    background: var(--success);
+  }
+  
+  .status-dot.evaluation {
+    background: #586ee8;
+  }
+  
+  .status-dot.negotiation {
+    background: #8b5fd3;
+  }
+  
+  .status-dot.decision {
+    background: var(--accent);
+  }
+  
+  .status-dot.completed {
+    background: var(--text-subtle);
+  }
+  
+  
+  /* =========================================================
+     SPEND BY CATEGORY
+     ========================================================= */
+  
+  .spend-list {
+    display: flex;
+    flex-direction: column;
+  
+    gap: 18px;
+  
+    width: 100%;
+  }
+  
+  .spend-row {
+    display: grid;
+  
+    grid-template-columns:
+      minmax(95px, 1fr)
+      minmax(60px, 1.1fr)
+      52px;
+  
+    align-items: center;
+  
+    gap: 12px;
+  
+    min-width: 0;
+  
+    font-size: 11px;
+  }
+  
+  .spend-row > span {
+    min-width: 0;
+  
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .spend-row strong {
+    min-width: 52px;
+  
+    color: var(--text);
+  
+    font-size: 11px;
+    font-weight: 500;
+  
+    text-align: right;
+  }
+  
+  .spend-bar {
+    width: 100%;
+    height: 4px;
+  
+    background: var(--border-strong);
+  
+    border-radius: 10px;
+  
+    overflow: hidden;
+  }
+  
+  .spend-bar div {
+    height: 100%;
+  
+    background: var(--accent);
+  
+    border-radius: inherit;
+  }
+  
+  
+  /* =========================================================
+     TOP VENDORS
+     ========================================================= */
+  
+  .vendor-list {
+    display: flex;
+    flex-direction: column;
+  
+    width: 100%;
+  }
+  
+  .vendor-row {
+    display: grid;
+  
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+  
+    align-items: center;
+  
+    gap: 10px;
+  
+    min-width: 0;
+  
+    padding: 13px 0;
+  
+    border-bottom: 1px solid var(--border);
+  
+    font-size: 11px;
+  }
+  
+  .vendor-row:last-child {
+    border-bottom: none;
+  }
+  
+  .vendor-row > span:nth-child(2) {
+    min-width: 0;
+  
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .vendor-rank {
+    width: 21px;
+    height: 21px;
+  
+    box-sizing: border-box;
+  
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    color: var(--text-muted);
+  
+    font-size: 10px;
+  }
+  
+  .vendor-row strong {
+    color: var(--text);
+  
+    font-size: 11px;
+    font-weight: 500;
+  
+    white-space: nowrap;
+  }
+  
+  
+  /* =========================================================
+     RECENT ACTIVITY
+     ========================================================= */
+  
+  .activity-list {
+    display: flex;
+    flex-direction: column;
+  
+    width: 100%;
+  }
+  
+  .activity-item {
+    display: grid;
+  
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+  
+    align-items: center;
+  
+    gap: 10px;
+  
+    min-width: 0;
+  
+    padding: 12px 0;
+  
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .activity-item:last-child {
+    border-bottom: none;
+  }
+  
+  .activity-icon {
+    width: 28px;
+    height: 28px;
+  
+    border-radius: 6px;
+  
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    background: var(--surface-2);
+  
+    color: var(--accent);
+  
+    font-size: 12px;
+  }
+  
+  .activity-item > div:nth-child(2) {
+    min-width: 0;
+  }
+  
+  .activity-item strong {
+    display: block;
+  
+    margin-bottom: 4px;
+  
+    color: var(--text);
+  
+    font-size: 11px;
+    line-height: 1.3;
+    font-weight: 500;
+  
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .activity-item span {
+    display: block;
+  
+    color: var(--text-subtle);
+  
+    font-size: 10px;
+    line-height: 1.3;
+  
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .activity-item small {
+    color: var(--text-subtle);
+  
+    font-size: 9px;
+  
+    white-space: nowrap;
+  }
+  
+  
+  /* =========================================================
+     LARGE DESKTOP
+     ========================================================= */
+  
+  @media (max-width: 1450px) {
+    .dashboard-container {
+      padding-left: 28px;
+      padding-right: 28px;
+    }
+  
+    .dashboard-grid {
+      grid-template-columns:
+        minmax(320px, 1.2fr)
+        minmax(280px, 1fr)
+        minmax(250px, 0.95fr)
+        minmax(280px, 1fr);
+    }
+  
+    .project-status {
+      grid-template-columns: 140px minmax(0, 1fr);
+  
+      column-gap: 18px;
+    }
+  
+    .status-circle {
+      width: 140px;
+      height: 140px;
+    }
+  
+    .status-circle-inner {
+      width: 96px;
+      height: 96px;
+    }
+  }
+  
+  
+  /* =========================================================
+     TABLET / SMALL DESKTOP
+     ========================================================= */
+  
+  @media (max-width: 1200px) {
+    .dashboard-kpis {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  
+    .dashboard-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  
+    /*
+      Project card still gets enough width because
+      it occupies one full grid cell.
+    */
+    .project-status {
+      grid-template-columns: 150px minmax(0, 1fr);
+  
+      column-gap: 22px;
+    }
+  
+    .status-circle {
+      width: 150px;
+      height: 150px;
+    }
+  
+    .status-circle-inner {
+      width: 102px;
+      height: 102px;
+    }
+  }
+  
+  
+  /* =========================================================
+     TABLET
+     ========================================================= */
+  
+  @media (max-width: 850px) {
+    .dashboard-container {
+      padding: 30px 22px 50px;
+    }
+  
+    .dashboard-header {
+      align-items: flex-start;
+  
+      flex-direction: column;
+  
+      gap: 20px;
+    }
+  
+    .dashboard-kpis {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  
+    .dashboard-grid {
+      grid-template-columns: 1fr;
+    }
+  
+    .dashboard-card {
+      min-height: auto;
+    }
+  
+    .project-status {
+      grid-template-columns: 160px minmax(0, 1fr);
+  
+      justify-content: center;
+  
+      column-gap: 30px;
+    }
+  
+    .status-circle {
+      width: 160px;
+      height: 160px;
+    }
+  
+    .status-circle-inner {
+      width: 108px;
+      height: 108px;
+    }
+  }
+  
+  
+  /* =========================================================
+     MOBILE
+     ========================================================= */
+  
+  @media (max-width: 600px) {
+    .dashboard-container {
+      padding: 24px 16px 40px;
+    }
+  
+    .dashboard-header h1 {
+      font-size: 26px;
+    }
+  
+    .dashboard-header p {
+      font-size: 13px;
+    }
+  
+    .dashboard-kpis {
+      grid-template-columns: 1fr;
+    }
+  
+    .kpi-card {
+      min-height: 100px;
+    }
+  
+    .dashboard-card {
+      padding: 20px;
+    }
+  
+    /*
+      Stack donut and legend vertically on very small
+      screens instead of squeezing them.
+    */
+    .project-status {
+      grid-template-columns: 1fr;
+  
+      justify-items: center;
+  
+      row-gap: 28px;
+  
+      padding-top: 4px;
+    }
+  
+    .status-list {
+      width: 100%;
+      max-width: 220px;
+    }
+  
+    .spend-row {
+      grid-template-columns:
+        minmax(100px, 1fr)
+        minmax(60px, 1fr)
+        50px;
+    }
+  
+    .activity-item {
+      grid-template-columns: 30px minmax(0, 1fr);
+    }
+  
+    .activity-item small {
+      display: none;
+    }
+  }

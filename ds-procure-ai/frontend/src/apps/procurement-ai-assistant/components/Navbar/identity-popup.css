@@ -1,0 +1,120 @@
+.identity-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  pointer-events: none;
+}
+
+.identity-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.identity-panel {
+  position: absolute;
+  left: var(--sidebar-width);
+  bottom: 16px;
+  width: min(420px, calc(100vw - var(--sidebar-width) - 24px));
+  max-height: min(72vh, 640px);
+  overflow: auto;
+  margin-left: 12px;
+  padding: 16px 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+  pointer-events: auto;
+  visibility: hidden;
+}
+
+.identity-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.identity-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.identity-subtitle {
+  margin: 4px 0 0;
+  color: var(--text-subtle);
+  font-size: 11px;
+}
+
+.identity-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.identity-close:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.identity-section + .identity-section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.identity-section-title {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.identity-list {
+  margin: 0;
+}
+
+.identity-row {
+  display: grid;
+  grid-template-columns: 118px 1fr;
+  gap: 10px;
+  padding: 5px 0;
+}
+
+.identity-row dt {
+  color: var(--text-subtle);
+  font-size: 11px;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.identity-row dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+@media (max-width: 700px) {
+  .identity-panel {
+    left: 70px;
+    width: min(360px, calc(100vw - 86px));
+  }
+}
