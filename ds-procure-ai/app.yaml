@@ -2,8 +2,8 @@ command:
   - python
   - run_app.py
 env:
-  - name: FLASK_SECRET_KEY
-    valueFrom: secret-key
+  # FLASK_SECRET_KEY is set by the bundle (config.env). Do not valueFrom
+  # secret-key here: ACC/PRD have no procure-ai/secret-key scope.
   - name: MATE_ENV
     value: prod
   - name: BRAIN_BASE_URL

@@ -74,6 +74,15 @@ targets:
       databricks_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
       fast_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
       thinking_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+    resources:
+      apps:
+        ds_procure_ai:
+          resources:
+            - name: secret-key
+              secret:
+                key: secret-key
+                permission: READ
+                scope: procure-ai
 
   T:
     mode: production
@@ -87,6 +96,15 @@ targets:
       databricks_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
       fast_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
       thinking_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+    resources:
+      apps:
+        ds_procure_ai:
+          resources:
+            - name: secret-key
+              secret:
+                key: secret-key
+                permission: READ
+                scope: procure-ai
     permissions:
       - service_principal_name: ${workspace.current_user.userName}
         level: CAN_MANAGE
@@ -138,8 +156,6 @@ targets:
       apps:
         ds_procure_ai:
           name: ds-procure-ai
-          # ACC has no procure-ai/secret-key scope yet. Omit the secret
-          # attachment (create 404s) and set Flask's key in config.env.
           config:
             env:
               - name: DATABRICKS_MODEL
@@ -150,20 +166,6 @@ targets:
                 value: ${var.thinking_model}
               - name: FLASK_SECRET_KEY
                 value: ${bundle.name}-${bundle.target}
-          resources:
-            - name: serving-endpoint
-              serving_endpoint:
-                name: databricks-claude-sonnet-5
-                permission: CAN_QUERY
-            - name: embedding-endpoint
-              serving_endpoint:
-                name: databricks-gte-large-en
-                permission: CAN_QUERY
-            - name: postgres
-              postgres:
-                branch: ${var.lakebase_branch}
-                database: ${var.lakebase_database}
-                permission: CAN_CONNECT_AND_CREATE
 
   P:
     mode: production

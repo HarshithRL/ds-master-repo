@@ -19,6 +19,8 @@ resources:
             value: ${var.fast_model}
           - name: DATABRICKS_THINKING_MODEL
             value: ${var.thinking_model}
+          - name: FLASK_SECRET_KEY
+            value: ${bundle.name}-${bundle.target}
       resources:
         # Keep existing attachments. Replacing this array wholesale (update_mask=resources)
         # would detach anything omitted here.
@@ -30,11 +32,7 @@ resources:
           serving_endpoint:
             name: databricks-gte-large-en
             permission: CAN_QUERY
-        - name: secret-key
-          secret:
-            key: secret-key
-            permission: READ
-            scope: procure-ai
+        # secret-key (scope procure-ai) is attached only on D/T, where it exists.
         # Autoscaling Lakebase — use `postgres` (branch + database paths).
         # Legacy `database` / instance_name is Provisioned-only and will fail.
         # Schema mate_agent is created by the app SP on first ACC boot.
