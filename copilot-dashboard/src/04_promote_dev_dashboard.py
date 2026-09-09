@@ -42,13 +42,36 @@ LVDASH_PATH = f"/Workspace{PIPELINE_FOLDER}/dashboards/agent_dashboard_phase_1.l
 
 w = WorkspaceClient()
 
-# SDK compatibility — older workspaces use get_dashboard/update_dashboard/publish_dashboard
-if not hasattr(w.lakeview, 'get'):
-    w.lakeview.get = w.lakeview.get_dashboard
-if not hasattr(w.lakeview, 'update'):
-    w.lakeview.update = w.lakeview.update_dashboard
-if not hasattr(w.lakeview, 'publish'):
-    w.lakeview.publish = w.lakeview.publish_dashboard
+# ---------------------------------------------------------------------------
+# Lakeview REST helpers — SDK-version-independent
+# (ACC/PRD workspace SDK may lack w.lakeview.get/update/publish)
+# ---------------------------------------------------------------------------
+import requests as _req
+from types import SimpleNamespace as _NS
+
+_ctx = dbutils.notebook.entry_point.getDbutils().notebook().getContext()
+_lv_api = _ctx.apiUrl().get()
+_lv_hdr = {"Authorization": f"Bearer {_ctx.apiToken().get()}", "Content-Type": "application/json"}
+
+class _Lakeview:
+    """REST wrapper for Lakeview API — works across all SDK versions."""
+    def get(self, dashboard_id):
+        r = _req.get(f"{_lv_api}/api/2.0/lakeview/dashboards/{dashboard_id}", headers=_lv_hdr)
+        r.raise_for_status()
+        d = r.json()
+        return _NS(serialized_dashboard=d.get("serialized_dashboard", ""), display_name=d.get("display_name", ""))
+
+    def update(self, *, dashboard_id, serialized_dashboard, **kw):
+        r = _req.patch(f"{_lv_api}/api/2.0/lakeview/dashboards/{dashboard_id}",
+                       headers=_lv_hdr, json={"serialized_dashboard": serialized_dashboard})
+        r.raise_for_status()
+
+    def publish(self, *, dashboard_id, warehouse_id, embed_credentials=True, **kw):
+        r = _req.post(f"{_lv_api}/api/2.0/lakeview/dashboards/{dashboard_id}/published",
+                      headers=_lv_hdr, json={"warehouse_id": warehouse_id, "embed_credentials": embed_credentials})
+        r.raise_for_status()
+
+lv = _Lakeview()
 
 # ---------------------------------------------------------------------------
 # Dynamic dashboard discovery — works across D / T / A / P targets
@@ -88,7 +111,7 @@ if not MAIN_DASHBOARD_ID:
 
 def fetch_dashboard(dashboard_id, label):
     """Fetch dashboard and return parsed serialized_dashboard dict."""
-    draft = w.lakeview.get(dashboard_id)
+    draft = lv.get(dashboard_id)
     ser = json.loads(draft.serialized_dashboard)
     print(f"{label}: '{draft.display_name}' — {len(ser.get('datasets', []))} datasets, {len(ser.get('pages', []))} pages")
     return ser, draft.display_name
@@ -372,7 +395,7 @@ for base, actual in metric_view_names.items():
 import copy
 
 # Re-fetch Main dashboard as string for manipulation
-main_draft = w.lakeview.get(MAIN_DASHBOARD_ID)
+main_draft = lv.get(MAIN_DASHBOARD_ID)
 main_ser_str = main_draft.serialized_dashboard
 
 # Patch catalog references to match the current environment.
@@ -439,7 +462,7 @@ if has_dev_changes and not AUTO_PROMOTE:
 elif has_dev_changes and AUTO_PROMOTE:
     # Promote: use DEV JSON as the base, then apply _v2 sync on top
     print(f"Promoting {total_changes} DEV change(s) to Main...")
-    dev_draft = w.lakeview.get(DEV_DASHBOARD_ID)
+    dev_draft = lv.get(DEV_DASHBOARD_ID)
     final_ser_str = dev_draft.serialized_dashboard
 
     # Patch catalog references from DEV to current environment
@@ -466,14 +489,14 @@ else:
     print("No DEV changes detected. Proceeding with _v2 sync + publish.")
 
 # --- Update Main dashboard ---
-w.lakeview.update(
+lv.update(
     dashboard_id=MAIN_DASHBOARD_ID,
     serialized_dashboard=final_ser_str
 )
 print(f"  \u2713 Main dashboard updated")
 
 # --- Publish ---
-w.lakeview.publish(
+lv.publish(
     dashboard_id=MAIN_DASHBOARD_ID,
     warehouse_id=WAREHOUSE_ID,
     embed_credentials=True
