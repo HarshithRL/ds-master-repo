@@ -1,0 +1,23 @@
+resources:
+  jobs:
+    copilot_dashboard_metrics_only:
+      name: "Copilot Dashboard - Metrics Only"
+      tags:
+        project: copilot-dashboard
+        purpose: metrics-refresh
+
+      tasks:
+        - task_key: metrics_validate_publish
+          notebook_task:
+            notebook_path: ../../src/03_metrics_validate_publish.py
+            base_parameters:
+              catalog: ${var.catalog}
+              warehouse_id: ${var.warehouse_id}
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: Standard_DS3_v2
+            data_security_mode: USER_ISOLATION
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*]"
+            policy_id: ${var.policy_id}
