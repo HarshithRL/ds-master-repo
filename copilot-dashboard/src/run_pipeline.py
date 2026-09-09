@@ -14,7 +14,8 @@
 # MAGIC | 0 | `00_sharepoint_to_volume` | Download 7 files from SharePoint → volume |
 # MAGIC | 1 | `01_bronze_ingestion` | Volume files → bronze Delta tables |
 # MAGIC | 2 | `02_silver_dimensional` | Silver normalize + dims + facts + views |
-# MAGIC | 3 | `03_metrics_validate_publish` | Metric views + validate + publish dashboard |
+# MAGIC | 3 | `03_metrics_validate_publish` | Metric views + validate |
+# MAGIC | 4 | `04_promote_dev_dashboard` | DEV→Main diff + _v2 sync + publish dashboard |
 # MAGIC
 # MAGIC **Fail-fast:** If any step fails, the pipeline stops immediately.
 # MAGIC
@@ -62,6 +63,12 @@ STEPS = [
         "path": f"{BASE}/03_metrics_validate_publish",
         "timeout": 30,
         "params": {"catalog": CATALOG, "warehouse_id": WAREHOUSE_ID},
+    },
+    {
+        "name": "04_promote_dev_dashboard",
+        "path": f"{BASE}/04_promote_dev_dashboard",
+        "timeout": 15,
+        "params": {"catalog": CATALOG, "warehouse_id": WAREHOUSE_ID, "auto_promote": "no"},
     },
 ]
 
@@ -143,43 +150,29 @@ print(f"Pipeline finished in {pipeline_elapsed/60:.1f} min")
 
 # COMMAND ----------
 
-# DBTITLE 1,Refresh Dashboard
+# DBTITLE 1,Post-Pipeline Check
 # ---------------------------------------------------------------------------
-# Dashboard refresh (03 handles creation + renames; this is a final publish)
+# Post-pipeline check
+# Dashboard publish is now handled by step 04_promote_dev_dashboard
 # ---------------------------------------------------------------------------
-from databricks.sdk import WorkspaceClient
-
-w = WorkspaceClient()
-
 all_ok = all(r["status"] == "SUCCESS" for r in results)
 
-# 03 may have created a new dashboard — re-read config for latest ID
-try:
-    with open(CONFIG_FILE) as f:
-        _cfg2 = json.load(f)
-    DASHBOARD_ID = _cfg2.get("dashboard_id", DASHBOARD_ID)
-except FileNotFoundError:
-    pass
-
-if all_ok and DASHBOARD_ID:
-    print("All steps succeeded. Publishing dashboard...")
-    try:
-        w.lakeview.publish(
-            dashboard_id=DASHBOARD_ID,
-            warehouse_id=WAREHOUSE_ID,
-            embed_credentials=True,
-        )
-        print(f"  \u2713 Dashboard {DASHBOARD_ID} published")
-    except Exception as e:
-        print(f"  \u26a0 Dashboard publish warning: {e}")
-        print("  Data is updated; manual publish may be needed.")
-elif all_ok and not DASHBOARD_ID:
-    print("All steps succeeded but no dashboard ID — 03 should have created it.")
+if all_ok:
+    # Step 04 result contains dashboard status
+    step04 = next((r for r in results if r["step"] == "04_promote_dev_dashboard"), None)
+    if step04:
+        dash_result = step04.get("result", {})
+        print(f"Dashboard status: {dash_result.get('status', 'UNKNOWN')}")
+        print(f"  Dashboard ID:  {dash_result.get('dashboard_id', 'N/A')}")
+        print(f"  DEV changes:   {dash_result.get('dev_changes', 0)}")
+        print(f"  _v2 synced:    {dash_result.get('v2_synced', 0)}")
+    else:
+        print("Step 04 result not found — check logs.")
 else:
     failed = [r for r in results if r["status"] == "FAILED"]
-    print(f"\u26a0 Pipeline had failures - dashboard NOT refreshed.")
+    print(f"\u26a0 Pipeline had failures.")
     print(f"  Failed step: {failed[0]['step']}")
-    print(f"  Error: {failed[0]['error']}")
+    print(f"  Error: {failed[0].get('error', 'unknown')}")
 
 # COMMAND ----------
 
