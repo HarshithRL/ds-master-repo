@@ -128,7 +128,7 @@ targets:
             - service_principal_name: ${workspace.current_user.userName}
               level: CAN_MANAGE
             - service_principal_name: ${resources.apps.ds_procure_ai.service_principal_client_id}
-              level: CAN_CONNECT_AND_CREATE
+              level: CAN_USE
             - user_name: pierre.delaguiche@etexgroup.com
               level: CAN_MANAGE
             - user_name: mustafaarda.bicakci@etexgroup.com
@@ -138,6 +138,32 @@ targets:
       apps:
         ds_procure_ai:
           name: ds-procure-ai
+          # ACC has no procure-ai/secret-key scope yet. Omit the secret
+          # attachment (create 404s) and set Flask's key in config.env.
+          config:
+            env:
+              - name: DATABRICKS_MODEL
+                value: ${var.databricks_model}
+              - name: DATABRICKS_FAST_MODEL
+                value: ${var.fast_model}
+              - name: DATABRICKS_THINKING_MODEL
+                value: ${var.thinking_model}
+              - name: FLASK_SECRET_KEY
+                value: ${bundle.name}-${bundle.target}
+          resources:
+            - name: serving-endpoint
+              serving_endpoint:
+                name: databricks-claude-sonnet-5
+                permission: CAN_QUERY
+            - name: embedding-endpoint
+              serving_endpoint:
+                name: databricks-gte-large-en
+                permission: CAN_QUERY
+            - name: postgres
+              postgres:
+                branch: ${var.lakebase_branch}
+                database: ${var.lakebase_database}
+                permission: CAN_CONNECT_AND_CREATE
 
   P:
     mode: production
