@@ -42,6 +42,14 @@ LVDASH_PATH = f"/Workspace{PIPELINE_FOLDER}/dashboards/agent_dashboard_phase_1.l
 
 w = WorkspaceClient()
 
+# SDK compatibility — older workspaces use get_dashboard/update_dashboard/publish_dashboard
+if not hasattr(w.lakeview, 'get'):
+    w.lakeview.get = w.lakeview.get_dashboard
+if not hasattr(w.lakeview, 'update'):
+    w.lakeview.update = w.lakeview.update_dashboard
+if not hasattr(w.lakeview, 'publish'):
+    w.lakeview.publish = w.lakeview.publish_dashboard
+
 # ---------------------------------------------------------------------------
 # Dynamic dashboard discovery — works across D / T / A / P targets
 # Lists the dashboards folder via workspace API (resource_id = Lakeview ID)
