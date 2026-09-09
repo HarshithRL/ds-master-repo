@@ -59,17 +59,29 @@ class _Lakeview:
         r = _req.get(f"{_lv_api}/api/2.0/lakeview/dashboards/{dashboard_id}", headers=_lv_hdr)
         r.raise_for_status()
         d = r.json()
-        return _NS(serialized_dashboard=d.get("serialized_dashboard", ""), display_name=d.get("display_name", ""))
+        sd = d.get("serialized_dashboard") or ""
+        dn = d.get("display_name") or ""
+        print(f"  [lv.get] id={dashboard_id}, display_name='{dn}', serialized_dashboard={len(sd)} chars, response_keys={sorted(d.keys())}")
+        if not sd:
+            print(f"  [lv.get] WARNING: serialized_dashboard is empty/None!")
+        return _NS(serialized_dashboard=sd, display_name=dn)
 
     def update(self, *, dashboard_id, serialized_dashboard, **kw):
+        content_len = len(serialized_dashboard or "")
+        if content_len < 100:
+            raise RuntimeError(f"Refusing to update dashboard — content too small ({content_len} chars). Aborting to prevent data loss.")
+        print(f"  [lv.update] id={dashboard_id}, sending {content_len} chars")
         r = _req.patch(f"{_lv_api}/api/2.0/lakeview/dashboards/{dashboard_id}",
                        headers=_lv_hdr, json={"serialized_dashboard": serialized_dashboard})
         r.raise_for_status()
+        print(f"  [lv.update] status={r.status_code}")
 
     def publish(self, *, dashboard_id, warehouse_id, embed_credentials=True, **kw):
+        print(f"  [lv.publish] id={dashboard_id}, warehouse={warehouse_id}")
         r = _req.post(f"{_lv_api}/api/2.0/lakeview/dashboards/{dashboard_id}/published",
                       headers=_lv_hdr, json={"warehouse_id": warehouse_id, "embed_credentials": embed_credentials})
         r.raise_for_status()
+        print(f"  [lv.publish] status={r.status_code}")
 
 lv = _Lakeview()
 
