@@ -356,14 +356,30 @@ measures:
 $$;
 """
 
-print(f"Deploying {len(metric_view_sqls)} metric views...")
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.sql import StatementState
+
+_w = WorkspaceClient()
+
+def _run_ddl(sql_text):
+    """Execute DDL via SQL warehouse (required for WITH METRICS syntax)."""
+    resp = _w.statement_execution.execute_statement(
+        warehouse_id=WAREHOUSE_ID,
+        statement=sql_text,
+        wait_timeout="60s",
+    )
+    if resp.status and resp.status.state == StatementState.FAILED:
+        raise RuntimeError(resp.status.error.message if resp.status.error else "Statement failed")
+    return resp
+
+print(f"Deploying {len(metric_view_sqls)} metric views via SQL warehouse {WAREHOUSE_ID}...")
 ok, failed = [], []
 renamed = {}  # {old_name: new_name} — passed to Publish cell
 
 for name, sql in metric_view_sqls.items():
     resolved_sql = sql.replace("automation_d.silver", S)
     try:
-        spark.sql(resolved_sql.strip())
+        _run_ddl(resolved_sql.strip())
         ok.append(name)
         print(f"  \u2713 {name}")
     except Exception as e:
@@ -373,7 +389,7 @@ for name, sql in metric_view_sqls.items():
             new_name = f"{name}_v2"
             new_sql = resolved_sql.replace(f"{S}.{name}", f"{S}.{new_name}")
             try:
-                spark.sql(new_sql.strip())
+                _run_ddl(new_sql.strip())
                 renamed[name] = new_name
                 ok.append(new_name)
                 print(f"  \u2713 {new_name} \u2014 created (no MANAGE on original '{name}')")
