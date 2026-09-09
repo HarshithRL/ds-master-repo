@@ -8,8 +8,17 @@ resources:
       lifecycle:
         started: true
       user_api_scopes:
-        - iam.current-user:read
+        # iam.current-user:read is a platform default; sending it on create
+        # returns 400 INVALID_PARAMETER_VALUE on this workspace.
         - serving.serving-endpoints
+      config:
+        env:
+          - name: DATABRICKS_MODEL
+            value: ${var.databricks_model}
+          - name: DATABRICKS_FAST_MODEL
+            value: ${var.fast_model}
+          - name: DATABRICKS_THINKING_MODEL
+            value: ${var.thinking_model}
       resources:
         # Keep existing attachments. Replacing this array wholesale (update_mask=resources)
         # would detach anything omitted here.
@@ -28,9 +37,8 @@ resources:
             scope: procure-ai
         # Autoscaling Lakebase — use `postgres` (branch + database paths).
         # Legacy `database` / instance_name is Provisioned-only and will fail.
-        # Schema mate_agent already exists; do not DROP it. Local-user ownership
-        # vs app SP (a65ce6d4-0267-43b3-a6c4-b24c39a35d05) must be granted in
-        # Postgres — the app must not steal schema ownership blindly.
+        # Schema mate_agent is created by the app SP on first ACC boot.
+        # Do not DROP it on later deploys.
         - name: postgres
           postgres:
             branch: ${var.lakebase_branch}

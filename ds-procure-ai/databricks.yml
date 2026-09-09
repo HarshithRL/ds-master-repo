@@ -5,10 +5,12 @@
 # DS-Master-Repo CI/CD pipeline. Targets must be D / T / A / P.
 #
 # Lakebase Autoscaling reuses existing project ds-vendor-agent — do not
-# create a new one. Branch/database values are full resource paths.
+# create a new one in DEV/TEST. Branch/database values are full resource paths.
 # The Postgres dbname is databricks_postgres; the resource ID is hyphenated
 # (databricks-postgres). App runtime env lives in app.yaml (not here).
 # Do not put PG passwords or DATABRICKS_CONFIG_PROFILE in bundle/app env.
+# Target A declares resources.postgres_projects.ds_vendor_agent so ACC creates
+# that same Lakebase project in the ACC workspace, then attaches the app.
 # =============================================================================
 
 bundle:
@@ -26,6 +28,15 @@ variables:
     default: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
   catalog:
     description: The Unity Catalog to use (contains bronze/silver/gold schemas)
+  databricks_model:
+    description: Fallback DATABRICKS_MODEL (AI Gateway UC path)
+    default: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+  fast_model:
+    description: AI Gateway UC path for fast_model
+    default: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+  thinking_model:
+    description: AI Gateway UC path for thinking_model
+    default: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
 
 sync:
   include:
@@ -60,6 +71,9 @@ targets:
       catalog: automation_d
       lakebase_branch: projects/ds-vendor-agent/branches/production
       lakebase_database: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
+      databricks_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+      fast_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+      thinking_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
 
   T:
     mode: production
@@ -70,6 +84,9 @@ targets:
       catalog: automation_d
       lakebase_branch: projects/ds-vendor-agent/branches/production
       lakebase_database: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
+      databricks_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+      fast_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+      thinking_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
     permissions:
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
@@ -85,9 +102,11 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       catalog: automation_a
-      # Confirm ACC Lakebase paths before opening a PR (ACC pipeline deploys --target A).
-      lakebase_branch: projects/ds-vendor-agent/branches/production
-      lakebase_database: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
+      databricks_model: automation_a.ai_models.gw_dev_claude-sonnet-4-6_aut
+      fast_model: automation_a.ai_models.gw_dev_claude-sonnet-4-6_aut
+      thinking_model: automation_a.ai_models.gw_dev_claude-sonnet-4-6_aut
+      lakebase_branch: ${resources.postgres_projects.ds_vendor_agent.id}/branches/production
+      lakebase_database: ${resources.postgres_projects.ds_vendor_agent.id}/branches/production/databases/databricks-postgres
     permissions:
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
@@ -95,6 +114,22 @@ targets:
         level: CAN_MANAGE
       - user_name: harshith.raghunath@etexgroup.com
         level: CAN_MANAGE
+    resources:
+      postgres_projects:
+        ds_vendor_agent:
+          project_id: ds-vendor-agent
+          display_name: ds-vendor-agent
+          pg_version: 17
+          permissions:
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: harshith.raghunath@etexgroup.com
+              level: CAN_MANAGE
+      apps:
+        ds_procure_ai:
+          name: ds-procure-ai
 
   P:
     mode: production

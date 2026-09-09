@@ -26,17 +26,25 @@ ModelKind = Literal["fast", "thinking"]
 
 @lru_cache(maxsize=1)
 def _load_model_names() -> dict[str, str]:
-    """Read ``fast_model`` / ``thinking_model`` from ``llm.yaml``."""
+    """Read ``fast_model`` / ``thinking_model`` from env, then ``llm.yaml``.
+
+    Apps set ``DATABRICKS_FAST_MODEL`` / ``DATABRICKS_THINKING_MODEL`` (and
+    ``DATABRICKS_MODEL``) per bundle target so ACC uses ``automation_a``
+    without swapping this file.
+    """
     with _LLM_YAML.open(encoding="utf-8") as fh:
         data = yaml.safe_load(fh) or {}
     models = data.get("models") or {}
-    fast = models.get("fast_model")
-    thinking = models.get("thinking_model")
-    if not fast or not thinking:
+    yaml_fast = models.get("fast_model")
+    yaml_thinking = models.get("thinking_model")
+    if not yaml_fast or not yaml_thinking:
         raise ValueError(
             f"{_LLM_YAML} must define models.fast_model and models.thinking_model"
         )
-    return {"fast": str(fast), "thinking": str(thinking)}
+    shared = os.getenv("DATABRICKS_MODEL")
+    fast = os.getenv("DATABRICKS_FAST_MODEL") or shared or str(yaml_fast)
+    thinking = os.getenv("DATABRICKS_THINKING_MODEL") or shared or str(yaml_thinking)
+    return {"fast": fast, "thinking": thinking}
 
 
 def get_fast_model_name() -> str:
@@ -68,7 +76,7 @@ def get_llm(kind: ModelKind = "fast", *, max_tokens: int | None = None) -> ChatD
     ``POST /ai-gateway/mlflow/v1/chat/completions``.
     """
     names = _load_model_names()
-    model = os.getenv("DATABRICKS_MODEL") or names.get(kind) or DEFAULT_MODEL
+    model = names.get(kind) or DEFAULT_MODEL
 
     if max_tokens is None:
         max_tokens_raw = os.getenv("DATABRICKS_MAX_TOKENS", str(DEFAULT_MAX_TOKENS))
