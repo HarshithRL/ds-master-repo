@@ -7,7 +7,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT\n              g.total_agents,\n              g.total_makers,\n              g.created_last_30d,\n              c.prepaid_credits,\n              c.prepaid_cost_eur,\n              e.payg_credits,\n              e.payg_cost_eur\n            FROM (\n              SELECT\n                MEASURE(valid_agent_count) AS total_agents,\n                MEASURE(maker_count) AS total_makers,\n                MEASURE(created_last_30d) AS created_last_30d\n              FROM automation_d.silver.metric_agent_governance\n            ) g\n            CROSS JOIN (\n              SELECT\n                MEASURE(total_consumption_credits) AS prepaid_credits,\n                ROUND(MEASURE(total_consumption_cost_eur), 2) AS prepaid_cost_eur\n              FROM automation_d.silver.metric_credit_consumption\n            ) c\n            CROSS JOIN (\n              SELECT\n                MEASURE(pay_as_you_go_credits) AS payg_credits,\n                ROUND(MEASURE(pay_as_you_go_credits) * (SELECT MAX(credit_to_eur) FROM automation_d.silver.ref_credit_rate), 2) AS payg_cost_eur\n              FROM automation_d.silver.metric_environment_consumption\n            ) e\n            ",
+        "source": "\n            SELECT\n              g.total_agents,\n              g.total_makers,\n              g.created_last_30d,\n              c.prepaid_credits,\n              c.prepaid_cost_eur,\n              e.payg_credits,\n              e.payg_cost_eur\n            FROM (\n              SELECT\n                MEASURE(valid_agent_count) AS total_agents,\n                MEASURE(maker_count) AS total_makers,\n                MEASURE(created_last_30d) AS created_last_30d\n              FROM automation_d.silver.metric_agent_governance_v2\n            ) g\n            CROSS JOIN (\n              SELECT\n                MEASURE(total_consumption_credits) AS prepaid_credits,\n                ROUND(MEASURE(total_consumption_cost_eur), 2) AS prepaid_cost_eur\n              FROM automation_d.silver.metric_credit_consumption_v2\n            ) c\n            CROSS JOIN (\n              SELECT\n                MEASURE(pay_as_you_go_credits) AS payg_credits,\n                ROUND(MEASURE(pay_as_you_go_credits) * (SELECT MAX(credit_to_eur) FROM automation_d.silver.ref_credit_rate), 2) AS payg_cost_eur\n              FROM automation_d.silver.metric_environment_consumption_v2\n            ) e\n            ",
         "dimensions": [],
         "measures": [
           {
@@ -48,7 +48,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT b.agent_category,\n                   ROUND(COALESCE(c.credits, 0), 1) AS credits,\n                   ROUND(COALESCE(c.cost_eur, 0), 2) AS cost_eur\n            FROM (\n              SELECT 'Copilot Studio' AS agent_category, 1 AS sort_order\n              UNION ALL SELECT 'Agent Builder', 2\n              UNION ALL SELECT 'Platform Tool', 3\n            ) b\n            LEFT JOIN (\n              SELECT agent_category,\n                     MEASURE(total_consumption_credits) AS credits,\n                     MEASURE(total_consumption_cost_eur) AS cost_eur\n              FROM automation_d.silver.metric_credit_consumption\n              GROUP BY agent_category\n            ) c ON b.agent_category = c.agent_category\n            ORDER BY b.sort_order\n            ",
+        "source": "\n            SELECT b.agent_category,\n                   ROUND(COALESCE(c.credits, 0), 1) AS credits,\n                   ROUND(COALESCE(c.cost_eur, 0), 2) AS cost_eur\n            FROM (\n              SELECT 'Copilot Studio' AS agent_category, 1 AS sort_order\n              UNION ALL SELECT 'Agent Builder', 2\n              UNION ALL SELECT 'Platform Tool', 3\n            ) b\n            LEFT JOIN (\n              SELECT agent_category,\n                     MEASURE(total_consumption_credits) AS credits,\n                     MEASURE(total_consumption_cost_eur) AS cost_eur\n              FROM automation_d.silver.metric_credit_consumption_v2\n              GROUP BY agent_category\n            ) c ON b.agent_category = c.agent_category\n            ORDER BY b.sort_order\n            ",
         "dimensions": [
           {
             "name": "agent_category",
@@ -74,7 +74,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT agent_name,\n                   agent_category,\n                   ROUND(MEASURE(total_consumption_credits), 1) AS credits,\n                   ROUND(MEASURE(total_consumption_cost_eur), 2) AS cost_eur\n            FROM automation_d.silver.metric_credit_consumption\n            WHERE agent_category <> 'Platform Tool'\n            GROUP BY agent_name, agent_category\n            ORDER BY credits DESC\n            LIMIT 10\n            ",
+        "source": "\n            SELECT agent_name,\n                   agent_category,\n                   ROUND(MEASURE(total_consumption_credits), 1) AS credits,\n                   ROUND(MEASURE(total_consumption_cost_eur), 2) AS cost_eur\n            FROM automation_d.silver.metric_credit_consumption_v2\n            WHERE agent_category <> 'Platform Tool'\n            GROUP BY agent_name, agent_category\n            ORDER BY credits DESC\n            LIMIT 10\n            ",
         "dimensions": [
           {
             "name": "agent_name",
@@ -104,7 +104,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT user_email,\n                   ROUND(MEASURE(total_consumption_credits), 1) AS credits,\n                   ROUND(MEASURE(total_consumption_cost_eur), 2) AS cost_eur\n            FROM automation_d.silver.metric_credit_consumption\n            WHERE agent_category = 'Copilot Studio'\n            GROUP BY user_email\n            ORDER BY credits DESC\n            LIMIT 10\n            ",
+        "source": "\n            SELECT user_email,\n                   ROUND(MEASURE(total_consumption_credits), 1) AS credits,\n                   ROUND(MEASURE(total_consumption_cost_eur), 2) AS cost_eur\n            FROM automation_d.silver.metric_credit_consumption_v2\n            WHERE agent_category = 'Copilot Studio'\n            GROUP BY user_email\n            ORDER BY credits DESC\n            LIMIT 10\n            ",
         "dimensions": [
           {
             "name": "user_email",
@@ -504,7 +504,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT 'Used (credit-linked)' AS usage_category,\n                   MEASURE(used_agent_count) AS agent_count\n            FROM automation_d.silver.metric_agent_governance\n            UNION ALL\n            SELECT 'Dormant (no measurable credit)', MEASURE(dormant_agent_count)\n            FROM automation_d.silver.metric_agent_governance\n            ",
+        "source": "\n            SELECT 'Used (credit-linked)' AS usage_category,\n                   MEASURE(used_agent_count) AS agent_count\n            FROM automation_d.silver.metric_agent_governance_v2\n            UNION ALL\n            SELECT 'Dormant (no measurable credit)', MEASURE(dormant_agent_count)\n            FROM automation_d.silver.metric_agent_governance_v2\n            ",
         "dimensions": [
           {
             "name": "usage_category",
@@ -526,7 +526,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT 'Billed (prepaid pool)' AS category,\n                   MEASURE(billed_credits) AS credits,\n                   ROUND(MEASURE(billed_credits) * (SELECT MAX(credit_to_eur) FROM automation_d.silver.ref_credit_rate), 2) AS cost_eur\n            FROM automation_d.silver.metric_agent_feature_credit\n            UNION ALL\n            SELECT 'Absorbed (license/included)',\n                   ROUND(MEASURE(non_billed_credits), 1),\n                   ROUND(MEASURE(non_billed_credits) * (SELECT MAX(credit_to_eur) FROM automation_d.silver.ref_credit_rate), 2)\n            FROM automation_d.silver.metric_agent_feature_credit\n            ",
+        "source": "\n            SELECT 'Billed (prepaid pool)' AS category,\n                   MEASURE(billed_credits) AS credits,\n                   ROUND(MEASURE(billed_credits) * (SELECT MAX(credit_to_eur) FROM automation_d.silver.ref_credit_rate), 2) AS cost_eur\n            FROM automation_d.silver.metric_agent_feature_credit_v2\n            UNION ALL\n            SELECT 'Absorbed (license/included)',\n                   ROUND(MEASURE(non_billed_credits), 1),\n                   ROUND(MEASURE(non_billed_credits) * (SELECT MAX(credit_to_eur) FROM automation_d.silver.ref_credit_rate), 2)\n            FROM automation_d.silver.metric_agent_feature_credit_v2\n            ",
         "dimensions": [
           {
             "name": "category",
@@ -582,7 +582,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT CASE WHEN m365_copilot_licensed THEN 'M365 Copilot licensed' ELSE 'Not licensed' END AS license_status,\n                   COUNT(DISTINCT user_email) AS users,\n                   ROUND(MEASURE(total_consumption_credits), 1) AS credits,\n                   ROUND(MEASURE(total_consumption_cost_eur), 2) AS cost_eur\n            FROM automation_d.silver.metric_credit_consumption\n            GROUP BY m365_copilot_licensed\n            ORDER BY license_status\n            ",
+        "source": "\n            SELECT CASE WHEN LOWER(m365_copilot_licensed) IN ('true', 'yes', '1') THEN 'M365 Copilot licensed' ELSE 'Not licensed' END AS license_status,\n                   COUNT(DISTINCT user_email) AS users,\n                   ROUND(MEASURE(total_consumption_credits), 1) AS credits,\n                   ROUND(MEASURE(total_consumption_cost_eur), 2) AS cost_eur\n            FROM automation_d.silver.metric_credit_consumption_v2\n            GROUP BY m365_copilot_licensed\n            ORDER BY license_status\n            ",
         "dimensions": [
           {
             "name": "license_status",
@@ -612,7 +612,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT\n              ROUND(MEASURE(total_consumption_credits), 1) AS total_credits,\n              ROUND(MEASURE(total_consumption_cost_eur), 2) AS total_cost_eur\n            FROM automation_d.silver.metric_credit_consumption\n            ",
+        "source": "\n            SELECT\n              ROUND(MEASURE(total_consumption_credits), 1) AS total_credits,\n              ROUND(MEASURE(total_consumption_cost_eur), 2) AS total_cost_eur\n            FROM automation_d.silver.metric_credit_consumption_v2\n            ",
         "dimensions": [],
         "measures": [
           {
@@ -633,7 +633,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT product,\n                   ROUND(MEASURE(total_credits), 1) AS credits,\n                   ROUND(MEASURE(total_cost_eur), 2) AS cost_eur\n            FROM automation_d.silver.metric_agent_feature_credit\n            GROUP BY product\n            ORDER BY credits DESC\n            ",
+        "source": "\n            SELECT product,\n                   ROUND(MEASURE(total_credits), 1) AS credits,\n                   ROUND(MEASURE(total_cost_eur), 2) AS cost_eur\n            FROM automation_d.silver.metric_agent_feature_credit_v2\n            GROUP BY product\n            ORDER BY credits DESC\n            ",
         "dimensions": [
           {
             "name": "product",
@@ -684,7 +684,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT\n              MEASURE(valid_agent_count) AS valid_agents,\n              MEASURE(at_risk_agent_count) AS at_risk_agents,\n              ROUND(100.0 * MEASURE(at_risk_agent_count) / MEASURE(total_agent_count), 1) AS risk_rate_pct,\n              ROUND(100.0 * MEASURE(dormant_agent_count) / MEASURE(valid_agent_count), 1) AS dormant_rate_pct\n            FROM automation_d.silver.metric_agent_governance\n            ",
+        "source": "\n            SELECT\n              MEASURE(valid_agent_count) AS valid_agents,\n              MEASURE(at_risk_agent_count) AS at_risk_agents,\n              ROUND(100.0 * MEASURE(at_risk_agent_count) / MEASURE(total_agent_count), 1) AS risk_rate_pct,\n              ROUND(100.0 * MEASURE(dormant_agent_count) / MEASURE(valid_agent_count), 1) AS dormant_rate_pct\n            FROM automation_d.silver.metric_agent_governance_v2\n            ",
         "dimensions": [],
         "measures": [
           {
@@ -713,7 +713,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT 'Created (valid)' AS stage, MEASURE(valid_agent_count) AS agent_count\n            FROM automation_d.silver.metric_agent_governance\n            UNION ALL\n            SELECT 'Published', MEASURE(published_agent_count)\n            FROM automation_d.silver.metric_agent_governance\n            UNION ALL\n            SELECT 'Used (credit-linked)', MEASURE(used_agent_count)\n            FROM automation_d.silver.metric_agent_governance\n            ",
+        "source": "\n            SELECT 'Created (valid)' AS stage, MEASURE(valid_agent_count) AS agent_count\n            FROM automation_d.silver.metric_agent_governance_v2\n            UNION ALL\n            SELECT 'Published', MEASURE(published_agent_count)\n            FROM automation_d.silver.metric_agent_governance_v2\n            UNION ALL\n            SELECT 'Used (credit-linked)', MEASURE(used_agent_count)\n            FROM automation_d.silver.metric_agent_governance_v2\n            ",
         "dimensions": [
           {
             "name": "stage",
@@ -840,7 +840,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT 'No Authentication' AS risk_category, MEASURE(no_auth_count) AS agent_count\n            FROM automation_d.silver.metric_agent_governance\n            UNION ALL\n            SELECT 'Orphaned / No Owner', MEASURE(orphan_agent_count)\n            FROM automation_d.silver.metric_agent_governance\n            UNION ALL\n            SELECT 'Unmanaged Environment', MEASURE(unmanaged_env_agent_count)\n            FROM automation_d.silver.metric_agent_governance\n            ",
+        "source": "\n            SELECT 'No Authentication' AS risk_category, MEASURE(no_auth_count) AS agent_count\n            FROM automation_d.silver.metric_agent_governance_v2\n            UNION ALL\n            SELECT 'Orphaned / No Owner', MEASURE(orphan_agent_count)\n            FROM automation_d.silver.metric_agent_governance_v2\n            UNION ALL\n            SELECT 'Unmanaged Environment', MEASURE(unmanaged_env_agent_count)\n            FROM automation_d.silver.metric_agent_governance_v2\n            ",
         "dimensions": [
           {
             "name": "risk_category",
@@ -854,11 +854,6 @@
           }
         ]
       }
-    },
-    {
-      "name": "ds_usage_copilot_metrics",
-      "displayName": "copilot_analytics_metrics",
-      "asset_name": "automation_d.silver.copilot_analytics_metrics"
     },
     {
       "name": "ds_kb_coverage",
@@ -963,11 +958,6 @@
           }
         ]
       }
-    },
-    {
-      "name": "ds_bot_usage",
-      "displayName": "Bot Usage Metrics",
-      "asset_name": "automation_d.silver.bot_usage_metrics"
     },
     {
       "name": "ds_consumption_declining",
@@ -1142,12 +1132,22 @@
         "  s.active_days,\n",
         "  s.avg_conversations_per_bot_day"
       ]
+    },
+    {
+      "name": "ds_bot_metrics",
+      "displayName": "Bot Usage Metrics v2",
+      "asset_name": "automation_d.silver.bot_usage_metrics_v2"
+    },
+    {
+      "name": "ds_copilot_metrics",
+      "displayName": "Copilot Analytics Metrics",
+      "asset_name": "automation_d.silver.copilot_analytics_metrics_v2"
     }
   ],
   "pages": [
     {
       "name": "b70e9166",
-      "displayName": "Introduction",
+      "displayName": "Executive Summary",
       "layout": [
         {
           "widget": {
@@ -1367,7 +1367,7 @@
             "spec": {
               "version": 2,
               "frame": {
-                "title": "New Agents ?? Last 30 Days",
+                "title": "New Agents - Last 30 Days",
                 "showTitle": true,
                 "showDescription": true,
                 "contentAlignment": "center",
@@ -1410,7 +1410,7 @@
             "name": "div_credit",
             "multilineTextboxSpec": {
               "lines": [
-                "**CREDIT CONSUMPTION**  ???  message credits (MCSMessages) & cost"
+                "**CREDIT CONSUMPTION**  -  message credits (MCSMessages) & cost"
               ],
               "verticalAlign": "VERTICAL_ALIGN_CENTER"
             },
@@ -1570,7 +1570,7 @@
             "spec": {
               "version": 2,
               "frame": {
-                "title": "AYG Credits",
+                "title": "Pay-as-you-go (PAYG) Credits",
                 "showTitle": true,
                 "showDescription": true,
                 "contentAlignment": "center",
@@ -1629,7 +1629,7 @@
             "spec": {
               "version": 2,
               "frame": {
-                "title": "PAYG Cost (EUR)",
+                "title": "Pay-as-you-go (PAYG) Cost (EUR)",
                 "showTitle": true,
                 "showDescription": true,
                 "contentAlignment": "center",
@@ -1673,7 +1673,7 @@
             "name": "div_breakdown",
             "multilineTextboxSpec": {
               "lines": [
-                "**WHERE THE CREDIT GOES**  ???  top agents & agent_category split"
+                "**WHERE THE CREDIT GOES**  -  top agents & agent\\_category split"
               ],
               "verticalAlign": "VERTICAL_ALIGN_CENTER"
             },
@@ -1863,33 +1863,8 @@
     },
     {
       "name": "21a4d6e0",
-      "displayName": "Overview - Copilot Studio Agents",
+      "displayName": "Copilot Studio Agents",
       "layout": [
-        {
-          "widget": {
-            "name": "etex_logo",
-            "multilineTextboxSpec": {
-              "lines": [
-                "[![](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FAF6F2"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 2
-          }
-        },
         {
           "widget": {
             "name": "kpi_studio_agents",
@@ -2301,43 +2276,10 @@
             "width": 4,
             "height": 8
           }
-        }
-      ],
-      "pageType": "PAGE_TYPE_CANVAS",
-      "layoutVersion": "GRID_V1"
-    },
-    {
-      "name": "18629d40",
-      "displayName": "Deep Dive - Copilot Studio Agents",
-      "layout": [
-        {
-          "widget": {
-            "name": "etex_logo",
-            "multilineTextboxSpec": {
-              "lines": [
-                "[![](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FAF6F2"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 2
-          }
         },
         {
           "widget": {
-            "name": "studio_title",
+            "name": "copied_studio_title",
             "multilineTextboxSpec": {
               "lines": [
                 "## <span style=\"color:#E86810\">Copilot Studio Agents Details</span>"
@@ -2346,14 +2288,14 @@
           },
           "position": {
             "x": 0,
-            "y": 2,
+            "y": 13,
             "width": 12,
             "height": 1
           }
         },
         {
           "widget": {
-            "name": "table_studio_details",
+            "name": "copied_studio_details_table",
             "queries": [
               {
                 "name": "main_query",
@@ -2404,12 +2346,12 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Copilot Studio Agent Details",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": false,
+                "title": "Copilot Studio Agent Details"
               },
+              "version": 2,
               "headerStyle": {
                 "foregroundColor": "#E86810",
                 "bold": true
@@ -2434,30 +2376,7 @@
                   },
                   {
                     "fieldName": "created_on_date",
-                    "dateTimeFormat": "DD/MM/YYYY",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "date",
-                    "displayAs": "datetime",
-                    "visible": true,
-                    "title": "Created On",
-                    "displayName": "Created On",
-                    "allowSearch": false,
-                    "alignContent": "right",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "displayName": "Created On"
                   },
                   {
                     "fieldName": "status",
@@ -2488,7 +2407,7 @@
           },
           "position": {
             "x": 0,
-            "y": 3,
+            "y": 14,
             "width": 12,
             "height": 11
           }
@@ -2499,33 +2418,8 @@
     },
     {
       "name": "119335cc",
-      "displayName": "Overview - Agent Builder Agents",
+      "displayName": "Agent Builder Agents",
       "layout": [
-        {
-          "widget": {
-            "name": "etex_logo",
-            "multilineTextboxSpec": {
-              "lines": [
-                "[![](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FAF6F2"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 2
-          }
-        },
         {
           "widget": {
             "name": "kpi_builder_agents",
@@ -2840,43 +2734,10 @@
             "width": 6,
             "height": 9
           }
-        }
-      ],
-      "pageType": "PAGE_TYPE_CANVAS",
-      "layoutVersion": "GRID_V1"
-    },
-    {
-      "name": "b7645998",
-      "displayName": "Deep Dive - Agent Builder Agents",
-      "layout": [
-        {
-          "widget": {
-            "name": "etex_logo",
-            "multilineTextboxSpec": {
-              "lines": [
-                "[![](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FAF6F2"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 2
-          }
         },
         {
           "widget": {
-            "name": "builder_title",
+            "name": "copied_builder_title",
             "multilineTextboxSpec": {
               "lines": [
                 "## <span style=\"color:#B5530A\">Agent Builder Agents Details</span>"
@@ -2885,14 +2746,14 @@
           },
           "position": {
             "x": 0,
-            "y": 2,
+            "y": 14,
             "width": 12,
             "height": 1
           }
         },
         {
           "widget": {
-            "name": "table_builder_details",
+            "name": "copied_builder_details_table",
             "queries": [
               {
                 "name": "main_query",
@@ -2937,12 +2798,12 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Agent Builder Agent Details",
                 "showTitle": true,
-                "showDescription": false
+                "showDescription": false,
+                "title": "Agent Builder Agent Details"
               },
+              "version": 2,
               "headerStyle": {
                 "foregroundColor": "#B5530A",
                 "bold": true
@@ -2967,30 +2828,7 @@
                   },
                   {
                     "fieldName": "created_on_date",
-                    "dateTimeFormat": "DD/MM/YYYY",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "date",
-                    "displayAs": "datetime",
-                    "visible": true,
-                    "title": "Created On",
-                    "displayName": "Created On",
-                    "allowSearch": false,
-                    "alignContent": "right",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "displayName": "Created On"
                   },
                   {
                     "fieldName": "status",
@@ -3021,7 +2859,7 @@
           },
           "position": {
             "x": 0,
-            "y": 3,
+            "y": 15,
             "width": 12,
             "height": 11
           }
@@ -3032,7 +2870,7 @@
     },
     {
       "name": "usage_overview_v2",
-      "displayName": "Copilot_analysis",
+      "displayName": "Usage & Adoption-1",
       "layout": [
         {
           "widget": {
@@ -3059,32 +2897,7 @@
           "position": {
             "x": 0,
             "y": 0,
-            "width": 9,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "usage_hero_logo_v2",
-            "multilineTextboxSpec": {
-              "lines": [
-                "[![](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 9,
-            "y": 0,
-            "width": 3,
+            "width": 12,
             "height": 3
           }
         },
@@ -3093,13 +2906,17 @@
             "name": "usage_f_region_v2",
             "queries": [
               {
-                "name": "dashboard_filter_query",
+                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "Region",
                       "expression": "`Region`"
+                    },
+                    {
+                      "name": "Region_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
                     }
                   ],
                   "disaggregated": false
@@ -3108,19 +2925,21 @@
             ],
             "spec": {
               "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Region / Admin Unit",
+                  "fields": []
+                }
+              },
               "widgetType": "filter-multi-select",
               "encodings": {
                 "fields": [
                   {
                     "fieldName": "Region",
-                    "displayName": "Region / Admin Unit",
-                    "queryName": "dashboard_filter_query"
+                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region"
                   }
                 ]
-              },
-              "frame": {
-                "title": "Region / Admin Unit",
-                "showTitle": true
               }
             }
           },
@@ -3136,13 +2955,17 @@
             "name": "usage_f_licence_v2",
             "queries": [
               {
-                "name": "dashboard_filter_query",
+                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "License Type",
                       "expression": "`License Type`"
+                    },
+                    {
+                      "name": "License Type_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
                     }
                   ],
                   "disaggregated": false
@@ -3151,19 +2974,21 @@
             ],
             "spec": {
               "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "License Type",
+                  "fields": []
+                }
+              },
               "widgetType": "filter-multi-select",
               "encodings": {
                 "fields": [
                   {
                     "fieldName": "License Type",
-                    "displayName": "License Type",
-                    "queryName": "dashboard_filter_query"
+                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type"
                   }
                 ]
-              },
-              "frame": {
-                "title": "License Type",
-                "showTitle": true
               }
             }
           },
@@ -3256,7 +3081,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Total Interactions)",
@@ -3268,11 +3093,14 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Total Copilot Interactions",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Total Copilot Interactions",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -3302,7 +3130,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Unique Active Users)",
@@ -3314,11 +3142,14 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Unique Active Users",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Unique Active Users",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -3344,7 +3175,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Avg Interactions per User)",
@@ -3356,11 +3187,14 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Avg Interactions per User",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Avg Interactions per User",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -3386,7 +3220,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Unique Regions)",
@@ -3398,11 +3232,14 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Unique Regions",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Unique Regions",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -3428,7 +3265,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Unique Environments)",
@@ -3440,11 +3277,14 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Unique Environments",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Unique Environments",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -3470,7 +3310,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "Region",
@@ -3486,11 +3326,14 @@
               }
             ],
             "spec": {
-              "version": 3,
               "frame": {
-                "title": "Interactions by Admin Unit",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Interactions by Admin Unit",
+                  "fields": []
+                }
               },
+              "version": 3,
               "widgetType": "bar",
               "encodings": {
                 "x": {
@@ -3525,7 +3368,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "Region",
@@ -3541,11 +3384,14 @@
               }
             ],
             "spec": {
-              "version": 3,
               "frame": {
-                "title": "Avg Interactions per User by Region",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Avg Interactions per User by Region",
+                  "fields": []
+                }
               },
+              "version": 3,
               "widgetType": "bar",
               "encodings": {
                 "x": {
@@ -3578,75 +3424,43 @@
       "layoutVersion": "GRID_V1"
     },
     {
-      "name": "usage_detail_v2",
-      "displayName": "Copilot Analysis - Licensing & Detail",
+      "name": "usage_adoption_2",
+      "displayName": "Usage & Adoption-2",
       "layout": [
         {
           "widget": {
-            "name": "usage2_hero_title_v2",
+            "name": "title",
             "multilineTextboxSpec": {
               "lines": [
-                "# Copilot Analysis Licensing & Detail\n",
+                "# Copilot Analysis - Usage Detail\n",
                 "\n",
-                "#### Licence mix ?? grounding & model ?? interaction surface\n",
-                "\n",
-                "*Same interaction grain as the overview page. Licence and model provider are present on \\~56% of interactions; the rest are blank at source.*"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_TOP"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
+                "#### Licensing mix, grounding & model, interaction surfaces"
+              ]
             }
           },
           "position": {
             "x": 0,
             "y": 0,
-            "width": 9,
-            "height": 3
+            "width": 12,
+            "height": 2
           }
         },
         {
           "widget": {
-            "name": "usage2_hero_logo_v2",
-            "multilineTextboxSpec": {
-              "lines": [
-                "[![](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 9,
-            "y": 0,
-            "width": 3,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "usage2_f_region_v2",
+            "name": "f_region",
             "queries": [
               {
-                "name": "dashboard_filter_query",
+                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "Region",
                       "expression": "`Region`"
+                    },
+                    {
+                      "name": "Region_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
                     }
                   ],
                   "disaggregated": false
@@ -3655,41 +3469,47 @@
             ],
             "spec": {
               "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Region / Admin Unit",
+                  "fields": []
+                }
+              },
               "widgetType": "filter-multi-select",
               "encodings": {
                 "fields": [
                   {
                     "fieldName": "Region",
-                    "displayName": "Region / Admin Unit",
-                    "queryName": "dashboard_filter_query"
+                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region"
                   }
                 ]
-              },
-              "frame": {
-                "title": "Region / Admin Unit",
-                "showTitle": true
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 3,
+            "y": 2,
             "width": 6,
             "height": 1
           }
         },
         {
           "widget": {
-            "name": "usage2_f_licence_v2",
+            "name": "f_licence",
             "queries": [
               {
-                "name": "dashboard_filter_query",
+                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "License Type",
                       "expression": "`License Type`"
+                    },
+                    {
+                      "name": "License Type_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
                     }
                   ],
                   "disaggregated": false
@@ -3698,137 +3518,55 @@
             ],
             "spec": {
               "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "License Type",
+                  "fields": []
+                }
+              },
               "widgetType": "filter-multi-select",
               "encodings": {
                 "fields": [
                   {
                     "fieldName": "License Type",
-                    "displayName": "License Type",
-                    "queryName": "dashboard_filter_query"
+                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type"
                   }
                 ]
-              },
-              "frame": {
-                "title": "License Type",
-                "showTitle": true
               }
             }
           },
           "position": {
             "x": 6,
-            "y": 3,
+            "y": 2,
             "width": 6,
             "height": 1
           }
         },
         {
           "widget": {
-            "name": "usage2_div_licence_v2",
+            "name": "div_licence",
             "multilineTextboxSpec": {
               "lines": [
                 "**LICENSING**   Premium vs Starter interaction mix"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#F4D5BE"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
+              ]
             }
           },
           "position": {
             "x": 0,
-            "y": 4,
+            "y": 3,
             "width": 12,
             "height": 1
           }
         },
         {
           "widget": {
-            "name": "usage2_div_ground_v2",
-            "multilineTextboxSpec": {
-              "lines": [
-                "**GROUNDING & MODEL**   Bing web search and model provider"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#F4D5BE"
-              },
-              "widgetBorderColor": {
-                "light": "#F59A3E"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 8,
-            "width": 12,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "usage2_div_surface_v2",
-            "multilineTextboxSpec": {
-              "lines": [
-                "**INTERACTION SURFACE**  M365 Copilot Chat vs declarative vs custom-engine agents"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#F4D5BE"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 12,
-            "width": 12,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "usage2_div_table_v2",
-            "multilineTextboxSpec": {
-              "lines": [
-                "**INTERACTION DETAIL**  row-level audit records"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#F4D5BE"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 16,
-            "width": 12,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_premium_interactions_v2",
+            "name": "kpi_premium",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Premium Interactions)",
@@ -3840,15 +3578,19 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Premium Interactions",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Premium Interactions",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
-                  "fieldName": "measure(Premium Interactions)"
+                  "fieldName": "measure(Premium Interactions)",
+                  "rowNumber": 0
                 }
               },
               "data": {
@@ -3858,19 +3600,19 @@
           },
           "position": {
             "x": 0,
-            "y": 5,
+            "y": 4,
             "width": 4,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "kpi_starter_interactions_v2",
+            "name": "kpi_starter",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Starter Interactions)",
@@ -3882,15 +3624,19 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Starter Interactions",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Starter Interactions",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
-                  "fieldName": "measure(Starter Interactions)"
+                  "fieldName": "measure(Starter Interactions)",
+                  "rowNumber": 0
                 }
               },
               "data": {
@@ -3900,19 +3646,19 @@
           },
           "position": {
             "x": 4,
-            "y": 5,
+            "y": 4,
             "width": 4,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "kpi_premium_share_v2",
+            "name": "kpi_premium_share",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Premium Share)",
@@ -3924,11 +3670,14 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Premium Share",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Premium Share",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -3951,19 +3700,35 @@
           },
           "position": {
             "x": 8,
-            "y": 5,
+            "y": 4,
             "width": 4,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "kpi_bing_interactions_v2",
+            "name": "div_ground",
+            "multilineTextboxSpec": {
+              "lines": [
+                "**GROUNDING & MODEL**   Bing web search and model provider"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_bing",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Bing Interactions)",
@@ -3975,15 +3740,19 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Bing Interactions",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Bing Interactions",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
-                  "fieldName": "measure(Bing Interactions)"
+                  "fieldName": "measure(Bing Interactions)",
+                  "rowNumber": 0
                 }
               },
               "data": {
@@ -3993,19 +3762,19 @@
           },
           "position": {
             "x": 0,
-            "y": 9,
+            "y": 8,
             "width": 4,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "kpi_pct_bing_v2",
+            "name": "kpi_pct_bing",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Pct Using Bing)",
@@ -4017,11 +3786,14 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "% Interactions Using Bing",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "% Interactions Using Bing",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -4044,19 +3816,19 @@
           },
           "position": {
             "x": 4,
-            "y": 9,
+            "y": 8,
             "width": 4,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "kpi_openai_interactions_v2",
+            "name": "kpi_openai",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(OpenAI Interactions)",
@@ -4068,15 +3840,19 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "OpenAI Interactions",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "OpenAI Interactions",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
-                  "fieldName": "measure(OpenAI Interactions)"
+                  "fieldName": "measure(OpenAI Interactions)",
+                  "rowNumber": 0
                 }
               },
               "data": {
@@ -4086,19 +3862,35 @@
           },
           "position": {
             "x": 8,
-            "y": 9,
+            "y": 8,
             "width": 4,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "kpi_bizchat_interactions_v2",
+            "name": "div_surface",
+            "multilineTextboxSpec": {
+              "lines": [
+                "**INTERACTION SURFACE**  M365 Copilot Chat vs declarative vs custom-engine agents"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_bizchat",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(BizChat M365 Interactions)",
@@ -4110,15 +3902,19 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Microsoft 365 Copilot Chat Interactions",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Microsoft 365 Copilot Chat Interactions",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
-                  "fieldName": "measure(BizChat M365 Interactions)"
+                  "fieldName": "measure(BizChat M365 Interactions)",
+                  "rowNumber": 0
                 }
               },
               "data": {
@@ -4128,19 +3924,19 @@
           },
           "position": {
             "x": 0,
-            "y": 13,
+            "y": 12,
             "width": 4,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "kpi_declarative_interactions_v2",
+            "name": "kpi_declarative",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Declarative Interactions)",
@@ -4152,15 +3948,19 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Declarative Interactions",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Declarative Interactions",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
-                  "fieldName": "measure(Declarative Interactions)"
+                  "fieldName": "measure(Declarative Interactions)",
+                  "rowNumber": 0
                 }
               },
               "data": {
@@ -4170,19 +3970,19 @@
           },
           "position": {
             "x": 4,
-            "y": 13,
+            "y": 12,
             "width": 4,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "kpi_custom_engine_v2",
+            "name": "kpi_custom_engine",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Custom Engine Interactions)",
@@ -4194,15 +3994,19 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Custom Engine Interactions",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Custom Engine Interactions",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
-                  "fieldName": "measure(Custom Engine Interactions)"
+                  "fieldName": "measure(Custom Engine Interactions)",
+                  "rowNumber": 0
                 }
               },
               "data": {
@@ -4212,19 +4016,35 @@
           },
           "position": {
             "x": 8,
-            "y": 13,
+            "y": 12,
             "width": 4,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "table1_v2",
+            "name": "div_detail",
+            "multilineTextboxSpec": {
+              "lines": [
+                "**INTERACTION DETAIL**  row-level audit records"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "tbl_detail",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "Interaction Type",
@@ -4272,276 +4092,53 @@
               }
             ],
             "spec": {
-              "version": 1,
-              "invisibleColumns": [],
-              "allowHTMLByDefault": false,
-              "itemsPerPage": 25,
-              "paginationSize": "default",
-              "condensed": true,
-              "withRowNumber": false,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Interaction Detail",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "rowsPerPage": 25,
               "widgetType": "table",
               "encodings": {
                 "columns": [
                   {
-                    "fieldName": "Interaction Type",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100000,
-                    "title": "Interaction Type",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "fieldName": "Interaction Type"
                   },
                   {
-                    "fieldName": "License Type",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100001,
-                    "title": "License Type",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "fieldName": "License Type"
                   },
                   {
                     "fieldName": "Uses Bing Search",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "boolean",
-                    "displayAs": "boolean",
-                    "visible": true,
-                    "order": 100002,
-                    "title": "Uses Bing Search",
-                    "allowSearch": false,
-                    "alignContent": "right",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "contentAlignment": "right"
                   },
                   {
-                    "fieldName": "Model Provider",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100003,
-                    "title": "Model Provider",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "fieldName": "Model Provider"
                   },
                   {
-                    "fieldName": "Region",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100004,
-                    "title": "Region",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "fieldName": "Region"
                   },
                   {
                     "fieldName": "Interaction Date",
-                    "dateTimeFormat": "DD/MM/YYYY",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "date",
-                    "displayAs": "datetime",
-                    "visible": true,
-                    "order": 100005,
-                    "title": "Interaction Date",
-                    "allowSearch": false,
-                    "alignContent": "right",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "contentAlignment": "right",
+                    "format": {
+                      "type": "moment.js",
+                      "format": "DD/MM/YYYY"
+                    }
                   },
                   {
-                    "fieldName": "User Email",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100006,
-                    "title": "User Email",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "fieldName": "User Email"
                   },
                   {
-                    "fieldName": "Agent Name",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100007,
-                    "title": "Agent Name",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "fieldName": "Agent Name"
                   },
                   {
-                    "fieldName": "Target Agent ID",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100008,
-                    "title": "Target Agent ID",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "fieldName": "Target Agent ID"
                   },
                   {
-                    "fieldName": "Environment ID",
-                    "booleanValues": [
-                      "false",
-                      "true"
-                    ],
-                    "imageUrlTemplate": "{{ @ }}",
-                    "imageTitleTemplate": "{{ @ }}",
-                    "imageWidth": "",
-                    "imageHeight": "",
-                    "linkUrlTemplate": "{{ @ }}",
-                    "linkTextTemplate": "{{ @ }}",
-                    "linkTitleTemplate": "{{ @ }}",
-                    "linkOpenInNewTab": true,
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 100009,
-                    "title": "Environment ID",
-                    "allowSearch": false,
-                    "alignContent": "left",
-                    "allowHTML": false,
-                    "highlightLinks": false,
-                    "useMonospaceFont": false,
-                    "preserveWhitespace": false
+                    "fieldName": "Environment ID"
                   }
                 ]
               },
@@ -4552,7 +4149,7 @@
           },
           "position": {
             "x": 0,
-            "y": 17,
+            "y": 16,
             "width": 12,
             "height": 8
           }
@@ -4567,35 +4164,10 @@
       "layout": [
         {
           "widget": {
-            "name": "add_gov_logo",
-            "multilineTextboxSpec": {
-              "lines": [
-                "[![](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FAF6F2"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 2
-          }
-        },
-        {
-          "widget": {
             "name": "gov_summary",
             "multilineTextboxSpec": {
               "lines": [
-                "**Governance posture across all inventoried agents what to fix first, where risk concentrates, and who owns it.** *Credit-linked usage only:* agents with no measurable MCS credit may still be used via M365 Copilot without appearing in billing (\\~23 agents ever appear in credit), so \"dormant\" means *no measurable credit*. Remediation queue is sorted security-first."
+                "**Governance posture across all inventoried agents what to fix first, where risk concentrates, and who owns it.** *Credit-linked usage only:* agents with no measurable MCS credit may still be used via M365 Copilot without appearing in billing, so \"dormant\" means *no measurable credit*. Remediation queue is sorted security-first."
               ],
               "verticalAlign": "VERTICAL_ALIGN_TOP"
             },
@@ -4612,7 +4184,7 @@
             "x": 0,
             "y": 2,
             "width": 12,
-            "height": 1
+            "height": 2
           }
         },
         {
@@ -4661,7 +4233,7 @@
           },
           "position": {
             "x": 0,
-            "y": 3,
+            "y": 4,
             "width": 3,
             "height": 3
           }
@@ -4692,7 +4264,7 @@
                 "showDescription": true,
                 "contentAlignment": "center",
                 "headerAlignment": "center",
-                "description": "(???1 governance flag)"
+                "description": "(1 governance flag)"
               },
               "widgetType": "counter",
               "encodings": {
@@ -4712,7 +4284,7 @@
           },
           "position": {
             "x": 3,
-            "y": 3,
+            "y": 4,
             "width": 3,
             "height": 3
           }
@@ -4763,7 +4335,7 @@
           },
           "position": {
             "x": 6,
-            "y": 3,
+            "y": 4,
             "width": 3,
             "height": 3
           }
@@ -4814,7 +4386,7 @@
           },
           "position": {
             "x": 9,
-            "y": 3,
+            "y": 4,
             "width": 3,
             "height": 3
           }
@@ -4829,12 +4401,12 @@
                   "datasetName": "ds_add_gov_lifecycle",
                   "fields": [
                     {
-                      "name": "stage",
-                      "expression": "`stage`"
-                    },
-                    {
                       "name": "measure(Agents)",
                       "expression": "MEASURE(`Agents`)"
+                    },
+                    {
+                      "name": "stage",
+                      "expression": "`stage`"
                     }
                   ],
                   "disaggregated": false
@@ -4844,7 +4416,7 @@
             "spec": {
               "version": 3,
               "frame": {
-                "title": "Agent Lifecycle: Created ??? Published ??? Used",
+                "title": "Agent Lifecycle: Created - Published - Used",
                 "showTitle": true,
                 "showDescription": true,
                 "description": "Activation drop-off across the lifecycle (valid agents). 'Used' = appears in credit data."
@@ -4876,7 +4448,7 @@
           },
           "position": {
             "x": 0,
-            "y": 6,
+            "y": 7,
             "width": 6,
             "height": 6
           }
@@ -4891,12 +4463,12 @@
                   "datasetName": "ds_add_gov_risk_category",
                   "fields": [
                     {
-                      "name": "risk_category",
-                      "expression": "`risk_category`"
-                    },
-                    {
                       "name": "measure(Agents)",
                       "expression": "MEASURE(`Agents`)"
+                    },
+                    {
+                      "name": "risk_category",
+                      "expression": "`risk_category`"
                     }
                   ],
                   "disaggregated": false
@@ -4909,7 +4481,7 @@
                 "title": "Risk by Category",
                 "showTitle": true,
                 "showDescription": true,
-                "description": "Where governance risk sits ??? ranked by agent count."
+                "description": "Where governance risk sits - ranked by agent count."
               },
               "widgetType": "bar",
               "encodings": {
@@ -4938,7 +4510,7 @@
           },
           "position": {
             "x": 6,
-            "y": 6,
+            "y": 7,
             "width": 6,
             "height": 6
           }
@@ -5012,7 +4584,7 @@
           },
           "position": {
             "x": 0,
-            "y": 12,
+            "y": 13,
             "width": 6,
             "height": 6
           }
@@ -5027,12 +4599,12 @@
                   "datasetName": "ds_add_gov_owner_risk",
                   "fields": [
                     {
-                      "name": "created_by",
-                      "expression": "`created_by`"
-                    },
-                    {
                       "name": "measure(At-Risk Agents)",
                       "expression": "MEASURE(`At-Risk Agents`)"
+                    },
+                    {
+                      "name": "created_by",
+                      "expression": "`created_by`"
                     }
                   ],
                   "disaggregated": false
@@ -5045,7 +4617,7 @@
                 "title": "Owners Carrying Most Risk",
                 "showTitle": true,
                 "showDescription": true,
-                "description": "Top 15 makers by at-risk agents. Display names only ??? cannot join to credit users (email)."
+                "description": "Top 15 makers by at-risk agents. Display names only - cannot join to credit users (email)."
               },
               "widgetType": "bar",
               "encodings": {
@@ -5063,8 +4635,7 @@
                     "type": "categorical",
                     "sort": {
                       "by": "x-reversed"
-                    },
-                    "displayLimit": 15
+                    }
                   }
                 }
               },
@@ -5075,7 +4646,7 @@
           },
           "position": {
             "x": 6,
-            "y": 12,
+            "y": 13,
             "width": 6,
             "height": 6
           }
@@ -5130,21 +4701,35 @@
                       "expression": "`created_on_eu`"
                     }
                   ],
-                  "disaggregated": true
+                  "filters": [
+                    {
+                      "expression": "`authentication` IN ('None')"
+                    },
+                    {
+                      "expression": "`risk_reasons` IN ('No Auth, Unmanaged Env')"
+                    }
+                  ],
+                  "disaggregated": true,
+                  "orders": [
+                    {
+                      "direction": "DESC",
+                      "expression": "`severity`"
+                    }
+                  ]
                 }
               }
             ],
             "spec": {
               "version": 2,
+              "headerStyle": {
+                "foregroundColor": "#E86810",
+                "bold": true
+              },
               "frame": {
                 "title": "Prioritized Remediation Queue (security-first)",
                 "showTitle": true,
                 "showDescription": true,
-                "description": "Governance risks only (drafts excluded ??? see funnel). Sorted by severity: No Auth (3) > No Owner (2) > Unmanaged Env (1)."
-              },
-              "headerStyle": {
-                "foregroundColor": "#E86810",
-                "bold": true
+                "description": "Governance Risk - No Authentication Agents "
               },
               "widgetType": "table",
               "encodings": {
@@ -5206,7 +4791,7 @@
           },
           "position": {
             "x": 0,
-            "y": 18,
+            "y": 19,
             "width": 12,
             "height": 7
           }
@@ -5219,31 +4804,6 @@
       "name": "0394fe6a",
       "displayName": "Adoption & Momentum",
       "layout": [
-        {
-          "widget": {
-            "name": "add_adopt_logo",
-            "multilineTextboxSpec": {
-              "lines": [
-                "[![](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FAF6F2"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 2
-          }
-        },
         {
           "widget": {
             "name": "adopt_utilization",
@@ -5272,7 +4832,7 @@
                 "title": "Agent Utilization",
                 "showTitle": true,
                 "showDescription": true,
-                "description": "Valid agents with vs without tracked credit usage. Credit bridge covers ~21 named agents ??? see semantic layer docs."
+                "description": "Valid agents with vs without tracked credit usage."
               },
               "widgetType": "bar",
               "encodings": {
@@ -5603,35 +5163,10 @@
       "layout": [
         {
           "widget": {
-            "name": "add_cost_logo",
-            "multilineTextboxSpec": {
-              "lines": [
-                "[![](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FAF6F2"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 2
-          }
-        },
-        {
-          "widget": {
             "name": "cost_note",
             "multilineTextboxSpec": {
               "lines": [
-                "*Env prepaid daily series (1,936 credits) differs from headline consumption (3,309.9) different grains. Product split uses billing view (metric\\_agent\\_feature\\_credit).*"
+                "*Env prepaid daily series differs from headline consumption different grains. Product split uses billing view (metric\\_agent\\_feature\\_credit).*"
               ],
               "verticalAlign": "VERTICAL_ALIGN_TOP"
             },
@@ -5648,7 +5183,7 @@
             "x": 0,
             "y": 2,
             "width": 12,
-            "height": 1
+            "height": 2
           }
         },
         {
@@ -5697,7 +5232,7 @@
           },
           "position": {
             "x": 0,
-            "y": 3,
+            "y": 4,
             "width": 4,
             "height": 3
           }
@@ -5749,7 +5284,7 @@
           },
           "position": {
             "x": 4,
-            "y": 3,
+            "y": 4,
             "width": 4,
             "height": 3
           }
@@ -5780,7 +5315,7 @@
                 "showDescription": true,
                 "contentAlignment": "center",
                 "headerAlignment": "center",
-                "description": "(29 Apr???27 May window only)"
+                "description": "(29 Apr 27 May window only)"
               },
               "widgetType": "counter",
               "encodings": {
@@ -5800,7 +5335,7 @@
           },
           "position": {
             "x": 8,
-            "y": 3,
+            "y": 4,
             "width": 4,
             "height": 3
           }
@@ -5875,7 +5410,7 @@
           },
           "position": {
             "x": 0,
-            "y": 6,
+            "y": 7,
             "width": 6,
             "height": 4
           }
@@ -5934,7 +5469,7 @@
           },
           "position": {
             "x": 6,
-            "y": 6,
+            "y": 7,
             "width": 6,
             "height": 4
           }
@@ -6016,7 +5551,7 @@
           },
           "position": {
             "x": 0,
-            "y": 10,
+            "y": 11,
             "width": 6,
             "height": 5
           }
@@ -6049,7 +5584,7 @@
                 "title": "Daily Prepaid Burn-down",
                 "showTitle": true,
                 "showDescription": true,
-                "description": "Environment-level MCS consumption, 29 Apr???27 May 2026."
+                "description": "Environment-level MCS consumption, 29 Apr 27 May 2026."
               },
               "widgetType": "line",
               "encodings": {
@@ -6075,7 +5610,7 @@
           },
           "position": {
             "x": 6,
-            "y": 10,
+            "y": 11,
             "width": 6,
             "height": 5
           }
@@ -6085,75 +5620,59 @@
       "layoutVersion": "GRID_V1"
     },
     {
-      "name": "usage_users_v2",
+      "name": "copilot_users",
       "displayName": "Copilot Analysis - Users",
       "layout": [
         {
           "widget": {
-            "name": "usage3_hero_title_v2",
+            "name": "title",
             "multilineTextboxSpec": {
               "lines": [
                 "# Copilot Analysis - Users\n",
                 "\n",
-                "#### Every Copilot user, ranked by interaction volume\n",
-                "\n",
-                "*One row per user (2,782 in total). Interaction counts, not credits ??? most of this usage is licence-absorbed and never billed.*"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_TOP"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
+                "#### Who is using Copilot and how much"
+              ]
             }
           },
           "position": {
             "x": 0,
             "y": 0,
-            "width": 9,
-            "height": 3
+            "width": 12,
+            "height": 2
           }
         },
         {
           "widget": {
-            "name": "usage3_hero_logo_v2",
+            "name": "subtitle",
             "multilineTextboxSpec": {
               "lines": [
-                "[![](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
+                "*Right-click a user  **Drill to** Copilot Analysis User Detail to see every interaction for that person.*"
+              ]
             }
           },
           "position": {
-            "x": 9,
-            "y": 0,
-            "width": 3,
-            "height": 3
+            "x": 0,
+            "y": 2,
+            "width": 12,
+            "height": 1
           }
         },
         {
           "widget": {
-            "name": "usage3_f_region_v2",
+            "name": "f_region",
             "queries": [
               {
-                "name": "dashboard_filter_query",
+                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "Region",
                       "expression": "`Region`"
+                    },
+                    {
+                      "name": "Region_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
                     }
                   ],
                   "disaggregated": false
@@ -6162,19 +5681,21 @@
             ],
             "spec": {
               "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Region / Admin Unit",
+                  "fields": []
+                }
+              },
               "widgetType": "filter-multi-select",
               "encodings": {
                 "fields": [
                   {
                     "fieldName": "Region",
-                    "displayName": "Region / Admin Unit",
-                    "queryName": "dashboard_filter_query"
+                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region"
                   }
                 ]
-              },
-              "frame": {
-                "title": "Region / Admin Unit",
-                "showTitle": true
               }
             }
           },
@@ -6187,16 +5708,20 @@
         },
         {
           "widget": {
-            "name": "usage3_f_licence_v2",
+            "name": "f_licence",
             "queries": [
               {
-                "name": "dashboard_filter_query",
+                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "License Type",
                       "expression": "`License Type`"
+                    },
+                    {
+                      "name": "License Type_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
                     }
                   ],
                   "disaggregated": false
@@ -6205,19 +5730,21 @@
             ],
             "spec": {
               "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "License Type",
+                  "fields": []
+                }
+              },
               "widgetType": "filter-multi-select",
               "encodings": {
                 "fields": [
                   {
                     "fieldName": "License Type",
-                    "displayName": "License Type",
-                    "queryName": "dashboard_filter_query"
+                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type"
                   }
                 ]
-              },
-              "frame": {
-                "title": "License Type",
-                "showTitle": true
               }
             }
           },
@@ -6230,20 +5757,11 @@
         },
         {
           "widget": {
-            "name": "usage3_div_kpi_v2",
+            "name": "div_kpi",
             "multilineTextboxSpec": {
               "lines": [
-                "**THE USER BASE**  ???  people, volume, intensity"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#F4D5BE"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
+                "**THE USER BASE**  -  people, volume, intensity"
+              ]
             }
           },
           "position": {
@@ -6255,12 +5773,12 @@
         },
         {
           "widget": {
-            "name": "usage3_kpi_users_v2",
+            "name": "kpi_users",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Unique Active Users)",
@@ -6272,23 +5790,19 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Unique Active Users",
                 "showTitle": true,
-                "showDescription": false,
-                "contentAlignment": "center",
-                "headerAlignment": "center"
+                "title": {
+                  "value": "Unique Active Users",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
                   "fieldName": "measure(Unique Active Users)",
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "none"
-                  },
-                  "displayName": "Unique Active Users"
+                  "rowNumber": 0
                 }
               },
               "data": {
@@ -6305,12 +5819,12 @@
         },
         {
           "widget": {
-            "name": "usage3_kpi_interactions_v2",
+            "name": "kpi_interactions",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Total Interactions)",
@@ -6322,23 +5836,19 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Total Interactions",
                 "showTitle": true,
-                "showDescription": false,
-                "contentAlignment": "center",
-                "headerAlignment": "center"
+                "title": {
+                  "value": "Total Interactions",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
                   "fieldName": "measure(Total Interactions)",
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "none"
-                  },
-                  "displayName": "Total Interactions"
+                  "rowNumber": 0
                 }
               },
               "data": {
@@ -6355,12 +5865,12 @@
         },
         {
           "widget": {
-            "name": "usage3_kpi_avg_v2",
+            "name": "kpi_avg",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Avg Interactions per User)",
@@ -6372,23 +5882,19 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Avg Interactions per User",
                 "showTitle": true,
-                "showDescription": false,
-                "contentAlignment": "center",
-                "headerAlignment": "center"
+                "title": {
+                  "value": "Avg Interactions per User",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
                   "fieldName": "measure(Avg Interactions per User)",
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "none"
-                  },
-                  "displayName": "Avg Interactions per User"
+                  "rowNumber": 0
                 }
               },
               "data": {
@@ -6405,20 +5911,11 @@
         },
         {
           "widget": {
-            "name": "usage3_div_hint_v2",
+            "name": "div_users",
             "multilineTextboxSpec": {
               "lines": [
                 "**ALL USERS**   right-click a user  **Drill to** *Copilot Analysis User Detail* to see every interaction for that person"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#F4D5BE"
-              },
-              "widgetBorderColor": {
-                "light": "#F59A3E"
-              }
+              ]
             }
           },
           "position": {
@@ -6430,12 +5927,12 @@
         },
         {
           "widget": {
-            "name": "usage3_user_list_v2",
+            "name": "tbl_users",
             "queries": [
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "User Email",
@@ -6477,16 +5974,22 @@
               }
             ],
             "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": {
+                  "value": "All Users by Interaction Volume",
+                  "fields": []
+                },
+                "description": {
+                  "value": "Grouped by user. 'Avg Interactions per User' is omitted grouped by user it degenerates to the interaction count.",
+                  "fields": []
+                }
+              },
               "version": 2,
               "headerStyle": {
                 "foregroundColor": "#E86810",
                 "bold": true
-              },
-              "frame": {
-                "title": "All Users by Interaction Volume",
-                "showTitle": true,
-                "showDescription": true,
-                "description": "Grouped by user. 'Avg Interactions per User' is omitted grouped by user it degenerates to the interaction count."
               },
               "widgetType": "table",
               "encodings": {
@@ -6574,32 +6077,7 @@
           "position": {
             "x": 0,
             "y": 0,
-            "width": 9,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "usage4_hero_logo_v2",
-            "multilineTextboxSpec": {
-              "lines": [
-                "[![](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 9,
-            "y": 0,
-            "width": 3,
+            "width": 12,
             "height": 3
           }
         },
@@ -6608,13 +6086,17 @@
             "name": "usage4_f_user_v2",
             "queries": [
               {
-                "name": "dashboard_filter_query",
+                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_User Email",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "User Email",
                       "expression": "`User Email`"
+                    },
+                    {
+                      "name": "User Email_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
                     }
                   ],
                   "disaggregated": false
@@ -6623,19 +6105,21 @@
             ],
             "spec": {
               "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "User",
+                  "fields": []
+                }
+              },
               "widgetType": "filter-single-select",
               "encodings": {
                 "fields": [
                   {
                     "fieldName": "User Email",
-                    "displayName": "User",
-                    "queryName": "dashboard_filter_query"
+                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_User Email"
                   }
                 ]
-              },
-              "frame": {
-                "title": "User",
-                "showTitle": true
               }
             }
           },
@@ -6651,13 +6135,17 @@
             "name": "usage4_f_region_v2",
             "queries": [
               {
-                "name": "dashboard_filter_query",
+                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "Region",
                       "expression": "`Region`"
+                    },
+                    {
+                      "name": "Region_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
                     }
                   ],
                   "disaggregated": false
@@ -6666,19 +6154,21 @@
             ],
             "spec": {
               "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Region / Admin Unit",
+                  "fields": []
+                }
+              },
               "widgetType": "filter-multi-select",
               "encodings": {
                 "fields": [
                   {
                     "fieldName": "Region",
-                    "displayName": "Region / Admin Unit",
-                    "queryName": "dashboard_filter_query"
+                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region"
                   }
                 ]
-              },
-              "frame": {
-                "title": "Region / Admin Unit",
-                "showTitle": true
               }
             }
           },
@@ -6694,13 +6184,17 @@
             "name": "usage4_f_licence_v2",
             "queries": [
               {
-                "name": "dashboard_filter_query",
+                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "License Type",
                       "expression": "`License Type`"
+                    },
+                    {
+                      "name": "License Type_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
                     }
                   ],
                   "disaggregated": false
@@ -6709,19 +6203,21 @@
             ],
             "spec": {
               "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "License Type",
+                  "fields": []
+                }
+              },
               "widgetType": "filter-multi-select",
               "encodings": {
                 "fields": [
                   {
                     "fieldName": "License Type",
-                    "displayName": "License Type",
-                    "queryName": "dashboard_filter_query"
+                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type"
                   }
                 ]
-              },
-              "frame": {
-                "title": "License Type",
-                "showTitle": true
               }
             }
           },
@@ -6764,7 +6260,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Total Interactions)",
@@ -6776,14 +6272,17 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Total Interactions",
                 "showTitle": true,
                 "showDescription": false,
                 "contentAlignment": "center",
-                "headerAlignment": "center"
+                "headerAlignment": "center",
+                "title": {
+                  "value": "Total Interactions",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -6814,7 +6313,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Bing Interactions)",
@@ -6826,14 +6325,17 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Bing Interactions",
                 "showTitle": true,
                 "showDescription": false,
                 "contentAlignment": "center",
-                "headerAlignment": "center"
+                "headerAlignment": "center",
+                "title": {
+                  "value": "Bing Interactions",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -6864,7 +6366,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Premium Interactions)",
@@ -6876,14 +6378,17 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Premium Interactions",
                 "showTitle": true,
                 "showDescription": false,
                 "contentAlignment": "center",
-                "headerAlignment": "center"
+                "headerAlignment": "center",
+                "title": {
+                  "value": "Premium Interactions",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -6914,7 +6419,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Starter Interactions)",
@@ -6926,14 +6431,17 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Starter Interactions",
                 "showTitle": true,
                 "showDescription": false,
                 "contentAlignment": "center",
-                "headerAlignment": "center"
+                "headerAlignment": "center",
+                "title": {
+                  "value": "Starter Interactions",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -6964,7 +6472,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(BizChat M365 Interactions)",
@@ -6976,14 +6484,17 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Microsoft 365 Copilot Chat",
                 "showTitle": true,
                 "showDescription": false,
                 "contentAlignment": "center",
-                "headerAlignment": "center"
+                "headerAlignment": "center",
+                "title": {
+                  "value": "Microsoft 365 Copilot Chat",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -7014,7 +6525,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Declarative Interactions)",
@@ -7026,14 +6537,17 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Declarative Agents",
                 "showTitle": true,
                 "showDescription": false,
                 "contentAlignment": "center",
-                "headerAlignment": "center"
+                "headerAlignment": "center",
+                "title": {
+                  "value": "Declarative Agents",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -7064,7 +6578,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "measure(Custom Engine Interactions)",
@@ -7076,14 +6590,17 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Custom Engine Agents",
                 "showTitle": true,
                 "showDescription": false,
                 "contentAlignment": "center",
-                "headerAlignment": "center"
+                "headerAlignment": "center",
+                "title": {
+                  "value": "Custom Engine Agents",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -7139,7 +6656,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "Interaction Date",
@@ -7155,13 +6672,19 @@
               }
             ],
             "spec": {
-              "version": 3,
               "frame": {
-                "title": "Interactions per Day",
                 "showTitle": true,
                 "showDescription": true,
-                "description": "Audit window: 1 May ??? 1 Jun 2026."
+                "title": {
+                  "value": "Interactions per Day",
+                  "fields": []
+                },
+                "description": {
+                  "value": "Audit window: 1 May - 1 Jun 2026.",
+                  "fields": []
+                }
               },
+              "version": 3,
               "widgetType": "line",
               "encodings": {
                 "x": {
@@ -7223,7 +6746,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_usage_copilot_metrics",
+                  "datasetName": "ds_copilot_metrics",
                   "fields": [
                     {
                       "name": "Interaction Date",
@@ -7277,13 +6800,19 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "All Interactions",
                 "showTitle": true,
                 "showDescription": true,
-                "description": "One row per Copilot interaction, newest first."
+                "title": {
+                  "value": "All Interactions",
+                  "fields": []
+                },
+                "description": {
+                  "value": "One row per Copilot interaction, newest first.",
+                  "fields": []
+                }
               },
+              "version": 2,
               "headerStyle": {
                 "foregroundColor": "#E86810",
                 "bold": true
@@ -7357,25 +6886,18 @@
       "layoutVersion": "GRID_V1"
     },
     {
-      "name": "785b4061",
+      "name": "knowledge_grounding",
       "displayName": "Knowledge & Grounding",
       "layout": [
         {
           "widget": {
-            "name": "kb_logo",
+            "name": "title",
             "multilineTextboxSpec": {
               "lines": [
-                "[![](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FAF6F2"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
+                "### Knowledge & Grounding which agents are grounded, and on what\n",
+                "\n",
+                "Every Copilot Studio agent can be attached to **knowledge bases** (SharePoint sites, files, public sites, Dataverse and federated sources). This page shows how many each agent has and, reading it the other way, **which knowledge bases are shared across many agents**: a shared source is a single point of change."
+              ]
             }
           },
           "position": {
@@ -7387,37 +6909,26 @@
         },
         {
           "widget": {
-            "name": "kb_summary",
+            "name": "subtitle",
             "multilineTextboxSpec": {
               "lines": [
-                "### Knowledge & Grounding which agents are grounded, and on what\n",
-                "\n",
-                "Every Copilot Studio agent can be attached to **knowledge bases** (SharePoint sites, files, public sites, Dataverse and federated sources). This page shows how many each agent has and, reading it the other way, **which knowledge bases are shared across many agents**: a shared source is a load-bearing asset, and its blast radius is every agent grounded on it. **Pick an agent above  or click one in any table or chart to narrow the whole page to that agent and list its individual knowledge bases.**"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_TOP"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
+                "*Counts come from the parsed knowledge-source details for each agent in the Copilot Studio Kit.*"
+              ]
             }
           },
           "position": {
             "x": 0,
             "y": 2,
             "width": 12,
-            "height": 2
+            "height": 1
           }
         },
         {
           "widget": {
-            "name": "kb_agent_filter",
+            "name": "f_agent",
             "queries": [
               {
-                "name": "dashboard_filter_query",
+                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab661fb01db8919aa468b0e32302_agent_name",
                 "query": {
                   "datasetName": "ds_kb_detail",
                   "fields": [
@@ -7436,32 +6947,31 @@
             ],
             "spec": {
               "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Select Agent"
+              },
               "widgetType": "filter-single-select",
               "encodings": {
                 "fields": [
                   {
                     "fieldName": "agent_name",
-                    "displayName": "Select Agent",
-                    "queryName": "dashboard_filter_query"
+                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab661fb01db8919aa468b0e32302_agent_name"
                   }
                 ]
-              },
-              "frame": {
-                "title": "Select Agent",
-                "showTitle": true
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 4,
+            "y": 3,
             "width": 6,
             "height": 1
           }
         },
         {
           "widget": {
-            "name": "kb_grounded_agents",
+            "name": "kpi_grounded",
             "queries": [
               {
                 "name": "main_query",
@@ -7478,49 +6988,38 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Grounded Agents",
                 "showTitle": true,
                 "showDescription": true,
-                "contentAlignment": "center",
-                "headerAlignment": "center",
-                "description": "(???1 knowledge source)"
+                "title": "Grounded Agents",
+                "description": {
+                  "value": "(>=1 knowledge source)",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
                   "fieldName": "measure(Grounded Agents)",
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "none"
-                  },
-                  "displayName": "Grounded Agents"
+                  "rowNumber": 0
                 }
               },
               "data": {
                 "queryName": "main_query"
               }
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
             }
           },
           "position": {
             "x": 0,
-            "y": 5,
+            "y": 4,
             "width": 2,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "kb_coverage",
+            "name": "kpi_coverage",
             "queries": [
               {
                 "name": "main_query",
@@ -7537,49 +7036,38 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Grounding Coverage %",
                 "showTitle": true,
                 "showDescription": true,
-                "contentAlignment": "center",
-                "headerAlignment": "center",
-                "description": "(of 369 valid Studio agents)"
+                "title": "Grounding Coverage %",
+                "description": {
+                  "value": "(of valid Studio agents)",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
                   "fieldName": "measure(Grounding Coverage %)",
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "none"
-                  },
-                  "displayName": "Grounding Coverage %"
+                  "rowNumber": 0
                 }
               },
               "data": {
                 "queryName": "main_query"
               }
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
             }
           },
           "position": {
             "x": 2,
-            "y": 5,
+            "y": 4,
             "width": 2,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "kb_bases",
+            "name": "kpi_bases",
             "queries": [
               {
                 "name": "main_query",
@@ -7596,49 +7084,38 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Knowledge Bases",
                 "showTitle": true,
                 "showDescription": true,
-                "contentAlignment": "center",
-                "headerAlignment": "center",
-                "description": "(distinct sources)"
+                "title": "Knowledge Bases",
+                "description": {
+                  "value": "(distinct sources)",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
                   "fieldName": "measure(Knowledge Bases)",
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "none"
-                  },
-                  "displayName": "Knowledge Bases"
+                  "rowNumber": 0
                 }
               },
               "data": {
                 "queryName": "main_query"
               }
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
             }
           },
           "position": {
             "x": 4,
-            "y": 5,
+            "y": 4,
             "width": 2,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "kb_links",
+            "name": "kpi_links",
             "queries": [
               {
                 "name": "main_query",
@@ -7655,49 +7132,38 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Agent???KB Links",
                 "showTitle": true,
                 "showDescription": true,
-                "contentAlignment": "center",
-                "headerAlignment": "center",
-                "description": "(edges of the grounding graph)"
+                "title": "Agent-KB Links",
+                "description": {
+                  "value": "(edges of the grounding graph)",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
                   "fieldName": "measure(Agent-KB Links)",
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "none"
-                  },
-                  "displayName": "Agent???KB Links"
+                  "rowNumber": 0
                 }
               },
               "data": {
                 "queryName": "main_query"
               }
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
             }
           },
           "position": {
             "x": 6,
-            "y": 5,
+            "y": 4,
             "width": 2,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "kb_shared",
+            "name": "kpi_shared",
             "queries": [
               {
                 "name": "main_query",
@@ -7714,49 +7180,38 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Shared Knowledge Bases",
                 "showTitle": true,
                 "showDescription": true,
-                "contentAlignment": "center",
-                "headerAlignment": "center",
-                "description": "(grounding 2+ agents)"
+                "title": "Shared Knowledge Bases",
+                "description": {
+                  "value": "(grounding 2+ agents)",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
                   "fieldName": "measure(Shared Knowledge Bases)",
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "none"
-                  },
-                  "displayName": "Shared Knowledge Bases"
+                  "rowNumber": 0
                 }
               },
               "data": {
                 "queryName": "main_query"
               }
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
             }
           },
           "position": {
             "x": 8,
-            "y": 5,
+            "y": 4,
             "width": 2,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "kb_avg",
+            "name": "kpi_avg",
             "queries": [
               {
                 "name": "main_query",
@@ -7773,49 +7228,38 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Avg Sources per Agent",
                 "showTitle": true,
                 "showDescription": true,
-                "contentAlignment": "center",
-                "headerAlignment": "center",
-                "description": "(grounded agents only)"
+                "title": "Avg Sources per Agent",
+                "description": {
+                  "value": "(grounded agents only)",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
                   "fieldName": "measure(Avg Sources per Agent)",
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "none"
-                  },
-                  "displayName": "Avg Sources per Agent"
+                  "rowNumber": 0
                 }
               },
               "data": {
                 "queryName": "main_query"
               }
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
             }
           },
           "position": {
             "x": 10,
-            "y": 5,
+            "y": 4,
             "width": 2,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "kb_by_type",
+            "name": "bar_by_type",
             "queries": [
               {
                 "name": "main_query",
@@ -7836,30 +7280,35 @@
               }
             ],
             "spec": {
-              "version": 3,
               "frame": {
-                "title": "Knowledge Sources by Type",
                 "showTitle": true,
                 "showDescription": true,
-                "description": "What agents are grounded on. SharePoint dominates."
+                "title": "Knowledge Sources by Type",
+                "description": {
+                  "value": "What agents are grounded on. SharePoint dominates.",
+                  "fields": []
+                }
               },
+              "version": 3,
               "widgetType": "bar",
               "encodings": {
                 "x": {
+                  "fieldName": "kb_type",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
                   "fieldName": "measure(Agent-KB Links)",
-                  "displayName": "Links",
+                  "displayName": "Agent-KB Links",
                   "scale": {
                     "type": "quantitative"
                   }
                 },
-                "y": {
+                "color": {
                   "fieldName": "kb_type",
-                  "displayName": "Knowledge Type",
                   "scale": {
-                    "type": "categorical",
-                    "sort": {
-                      "by": "x-reversed"
-                    }
+                    "type": "categorical"
                   }
                 }
               },
@@ -7870,14 +7319,14 @@
           },
           "position": {
             "x": 0,
-            "y": 8,
+            "y": 7,
             "width": 6,
             "height": 6
           }
         },
         {
           "widget": {
-            "name": "kb_most_reused",
+            "name": "bar_most_reused",
             "queries": [
               {
                 "name": "main_query",
@@ -7898,31 +7347,35 @@
               }
             ],
             "spec": {
-              "version": 3,
               "frame": {
-                "title": "Most-Reused Knowledge Bases",
                 "showTitle": true,
                 "showDescription": true,
-                "description": "Blast radius: how many agents each knowledge base grounds. Click a bar to see them."
+                "title": "Most-Reused Knowledge Bases",
+                "description": {
+                  "value": "Blast radius: how many agents each knowledge base grounds.",
+                  "fields": []
+                }
               },
+              "version": 3,
               "widgetType": "bar",
               "encodings": {
                 "x": {
+                  "fieldName": "kb_display_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
                   "fieldName": "measure(Grounded Agents)",
-                  "displayName": "Agents",
+                  "displayName": "Grounded Agents",
                   "scale": {
                     "type": "quantitative"
                   }
                 },
-                "y": {
+                "color": {
                   "fieldName": "kb_display_name",
-                  "displayName": "Knowledge Base",
                   "scale": {
-                    "type": "categorical",
-                    "sort": {
-                      "by": "x-reversed"
-                    },
-                    "displayLimit": 10
+                    "type": "categorical"
                   }
                 }
               },
@@ -7933,14 +7386,14 @@
           },
           "position": {
             "x": 6,
-            "y": 8,
+            "y": 7,
             "width": 6,
             "height": 6
           }
         },
         {
           "widget": {
-            "name": "kb_top_agents",
+            "name": "bar_top_agents",
             "queries": [
               {
                 "name": "main_query",
@@ -7961,31 +7414,35 @@
               }
             ],
             "spec": {
-              "version": 3,
               "frame": {
-                "title": "Top Agents by Knowledge Base Count",
                 "showTitle": true,
                 "showDescription": true,
-                "description": "Agents attached to the most distinct knowledge bases. Click a bar to narrow the page to that agent."
+                "title": "Top Agents by Knowledge Base Count",
+                "description": {
+                  "value": "Agents attached to the most distinct knowledge bases.",
+                  "fields": []
+                }
               },
+              "version": 3,
               "widgetType": "bar",
               "encodings": {
                 "x": {
+                  "fieldName": "agent_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
                   "fieldName": "measure(Knowledge Bases)",
                   "displayName": "Knowledge Bases",
                   "scale": {
                     "type": "quantitative"
                   }
                 },
-                "y": {
+                "color": {
                   "fieldName": "agent_name",
-                  "displayName": "Agent",
                   "scale": {
-                    "type": "categorical",
-                    "sort": {
-                      "by": "x-reversed"
-                    },
-                    "displayLimit": 10
+                    "type": "categorical"
                   }
                 }
               },
@@ -7996,14 +7453,14 @@
           },
           "position": {
             "x": 0,
-            "y": 14,
+            "y": 13,
             "width": 6,
             "height": 6
           }
         },
         {
           "widget": {
-            "name": "kb_by_env",
+            "name": "bar_by_env",
             "queries": [
               {
                 "name": "main_query",
@@ -8024,31 +7481,35 @@
               }
             ],
             "spec": {
-              "version": 3,
               "frame": {
-                "title": "Grounded Agents by Environment",
                 "showTitle": true,
                 "showDescription": true,
-                "description": "Where grounded agents sit."
+                "title": "Grounded Agents by Environment",
+                "description": {
+                  "value": "Where grounded agents sit.",
+                  "fields": []
+                }
               },
+              "version": 3,
               "widgetType": "bar",
               "encodings": {
                 "x": {
+                  "fieldName": "environment_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
                   "fieldName": "measure(Grounded Agents)",
                   "displayName": "Grounded Agents",
                   "scale": {
                     "type": "quantitative"
                   }
                 },
-                "y": {
+                "color": {
                   "fieldName": "environment_name",
-                  "displayName": "Environment",
                   "scale": {
-                    "type": "categorical",
-                    "sort": {
-                      "by": "x-reversed"
-                    },
-                    "displayLimit": 10
+                    "type": "categorical"
                   }
                 }
               },
@@ -8059,14 +7520,14 @@
           },
           "position": {
             "x": 6,
-            "y": 14,
+            "y": 13,
             "width": 6,
             "height": 6
           }
         },
         {
           "widget": {
-            "name": "kb_detail_table",
+            "name": "tbl_per_agent",
             "queries": [
               {
                 "name": "main_query",
@@ -8101,13 +7562,16 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Knowledge Bases per Agent",
                 "showTitle": true,
                 "showDescription": true,
-                "description": "Distinct knowledge bases attached to each grounded agent (134 agents). Click a row to narrow the whole page to that agent ??? its individual knowledge bases appear in the table below."
+                "title": "Knowledge Bases per Agent",
+                "description": {
+                  "value": "Distinct knowledge bases attached to each grounded agent. Click a row to narrow the page to that agent.",
+                  "fields": []
+                }
               },
+              "version": 2,
               "headerStyle": {
                 "foregroundColor": "#E86810",
                 "bold": true
@@ -8151,14 +7615,14 @@
           },
           "position": {
             "x": 0,
-            "y": 20,
+            "y": 19,
             "width": 12,
             "height": 9
           }
         },
         {
           "widget": {
-            "name": "kb_agent_kb_list",
+            "name": "tbl_kb_list",
             "queries": [
               {
                 "name": "main_query",
@@ -8199,13 +7663,16 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Knowledge Bases for Selected Agent",
                 "showTitle": true,
                 "showDescription": true,
-                "description": "Every knowledge base attached to the selected agent (pick one above, or click an agent in the table or charts). Unfiltered, this lists all 493 agent???knowledge-base links."
+                "title": "Knowledge Bases for Selected Agent",
+                "description": {
+                  "value": "Every knowledge base attached to the selected agent. Unfiltered, this lists all agent-knowledge-base links.",
+                  "fields": []
+                }
               },
+              "version": 2,
               "headerStyle": {
                 "foregroundColor": "#E86810",
                 "bold": true
@@ -8253,32 +7720,23 @@
           },
           "position": {
             "x": 0,
-            "y": 29,
+            "y": 28,
             "width": 12,
             "height": 9
           }
         },
         {
           "widget": {
-            "name": "kb_caveats",
+            "name": "caveats",
             "multilineTextboxSpec": {
               "lines": [
-                "**How to read these numbers.** Counts come from the parsed knowledge-source detail on each agent (Copilot Studio Kit), deduped to distinct agent ?? knowledge base ??? 17 agents list the same source more than once in their own configuration, and those repeats are not counted twice. Three limits worth knowing: **(1)** 126 valid Studio agents are flagged as using knowledge but expose no detail ??? they are *unknown*, not zero, and are excluded from the grounded count rather than counted as ungrounded. **(2)** 31 grounded agents are absent from the agent inventory; they are kept and flagged `in_inventory = false`. **(3)** Coverage % is measured against the 369 valid Copilot Studio agents present in the Kit. This is agent *configuration*, not usage ??? it says nothing about how often an agent is actually used. **(4)** The *Select Agent* dropdown keys on agent name; a handful of distinct agents share a name (134 agent IDs across ~108 names), so a shared name shows both agents' knowledge bases together."
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_TOP"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
+                "How to read these numbers. Counts come from the parsed knowledge-source details for each agent in the Copilot Studio Kit. They are deduplicated by agent and knowledge base. Three limits worth knowing: (1) Some valid Studio agents are flagged as using knowledge but do not appear in the parsed data. (2) Agent Builder agents do not expose knowledge sources in the export kit. (3) Public-website sources may be generic (e.g. microsoft.com) and shared status may be inflated."
+              ]
             }
           },
           "position": {
             "x": 0,
-            "y": 38,
+            "y": 37,
             "width": 12,
             "height": 3
           }
@@ -8291,22 +7749,6 @@
       "name": "consumption",
       "displayName": "Consumption",
       "layout": [
-        {
-          "widget": {
-            "name": "header_logo",
-            "multilineTextboxSpec": {
-              "lines": [
-                "[![](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)](https://www.etexgroup.com/globalassets/logo/new-logos/etex-logo---baseline-lockup---positive---rgb-232x38.png?v=498647)"
-              ]
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 2
-          }
-        },
         {
           "widget": {
             "name": "header_title",
@@ -8348,7 +7790,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_bot_usage",
+                  "datasetName": "ds_bot_metrics",
                   "fields": [
                     {
                       "name": "measure(total_conversations)",
@@ -8360,11 +7802,14 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Total Conversations",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Total Conversations",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -8391,7 +7836,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_bot_usage",
+                  "datasetName": "ds_bot_metrics",
                   "fields": [
                     {
                       "name": "measure(total_agents)",
@@ -8403,11 +7848,14 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Total Agents",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Total Agents",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -8434,7 +7882,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_bot_usage",
+                  "datasetName": "ds_bot_metrics",
                   "fields": [
                     {
                       "name": "measure(active_agents_30d)",
@@ -8446,11 +7894,14 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Active Agents (30d)",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Active Agents (30d)",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -8477,7 +7928,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_bot_usage",
+                  "datasetName": "ds_bot_metrics",
                   "fields": [
                     {
                       "name": "measure(pct_active_agents)",
@@ -8489,11 +7940,14 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "% Active Agents",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "% Active Agents",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -8520,7 +7974,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_bot_usage",
+                  "datasetName": "ds_bot_metrics",
                   "fields": [
                     {
                       "name": "measure(total_environments)",
@@ -8532,11 +7986,14 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Total Environments",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Total Environments",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -8563,7 +8020,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_bot_usage",
+                  "datasetName": "ds_bot_metrics",
                   "fields": [
                     {
                       "name": "measure(avg_conversations_per_bot_day)",
@@ -8575,11 +8032,14 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Avg Conversations per Bot-Day",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Avg Conversations per Bot-Day",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -8779,7 +8239,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_bot_usage",
+                  "datasetName": "ds_bot_metrics",
                   "fields": [
                     {
                       "name": "monthly(Usage Month)",
@@ -8795,11 +8255,14 @@
               }
             ],
             "spec": {
-              "version": 3,
               "frame": {
-                "title": "Active Agents per Month",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Active Agents per Month",
+                  "fields": []
+                }
               },
+              "version": 3,
               "widgetType": "line",
               "encodings": {
                 "x": {
@@ -8852,7 +8315,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_bot_usage",
+                  "datasetName": "ds_bot_metrics",
                   "fields": [
                     {
                       "name": "Bot Name",
@@ -8868,11 +8331,14 @@
               }
             ],
             "spec": {
-              "version": 3,
               "frame": {
-                "title": "Top 10 Agents by Conversations",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Top 10 Agents by Conversations",
+                  "fields": []
+                }
               },
+              "version": 3,
               "widgetType": "bar",
               "encodings": {
                 "x": {
@@ -8916,7 +8382,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_bot_usage",
+                  "datasetName": "ds_bot_metrics",
                   "fields": [
                     {
                       "name": "Environment Type",
@@ -8932,11 +8398,14 @@
               }
             ],
             "spec": {
-              "version": 3,
               "frame": {
-                "title": "Production vs Dev/Test vs Default",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Production vs Dev/Test vs Default",
+                  "fields": []
+                }
               },
+              "version": 3,
               "widgetType": "bar",
               "encodings": {
                 "x": {
@@ -8980,7 +8449,7 @@
               {
                 "name": "main_query",
                 "query": {
-                  "datasetName": "ds_bot_usage",
+                  "datasetName": "ds_bot_metrics",
                   "fields": [
                     {
                       "name": "Environment",
@@ -8996,11 +8465,14 @@
               }
             ],
             "spec": {
-              "version": 3,
               "frame": {
-                "title": "Conversations by Environment",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "Conversations by Environment",
+                  "fields": []
+                }
               },
+              "version": 3,
               "widgetType": "bar",
               "encodings": {
                 "x": {
