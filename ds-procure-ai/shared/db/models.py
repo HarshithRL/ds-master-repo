@@ -389,6 +389,94 @@ class KbEdge(Base):
     model_version: Mapped[str | None] = mapped_column(String)
 
 
+class ChatSession(Base):
+    __tablename__ = "chat_session"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    project_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String, nullable=False, default="New chat")
+    created_at: Mapped[str] = mapped_column(String, nullable=False, default=utc_now_iso)
+    updated_at: Mapped[str] = mapped_column(String, nullable=False, default=utc_now_iso)
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_message"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    session_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    created_at: Mapped[str] = mapped_column(String, nullable=False, default=utc_now_iso)
+
+
+class OntologyRequirement(Base):
+    __tablename__ = "ontology_requirement"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    project_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    req_id: Mapped[str] = mapped_column(String, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    category: Mapped[str] = mapped_column(String, nullable=False)
+    target: Mapped[str | None] = mapped_column(Text)
+    mandatory: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    weight: Mapped[float | None] = mapped_column(Float)
+    ontology_version: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class OntologyOffering(Base):
+    __tablename__ = "ontology_offering"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    project_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    vendor_id: Mapped[str] = mapped_column(String, nullable=False)
+    req_id: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="?")
+    value_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    numeric_value: Mapped[float | None] = mapped_column(Float)
+    locator: Mapped[str] = mapped_column(String, nullable=False, default="")
+    quote: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    chunk_id: Mapped[str | None] = mapped_column(String)
+    confidence: Mapped[float | None] = mapped_column(Float)
+
+
+class TcoLine(Base):
+    __tablename__ = "tco_line"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    project_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    vendor_id: Mapped[str] = mapped_column(String, nullable=False)
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    line_type: Mapped[str] = mapped_column(String, nullable=False)
+    amount_eur: Mapped[float | None] = mapped_column(Float)
+    mandays: Mapped[float | None] = mapped_column(Float)
+    rate_eur_per_day: Mapped[float | None] = mapped_column(Float)
+    derived: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    locator: Mapped[str] = mapped_column(String, nullable=False, default="")
+    note: Mapped[str | None] = mapped_column(Text)
+
+
+class OntologyFlag(Base):
+    __tablename__ = "ontology_flag"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    project_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    severity: Mapped[str] = mapped_column(String, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    vendors_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    locator: Mapped[str | None] = mapped_column(String)
+
+
+class Pack(Base):
+    __tablename__ = "pack"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    project_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    kind: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="idle")
+    path: Mapped[str | None] = mapped_column(String)
+    created_at: Mapped[str] = mapped_column(String, nullable=False, default=utc_now_iso)
+
+
 class QualityFlag(Base):
     __tablename__ = "quality_flag"
 

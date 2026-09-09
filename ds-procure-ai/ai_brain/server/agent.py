@@ -63,7 +63,12 @@ async def streaming(request: ResponsesAgentRequest):
     if resume is None and not text:
         raise ValueError("request text is required")
     user_id = user_id_from_request(request)
-    config = graph_config(thread_id, checkpoint_id, user_id=user_id)
+    config = graph_config(
+        thread_id,
+        checkpoint_id,
+        user_id=user_id,
+        project_id=str((procurement or {}).get("project_id") or ""),
+    )
     payload = _graph_input(text, procurement, resume)
     async with runtime.semaphore:
         async for event in iter_response_events(

@@ -10,6 +10,7 @@ from shared.db.repos.projects import ProjectNotFoundError, ProjectValidationErro
 from shared.db.repos.users import get_user
 from shared.logger_global import bind_context, get_logger
 from ai_brain.core.kb.ingest import enqueue_ingest
+from services import chat_sessions
 from services import procurement_chat
 from services.procurement_serializers import (
     dashboard_payload,
@@ -356,6 +357,56 @@ def project_workspace_chat(project_id):
 
 
 @procurement_bp.route(
+    "/api/procurement/projects/<project_id>/workspace/sessions",
+    methods=["GET"],
+)
+def project_chat_sessions(project_id):
+    bind_context(project_id=project_id, workflow="chat.sessions")
+    try:
+        owner_id = require_workspace_id()
+    except AuthRequiredError as exc:
+        return auth_error_response(exc)
+    if project_repo.get_for_owner_or_none(project_id, owner_id) is None:
+        return jsonify({"error": "not_found"}), 404
+    return jsonify({"sessions": chat_sessions.list_sessions(project_id)})
+
+
+@procurement_bp.route(
+    "/api/procurement/projects/<project_id>/workspace/sessions",
+    methods=["POST"],
+)
+def project_chat_session_create(project_id):
+    bind_context(project_id=project_id, workflow="chat.session_create")
+    try:
+        owner_id = require_workspace_id()
+    except AuthRequiredError as exc:
+        return auth_error_response(exc)
+    if project_repo.get_for_owner_or_none(project_id, owner_id) is None:
+        return jsonify({"error": "not_found"}), 404
+    body = request.get_json(silent=True) or {}
+    title = body.get("title") if isinstance(body.get("title"), str) else "New chat"
+    return jsonify(chat_sessions.create_session(project_id, title=title)), 201
+
+
+@procurement_bp.route(
+    "/api/procurement/projects/<project_id>/workspace/sessions/<session_id>",
+    methods=["GET"],
+)
+def project_chat_session_get(project_id, session_id):
+    bind_context(project_id=project_id, workflow="chat.session_get")
+    try:
+        owner_id = require_workspace_id()
+    except AuthRequiredError as exc:
+        return auth_error_response(exc)
+    if project_repo.get_for_owner_or_none(project_id, owner_id) is None:
+        return jsonify({"error": "not_found"}), 404
+    found = chat_sessions.get_session(project_id, session_id)
+    if found is None:
+        return jsonify({"error": "not_found"}), 404
+    return jsonify(found)
+
+
+@procurement_bp.route(
     "/api/procurement/projects/<project_id>/workspace/chat/stream",
     methods=["POST"],
 )
@@ -364,6 +415,7 @@ def project_workspace_chat_stream(project_id):
     body = request.get_json(silent=True) or {}
     message = body.get("message") if isinstance(body.get("message"), str) else ""
     history = body.get("history") if isinstance(body.get("history"), list) else None
+    session_id = body.get("session_id") if isinstance(body.get("session_id"), str) else None
 
     try:
         owner_id = require_workspace_id()
@@ -383,6 +435,7 @@ def project_workspace_chat_stream(project_id):
             owner_id=owner_id,
             message=message,
             history=history,
+            session_id=session_id,
         ):
             yield procurement_chat.sse_format(event)
 

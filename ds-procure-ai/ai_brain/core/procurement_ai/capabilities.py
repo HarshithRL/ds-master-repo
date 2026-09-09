@@ -40,3 +40,28 @@ def capability_from_state(state: dict[str, Any]) -> str:
 def project_id_from_state(state: dict[str, Any]) -> str:
     procurement = state.get("procurement") if isinstance(state.get("procurement"), dict) else {}
     return str(state.get("project_id") or procurement.get("project_id") or "").strip()
+
+
+def capability_from_request(text: str) -> str:
+    """Route only explicit pack asks. A normal question stays on file-search chat."""
+    lowered = " ".join((text or "").lower().split())
+    compare_phrases = (
+        "create comparison",
+        "comparison matrix",
+        "comparison workbook",
+        "bafo comparison",
+        "build comparison",
+        "build the matrix",
+        "vendor comparison matrix",
+    )
+    if any(phrase in lowered for phrase in compare_phrases):
+        return COMPARE_XLSX
+    steerco_phrases = (
+        "build steerco",
+        "steerco deck",
+        "steerco ppt",
+        "steering committee",
+    )
+    if any(phrase in lowered for phrase in steerco_phrases):
+        return STEERCO_PPT
+    return ""

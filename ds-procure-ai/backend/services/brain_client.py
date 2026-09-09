@@ -7,6 +7,8 @@ import os
 from collections.abc import Iterator
 from typing import Any
 
+from ai_brain.core.procurement_ai.capabilities import capability_from_request
+
 import httpx
 
 from shared.logger_global import get_logger
@@ -51,12 +53,23 @@ def brain_request_headers(*, stream: bool = False, user_id: str = "") -> dict[st
     return headers
 
 
-def invoke_body(request_text: str, thread_id: str, *, user_id: str = "") -> dict[str, Any]:
+def invoke_body(
+    request_text: str,
+    thread_id: str,
+    *,
+    project_id: str = "",
+    user_id: str = "",
+) -> dict[str, Any]:
+    pid = (project_id or thread_id or "").strip()
+    procurement = workspace_procurement(pid)
+    capability = capability_from_request(request_text)
+    if capability:
+        procurement["capability"] = capability
     return {
         "request": request_text,
-        "procurement": workspace_procurement(thread_id),
+        "procurement": procurement,
         "thread_id": thread_id,
-        "project_id": thread_id,
+        "project_id": pid,
     }
 
 
@@ -64,12 +77,19 @@ def invocations_body(
     request_text: str,
     thread_id: str,
     *,
+    project_id: str = "",
     user_id: str = "",
 ) -> dict[str, Any]:
+    pid = (project_id or thread_id or "").strip()
+    procurement = workspace_procurement(pid)
+    capability = capability_from_request(request_text)
+    if capability:
+        procurement["capability"] = capability
     custom: dict[str, Any] = {
         "request": request_text,
-        "procurement": workspace_procurement(thread_id),
+        "procurement": procurement,
         "thread_id": thread_id,
+        "project_id": pid,
     }
     uid = (user_id or "").strip()
     if uid:
@@ -81,12 +101,18 @@ def invocations_body(
     }
 
 
-def post_invoke(request_text: str, thread_id: str, *, user_id: str = "") -> dict[str, Any]:
+def post_invoke(
+    request_text: str,
+    thread_id: str,
+    *,
+    project_id: str = "",
+    user_id: str = "",
+) -> dict[str, Any]:
     url = f"{brain_base_url()}/invoke"
     with httpx.Client(timeout=_timeout()) as client:
         response = client.post(
             url,
-            json=invoke_body(request_text, thread_id),
+            json=invoke_body(request_text, thread_id, project_id=project_id),
             headers=brain_request_headers(user_id=user_id),
         )
         response.raise_for_status()
@@ -172,6 +198,7 @@ def iter_invocations_sse(
     request_text: str,
     thread_id: str,
     *,
+    project_id: str = "",
     user_id: str = "",
 ) -> Iterator[dict[str, Any]]:
     url = f"{brain_base_url()}/invocations"
@@ -179,7 +206,9 @@ def iter_invocations_sse(
         with client.stream(
             "POST",
             url,
-            json=invocations_body(request_text, thread_id, user_id=user_id),
+            json=invocations_body(
+                request_text, thread_id, project_id=project_id, user_id=user_id
+            ),
             headers=brain_request_headers(stream=True, user_id=user_id),
         ) as response:
             response.raise_for_status()

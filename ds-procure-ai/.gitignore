@@ -8,6 +8,7 @@ frontend/node_modules/
 # without an npm build step. Rebuild with `npm run build` in frontend/.
 __pycache__/
 *.pyc
+*.log
 logs/
 backend/logs/
 mlartifacts/

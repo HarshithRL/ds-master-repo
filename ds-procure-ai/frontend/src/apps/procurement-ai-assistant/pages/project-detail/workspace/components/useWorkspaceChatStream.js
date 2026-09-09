@@ -82,11 +82,13 @@ function isAbortError(err) {
 
 export function useWorkspaceChatStream({
   projectId,
+  sessionId = "",
   messages,
   pendingMessage = "",
   onPendingConsumed,
   onMessagesChange,
   onFileProgress,
+  onSession,
 }) {
   const [ui, dispatch] = useReducer(chatUiReducer, initialUi);
   const abortRef = useRef(null);
@@ -109,7 +111,7 @@ export function useWorkspaceChatStream({
       generationRef.current += 1;
       abortRef.current?.abort();
     };
-  }, [projectId]);
+  }, [projectId, sessionId]);
 
   useEffect(() => {
     if (ui.status !== "sending") {
@@ -119,7 +121,7 @@ export function useWorkspaceChatStream({
   }, [ui.streamText, ui.thoughts, ui.status]);
 
   async function sendMessage(text, { skipAppend = false } = {}) {
-    if (!text || !projectId) {
+    if (!text || !projectId || !sessionId) {
       return;
     }
 
@@ -151,6 +153,7 @@ export function useWorkspaceChatStream({
         {
           message: text,
           history: apiHistory,
+          session_id: sessionId,
           procurement: {
             ...WORKSPACE_PROCUREMENT,
             project_id: projectId,
@@ -160,7 +163,12 @@ export function useWorkspaceChatStream({
           if (generation !== generationRef.current) {
             return;
           }
-          if (evt.type === "token" && evt.text) {
+          if (evt.type === "session" && evt.session_id) {
+            onSession?.({
+              id: evt.session_id,
+              title: evt.title || "New chat",
+            });
+          } else if (evt.type === "token" && evt.text) {
             assembled += evt.text;
             dispatch({ type: "token", text: assembled });
           } else if (evt.type === "thought" || evt.type === "context") {
@@ -242,13 +250,13 @@ export function useWorkspaceChatStream({
       lastPendingSentRef.current = "";
       return;
     }
-    if (!projectId || text === lastPendingSentRef.current) {
+    if (!projectId || !sessionId || text === lastPendingSentRef.current) {
       return;
     }
     lastPendingSentRef.current = text;
     onPendingConsumed?.();
     void sendRef.current?.(text, { skipAppend: true });
-  }, [pendingMessage, projectId, onPendingConsumed]);
+  }, [pendingMessage, projectId, sessionId, onPendingConsumed]);
 
   return { ui, dispatch, sendMessage, bottomRef };
 }

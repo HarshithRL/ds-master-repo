@@ -67,11 +67,23 @@ async def compare_xlsx(
                 thread_id=thread_id or None,
             )
         raise
+    href = result.get("href") or ""
+    status = result.get("status") or "blocked"
+    if href:
+        reply = (
+            "Comparison workbook is ready. "
+            "Rows that do not apply to this process type are N/A. "
+            "Unevidenced cells are ?. Scorecard is left for the Etex team. "
+            f"Download: {href}"
+        )
+    else:
+        reply = f"Comparison workbook was not written ({status})."
     return {
         "procurement": {
-            "compare_xlsx": result.get("status"),
-            "xlsx_status": result.get("status"),
-            "xlsx_href": result.get("href") or "",
+            "compare_xlsx": status,
+            "xlsx_status": status,
+            "xlsx_href": href,
             "evidence_used": bool(result.get("evidence_used")),
+            "assistant_reply": reply,
         }
     }

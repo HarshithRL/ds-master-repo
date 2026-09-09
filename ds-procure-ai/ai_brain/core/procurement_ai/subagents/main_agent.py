@@ -178,17 +178,11 @@ def get_procura_main_agent():
     from langchain.agents import create_agent
 
     from ai_brain.core.config import get_llm
-    from ai_brain.core.kb.mcp_tools import langchain_kb_tools
     from ai_brain.core.procurement_ai.file_ingest import ingest_chat_tools
 
-    kb_tools = [
-        tool
-        for tool in langchain_kb_tools()
-        if getattr(tool, "__name__", "") not in {"list_files", "search_docs", "read_chunk"}
-    ]
     return create_agent(
         model=get_llm(),
-        tools=[*ingest_chat_tools(), *kb_tools],
+        tools=ingest_chat_tools(),
         middleware=[procura_kb_prompt],
         context_schema=ProcuraContext,
     )

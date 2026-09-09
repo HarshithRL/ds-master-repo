@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 
-import { apiGet } from "../../../../../services/api";
+import { apiGet, apiPost } from "../../../../../services/api";
 import {
   markIntakePendingSent,
   readIntakeSeed,
@@ -51,11 +51,17 @@ function seedFromLocation(projectId, locationState) {
   return null;
 }
 
+function sessionStorageKey(projectId) {
+  return `nexus-chat-session:${projectId}`;
+}
+
 function WorkspaceTab({ projectId, onProjectUpdated }) {
   const location = useLocation();
   const fileInputRef = useRef(null);
   const [data, setData] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [sessionId, setSessionId] = useState("");
   const [pendingMessage, setPendingMessage] = useState("");
   const [error, setError] = useState(null);
   const [fileTick, setFileTick] = useState(0);
@@ -85,30 +91,104 @@ function WorkspaceTab({ projectId, onProjectUpdated }) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     setData(null);
     setMessages([]);
+    setSessions([]);
+    setSessionId("");
     setPendingMessage("");
     setError(null);
     setUploadUi({ uploading: false, error: null, status: null });
     setInsights(null);
-    apiGet(`/api/procurement/projects/${projectId}/workspace`)
-      .then((payload) => {
-        setData(payload);
-        const seed = seedFromLocation(projectId, location.state);
-        if (seed) {
-          setMessages(
-            seed.messages.map((msg) => ({
-              role: msg.role,
-              text: msg.text,
-            })),
-          );
-          setPendingMessage(seed.pendingMessage || "");
-        } else {
-          setMessages(payload.chatMessages ?? []);
-        }
-      })
-      .catch(() => setError("Unable to load workspace."));
+
+    async function load() {
+      const payload = await apiGet(`/api/procurement/projects/${projectId}/workspace`);
+      if (cancelled) {
+        return;
+      }
+      setData(payload);
+      const seed = seedFromLocation(projectId, location.state);
+      let rows = [];
+      try {
+        const listed = await apiGet(
+          `/api/procurement/projects/${projectId}/workspace/sessions`,
+        );
+        rows = listed.sessions ?? [];
+      } catch {
+        rows = [];
+      }
+      if (!rows.length) {
+        const created = await apiPost(
+          `/api/procurement/projects/${projectId}/workspace/sessions`,
+          {},
+        );
+        rows = [created];
+      }
+      if (cancelled) {
+        return;
+      }
+      setSessions(rows);
+      const stored = sessionStorage.getItem(sessionStorageKey(projectId));
+      const current = rows.find((row) => row.id === stored) || rows[0];
+      setSessionId(current.id);
+      sessionStorage.setItem(sessionStorageKey(projectId), current.id);
+      if (seed) {
+        setMessages(
+          seed.messages.map((msg) => ({
+            role: msg.role,
+            text: msg.text,
+          })),
+        );
+        setPendingMessage(seed.pendingMessage || "");
+        return;
+      }
+      const detail = await apiGet(
+        `/api/procurement/projects/${projectId}/workspace/sessions/${current.id}`,
+      );
+      if (cancelled) {
+        return;
+      }
+      setMessages(detail.messages ?? []);
+    }
+
+    load().catch(() => {
+      if (!cancelled) {
+        setError("Unable to load workspace.");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, location.state]);
+
+  async function refreshSessions() {
+    const listed = await apiGet(
+      `/api/procurement/projects/${projectId}/workspace/sessions`,
+    );
+    setSessions(listed.sessions ?? []);
+  }
+
+  async function startNewChat() {
+    const created = await apiPost(
+      `/api/procurement/projects/${projectId}/workspace/sessions`,
+      {},
+    );
+    setSessions((prev) => [created, ...prev.filter((item) => item.id !== created.id)]);
+    setSessionId(created.id);
+    sessionStorage.setItem(sessionStorageKey(projectId), created.id);
+    setMessages([]);
+    setPendingMessage("");
+  }
+
+  async function openSession(session) {
+    const detail = await apiGet(
+      `/api/procurement/projects/${projectId}/workspace/sessions/${session.id}`,
+    );
+    setSessionId(detail.id);
+    sessionStorage.setItem(sessionStorageKey(projectId), detail.id);
+    setMessages(detail.messages ?? []);
+    setPendingMessage("");
+  }
 
   function consumePending() {
     setPendingMessage("");
@@ -207,11 +287,18 @@ function WorkspaceTab({ projectId, onProjectUpdated }) {
       />
       <ChatPanel
         projectId={projectId}
+        sessionId={sessionId}
+        sessions={sessions}
         messages={messages}
         userInitial={data.userInitial}
         pendingMessage={pendingMessage}
         onPendingConsumed={consumePending}
-        onMessagesChange={setMessages}
+        onMessagesChange={(next) => {
+          setMessages(next);
+          refreshSessions().catch(() => {});
+        }}
+        onNewChat={startNewChat}
+        onOpenSession={openSession}
         onProjectUpdated={onProjectUpdated}
         onAddFile={openFilePicker}
         uploading={uploadUi.uploading}

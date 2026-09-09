@@ -1055,3 +1055,225 @@
 .ws-file-status.is-queued {
   color: var(--text-muted);
 }
+
+.ws-chat-ai-body .ws-md strong {
+  display: inline;
+  margin: 0;
+  color: inherit;
+  font-size: inherit;
+  font-weight: 650;
+}
+
+.ws-md-table {
+  margin: 0 0 0.9em;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.ws-md-table table {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.ws-md-table th,
+.ws-md-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ws-md-table th {
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 650;
+}
+
+.ws-md-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.ws-md h1,
+.ws-md h2 {
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid var(--border);
+}
+
+
+.ws-center-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 20px);
+  margin: 10px 10px 0;
+}
+
+.ws-center-head .ws-center-tabs {
+  flex: 1;
+  width: auto;
+  margin: 0;
+}
+
+.ws-new-chat {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ws-history {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
+  padding: 12px;
+}
+
+.ws-history-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ws-history-item.active {
+  border-color: #ff6900;
+}
+
+.ws-history-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ws-history-time {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.ws-chat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 12px 8px;
+}
+.ws-chat-chip {
+  border: 1px solid #d0d5dd;
+  background: #fff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ws-chat-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ws-chat-composer-wrap {
+  position: relative;
+}
+.ws-skill-menu {
+  position: absolute;
+  left: 0;
+  right: 72px;
+  bottom: calc(100% + 6px);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+.ws-skill-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.ws-skill-item:hover {
+  background: rgba(255, 105, 0, 0.12);
+}
+.ws-skill-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.ws-skill-hint {
+  font-size: 11px;
+  color: var(--text-muted, #9aa0a6);
+}
+.ws-skill-empty {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-muted, #9aa0a6);
+}
+.ws-skill-token {
+  border: 1px solid rgba(255, 105, 0, 0.45);
+  background: rgba(255, 105, 0, 0.12);
+  color: #ff8a3d;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ws-chat-dock {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 10px 18px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.ws-chat-composer-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.ws-pack-card {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 105, 0, 0.45);
+  border-radius: 8px;
+  background: rgba(255, 105, 0, 0.12);
+  color: #ff8a3d;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.ws-pack-card:hover {
+  background: rgba(255, 105, 0, 0.2);
+}

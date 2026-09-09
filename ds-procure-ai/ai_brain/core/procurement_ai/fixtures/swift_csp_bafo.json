@@ -1,0 +1,491 @@
+{
+  "process_type": "indirect_it_services",
+  "ontology_version": "1.0.0",
+  "currency": "EUR",
+  "internal_day_rate": 800.0,
+  "requirements": [
+    {
+      "id": "R01",
+      "text": "RFP requirement slot 01. Filled from the uploaded RFP, not from this catalog.",
+      "category": "scope",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R02",
+      "text": "RFP requirement slot 02. Filled from the uploaded RFP, not from this catalog.",
+      "category": "timeline",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R03",
+      "text": "RFP requirement slot 03. Filled from the uploaded RFP, not from this catalog.",
+      "category": "commercial",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R04",
+      "text": "RFP requirement slot 04. Filled from the uploaded RFP, not from this catalog.",
+      "category": "legal",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R05",
+      "text": "RFP requirement slot 05. Filled from the uploaded RFP, not from this catalog.",
+      "category": "deliverable",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R06",
+      "text": "RFP requirement slot 06. Filled from the uploaded RFP, not from this catalog.",
+      "category": "commercial_tco",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R07",
+      "text": "RFP requirement slot 07. Filled from the uploaded RFP, not from this catalog.",
+      "category": "risk",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R08",
+      "text": "RFP requirement slot 08. Filled from the uploaded RFP, not from this catalog.",
+      "category": "scope",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R09",
+      "text": "RFP requirement slot 09. Filled from the uploaded RFP, not from this catalog.",
+      "category": "timeline",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R10",
+      "text": "RFP requirement slot 10. Filled from the uploaded RFP, not from this catalog.",
+      "category": "commercial",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R11",
+      "text": "RFP requirement slot 11. Filled from the uploaded RFP, not from this catalog.",
+      "category": "legal",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R12",
+      "text": "RFP requirement slot 12. Filled from the uploaded RFP, not from this catalog.",
+      "category": "deliverable",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R13",
+      "text": "RFP requirement slot 13. Filled from the uploaded RFP, not from this catalog.",
+      "category": "commercial_tco",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R14",
+      "text": "RFP requirement slot 14. Filled from the uploaded RFP, not from this catalog.",
+      "category": "risk",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R15",
+      "text": "RFP requirement slot 15. Filled from the uploaded RFP, not from this catalog.",
+      "category": "scope",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R16",
+      "text": "RFP requirement slot 16. Filled from the uploaded RFP, not from this catalog.",
+      "category": "timeline",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R17",
+      "text": "RFP requirement slot 17. Filled from the uploaded RFP, not from this catalog.",
+      "category": "commercial",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R18",
+      "text": "RFP requirement slot 18. Filled from the uploaded RFP, not from this catalog.",
+      "category": "legal",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R19",
+      "text": "RFP requirement slot 19. Filled from the uploaded RFP, not from this catalog.",
+      "category": "deliverable",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R20",
+      "text": "RFP requirement slot 20. Filled from the uploaded RFP, not from this catalog.",
+      "category": "commercial_tco",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R21",
+      "text": "RFP requirement slot 21. Filled from the uploaded RFP, not from this catalog.",
+      "category": "risk",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R22",
+      "text": "RFP requirement slot 22. Filled from the uploaded RFP, not from this catalog.",
+      "category": "scope",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R23",
+      "text": "RFP requirement slot 23. Filled from the uploaded RFP, not from this catalog.",
+      "category": "timeline",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R24",
+      "text": "RFP requirement slot 24. Filled from the uploaded RFP, not from this catalog.",
+      "category": "commercial",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R25",
+      "text": "RFP requirement slot 25. Filled from the uploaded RFP, not from this catalog.",
+      "category": "legal",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R26",
+      "text": "RFP requirement slot 26. Filled from the uploaded RFP, not from this catalog.",
+      "category": "deliverable",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R27",
+      "text": "RFP requirement slot 27. Filled from the uploaded RFP, not from this catalog.",
+      "category": "commercial_tco",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R28",
+      "text": "RFP requirement slot 28. Filled from the uploaded RFP, not from this catalog.",
+      "category": "risk",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R29",
+      "text": "RFP requirement slot 29. Filled from the uploaded RFP, not from this catalog.",
+      "category": "scope",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R30",
+      "text": "RFP requirement slot 30. Filled from the uploaded RFP, not from this catalog.",
+      "category": "timeline",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R31",
+      "text": "RFP requirement slot 31. Filled from the uploaded RFP, not from this catalog.",
+      "category": "commercial",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R32",
+      "text": "RFP requirement slot 32. Filled from the uploaded RFP, not from this catalog.",
+      "category": "legal",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R33",
+      "text": "RFP requirement slot 33. Filled from the uploaded RFP, not from this catalog.",
+      "category": "deliverable",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R34",
+      "text": "RFP requirement slot 34. Filled from the uploaded RFP, not from this catalog.",
+      "category": "commercial_tco",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R35",
+      "text": "RFP requirement slot 35. Filled from the uploaded RFP, not from this catalog.",
+      "category": "risk",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R36",
+      "text": "RFP requirement slot 36. Filled from the uploaded RFP, not from this catalog.",
+      "category": "scope",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R37",
+      "text": "RFP requirement slot 37. Filled from the uploaded RFP, not from this catalog.",
+      "category": "timeline",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R38",
+      "text": "RFP requirement slot 38. Filled from the uploaded RFP, not from this catalog.",
+      "category": "commercial",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R39",
+      "text": "RFP requirement slot 39. Filled from the uploaded RFP, not from this catalog.",
+      "category": "legal",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    },
+    {
+      "id": "R40",
+      "text": "RFP requirement slot 40. Filled from the uploaded RFP, not from this catalog.",
+      "category": "deliverable",
+      "target": null,
+      "mandatory": true,
+      "weight": null
+    }
+  ],
+  "vendors": [
+    {
+      "vendor_id": "pwc",
+      "legal_name": "PwC",
+      "blended_rate": null,
+      "vendor_mandays": null,
+      "etex_mandays": null,
+      "timeline": null,
+      "ecovadis": null,
+      "creditsafe": null,
+      "delivery_model": null,
+      "assumptions": null,
+      "legal_terms": null,
+      "etex_obligations": null,
+      "risk_plan": null,
+      "scope_completeness": null,
+      "missing_requirements": null,
+      "locators": {
+        "ecovadis": "PwC/ecovadis",
+        "creditsafe": "PwC/creditsafe"
+      }
+    },
+    {
+      "vendor_id": "ey",
+      "legal_name": "EY",
+      "blended_rate": null,
+      "vendor_mandays": null,
+      "etex_mandays": null,
+      "timeline": null,
+      "ecovadis": null,
+      "creditsafe": null,
+      "delivery_model": null,
+      "assumptions": null,
+      "legal_terms": null,
+      "etex_obligations": null,
+      "risk_plan": null,
+      "scope_completeness": null,
+      "missing_requirements": null,
+      "locators": {
+        "ecovadis": "EY/ecovadis",
+        "creditsafe": "EY/creditsafe"
+      }
+    },
+    {
+      "vendor_id": "bdo",
+      "legal_name": "BDO",
+      "blended_rate": null,
+      "vendor_mandays": null,
+      "etex_mandays": null,
+      "timeline": null,
+      "ecovadis": null,
+      "creditsafe": null,
+      "delivery_model": null,
+      "assumptions": null,
+      "legal_terms": null,
+      "etex_obligations": null,
+      "risk_plan": null,
+      "scope_completeness": null,
+      "missing_requirements": null,
+      "locators": {
+        "ecovadis": "BDO/ecovadis",
+        "creditsafe": "BDO/creditsafe"
+      }
+    },
+    {
+      "vendor_id": "trifinance",
+      "legal_name": "TriFinance",
+      "blended_rate": null,
+      "vendor_mandays": null,
+      "etex_mandays": null,
+      "timeline": null,
+      "ecovadis": null,
+      "creditsafe": null,
+      "delivery_model": null,
+      "assumptions": null,
+      "legal_terms": null,
+      "etex_obligations": null,
+      "risk_plan": null,
+      "scope_completeness": null,
+      "missing_requirements": null,
+      "locators": {
+        "ecovadis": "TriFinance/ecovadis",
+        "creditsafe": "TriFinance/creditsafe"
+      }
+    },
+    {
+      "vendor_id": "kpmg",
+      "legal_name": "KPMG",
+      "blended_rate": null,
+      "vendor_mandays": null,
+      "etex_mandays": null,
+      "timeline": null,
+      "ecovadis": null,
+      "creditsafe": null,
+      "delivery_model": null,
+      "assumptions": null,
+      "legal_terms": null,
+      "etex_obligations": null,
+      "risk_plan": null,
+      "scope_completeness": null,
+      "missing_requirements": null,
+      "locators": {
+        "ecovadis": "KPMG/ecovadis",
+        "creditsafe": "KPMG/creditsafe"
+      }
+    }
+  ],
+  "offerings": [],
+  "tco": [],
+  "key_flags": [],
+  "sources": [
+    {
+      "vendor_id": "pwc",
+      "files": [],
+      "method_note": null
+    },
+    {
+      "vendor_id": "ey",
+      "files": [],
+      "method_note": null
+    },
+    {
+      "vendor_id": "bdo",
+      "files": [],
+      "method_note": null
+    },
+    {
+      "vendor_id": "trifinance",
+      "files": [],
+      "method_note": null
+    },
+    {
+      "vendor_id": "kpmg",
+      "files": [],
+      "method_note": null
+    }
+  ],
+  "bafo_rows": [
+    "Solution costs (Software, Materials) ? Recurring ? Y1 / Y2 / Y3",
+    "Service / Implementation Costs ? One off ? Y1 / Y2 / Y3",
+    "Etex Mandays @ 800 EUR/day ? Y1 / Y2 / Y3",
+    "Total TCO year 1 / 2 / 3",
+    "Total TCO horizon (2y / 3y / 5y as quoted)",
+    "Score Card score ? placeholder To be scored by Etex evaluation team",
+    "Indexation",
+    "Indicative blended rate",
+    "Vendor mandays",
+    "Etex mandays",
+    "Planning / timeline",
+    "EcoVadis (own field)",
+    "CreditScore (own field ? never EcoVadis text)",
+    "Architecture Assessment ? human scored",
+    "Security Assessment ? human scored",
+    "Delivery Model",
+    "Assumptions",
+    "Legal terms & compliance",
+    "Obligations for Etex",
+    "Risk plan",
+    "Scope completeness against requirements",
+    "Missing requirement list"
+  ],
+  "weights_locked": false,
+  "scorecard_owner": "Etex evaluation team"
+}

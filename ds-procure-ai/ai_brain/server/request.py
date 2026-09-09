@@ -45,6 +45,7 @@ def graph_config(
     thread_id: str,
     checkpoint_id: str | None = None,
     user_id: str | None = None,
+    project_id: str | None = None,
 ) -> dict[str, Any]:
     from ai_brain.server.tracing import langchain_callbacks
 
@@ -53,12 +54,17 @@ def graph_config(
         configurable["checkpoint_id"] = checkpoint_id
     if user_id:
         configurable["user_id"] = user_id
+    pid = (project_id or "").strip()
+    if pid:
+        configurable["project_id"] = pid
     metadata: dict[str, Any] = {
         "thread_id": thread_id,
         "mlflow.trace.session": thread_id,
     }
     if user_id:
         metadata["user_id"] = user_id
+    if pid:
+        metadata["project_id"] = pid
     return {
         "configurable": configurable,
         "metadata": metadata,

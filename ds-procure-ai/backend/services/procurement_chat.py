@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from services import brain_client
+from services import chat_sessions
 from services import procurement_serializers as serializers
 from shared.db.repos import projects as project_repo
 from shared.logger_global import bind_context, get_logger
@@ -105,6 +106,15 @@ def map_brain_event(
     kind = str(custom.get("kind") or "")
     node = str(custom.get("node") or "")
 
+    if kind == "tool":
+        yield {
+            "type": "thought",
+            "kind": "step",
+            "label": str(custom.get("name") or "tool"),
+            "detail": "",
+        }
+        return
+
     if kind == "file_progress":
         yield {
             "type": "file_progress",
@@ -162,7 +172,9 @@ def map_brain_event(
 
     if text:
         acc.answer = text
-    done_text = acc.answer.strip() or "I could not generate a reply. Please try again."
+    done_text = acc.answer.strip()
+    if not done_text or "(no matching chunks)" in done_text or done_text.startswith("(no "):
+        done_text = "I could not find that in the uploaded files."
     payload: dict[str, Any] = {
         "type": "done",
         "role": "ai",
@@ -229,9 +241,19 @@ def _prepare(
 def _reply_from_invoke(body: dict[str, Any]) -> str:
     procurement = body.get("procurement") if isinstance(body, dict) else None
     if isinstance(procurement, dict):
+        reply = str(procurement.get("assistant_reply") or "").strip()
+        if reply:
+            return reply
         text = str(procurement.get("main_agent") or procurement.get("deep_agent") or "")
         if text.strip():
             return text.strip()
+        href = str(procurement.get("xlsx_href") or "").strip()
+        if href:
+            return (
+                "Comparison workbook is ready. "
+                "Rows that do not apply are N/A. Unevidenced cells are ?. "
+                f"Download: {href}"
+            )
     return "I could not generate a reply. Please try again."
 
 
@@ -240,6 +262,7 @@ def run_workspace_chat(
     owner_id: str,
     message: str,
     history: list | None = None,
+    session_id: str | None = None,
 ) -> dict | None:
     """Invoke ai_brain /invoke. Returns AI reply or None if the project is missing."""
     del history
@@ -250,11 +273,18 @@ def run_workspace_chat(
     if prepared is None:
         return None
     _project, user_text = prepared
+    session = chat_sessions.ensure_session(project_id, session_id)
+    if session is None:
+        return None
+    chat_sessions.append_message(project_id, session["id"], "user", user_text)
 
     started = time.perf_counter()
     try:
         body = brain_client.post_invoke(
-            user_text, thread_id=project_id, user_id=owner_id
+            user_text,
+            thread_id=session["id"],
+            project_id=project_id,
+            user_id=owner_id,
         )
     except Exception:
         bind_context(workflow="chat.error")
@@ -268,7 +298,8 @@ def run_workspace_chat(
         len(text),
         round((time.perf_counter() - started) * 1000, 2),
     )
-    return {"role": "ai", "text": text}
+    chat_sessions.append_message(project_id, session["id"], "ai", text)
+    return {"role": "ai", "text": text, "session_id": session["id"]}
 
 
 def iter_workspace_chat_events(
@@ -276,6 +307,7 @@ def iter_workspace_chat_events(
     owner_id: str,
     message: str,
     history: list | None = None,
+    session_id: str | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Yield SSE events from ai_brain /invocations: thought → token → done/error."""
     del history
@@ -296,17 +328,34 @@ def iter_workspace_chat_events(
         return
 
     _project, user_text = prepared
+    session = chat_sessions.ensure_session(project_id, session_id)
+    if session is None:
+        bind_context(workflow="chat.error")
+        yield {"type": "error", "detail": "session_not_found"}
+        return
+    yield {
+        "type": "session",
+        "session_id": session["id"],
+        "title": session["title"],
+    }
+    chat_sessions.append_message(project_id, session["id"], "user", user_text)
     acc = StreamAcc()
     started = time.perf_counter()
     emitted_done = False
+    final_text = ""
 
     try:
         for event in brain_client.iter_invocations_sse(
-            user_text, thread_id=project_id, user_id=owner_id
+            user_text,
+            thread_id=session["id"],
+            project_id=project_id,
+            user_id=owner_id,
         ):
             for mapped in map_brain_event(event, acc):
                 if mapped.get("type") in _TERMINAL_TYPES:
                     emitted_done = True
+                if mapped.get("type") == "done":
+                    final_text = str(mapped.get("text") or "").strip()
                 yield mapped
     except Exception as exc:  # noqa: BLE001
         bind_context(workflow="chat.error")
@@ -319,10 +368,14 @@ def iter_workspace_chat_events(
 
     if not emitted_done:
         done_text = acc.answer.strip() or "I could not generate a reply. Please try again."
+        final_text = done_text
         payload: dict[str, Any] = {"type": "done", "role": "ai", "text": done_text}
         if acc.thoughts:
             payload["thoughts"] = list(acc.thoughts)
         yield payload
+
+    if final_text:
+        chat_sessions.append_message(project_id, session["id"], "ai", final_text)
 
     bind_context(workflow="chat.done")
     log.info(

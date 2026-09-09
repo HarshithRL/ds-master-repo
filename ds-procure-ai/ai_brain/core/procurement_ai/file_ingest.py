@@ -146,23 +146,54 @@ def index_docs(state: dict[str, Any]) -> dict[str, Any]:
     return {"procurement": {"index_ready": True, "chunk_count": len(chunks)}}
 
 
+_SEARCH_STOP = frozenset({
+    "a", "an", "the", "and", "or", "of", "to", "for", "in", "on", "at", "by",
+    "with", "from", "this", "that", "these", "those", "it", "its", "is", "are",
+    "was", "be", "do", "does", "did", "can", "you", "me", "we", "please",
+    "what", "why", "how", "about", "tell", "show", "explain", "again",
+    "project", "file", "files", "document", "documents",
+})
+
+
+def _search_terms(query: str) -> list[str]:
+    words = []
+    for raw in (query or "").lower().replace("/", " ").split():
+        word = "".join(ch for ch in raw if ch.isalnum())
+        if len(word) < 3 or word in _SEARCH_STOP:
+            continue
+        if word not in words:
+            words.append(word)
+    return words
+
+
+def _card(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "chunk_id": row.get("chunk_id"),
+        "file_id": row.get("file_id"),
+        "filename": row.get("filename"),
+        "header": row.get("header"),
+        "text": row.get("text"),
+    }
+
+
 def search_docs(project_id: str, query: str, file_id: str | None = None, limit: int = 6) -> list[dict[str, Any]]:
-    needle = (query or "").strip().lower()
     rows = list(_CHUNK_STORE.get(project_id) or [])
     if file_id:
         rows = [row for row in rows if row.get("file_id") == file_id]
-    if needle:
-        rows = [row for row in rows if needle in (row.get("text") or "").lower() or needle in (row.get("header") or "").lower()]
-    return [
-        {
-            "chunk_id": row.get("chunk_id"),
-            "file_id": row.get("file_id"),
-            "filename": row.get("filename"),
-            "header": row.get("header"),
-            "text": row.get("text"),
-        }
-        for row in rows[:limit]
-    ]
+    terms = _search_terms(query)
+    if not terms:
+        return [_card(row) for row in rows[:limit]]
+    scored: list[tuple[int, dict[str, Any]]] = []
+    for row in rows:
+        hay = f"{row.get('header') or ''} {row.get('text') or ''}".lower()
+        hits = sum(1 for term in terms if term in hay)
+        if hits:
+            scored.append((hits, row))
+    scored.sort(key=lambda item: item[0], reverse=True)
+    picked = [row for _, row in scored[:limit]]
+    if not picked:
+        return []
+    return [_card(row) for row in picked]
 
 
 def _analyze_markdown(file_card: dict[str, Any]) -> str:
@@ -382,7 +413,7 @@ def chat_search_docs(query: str, file_id: str = "") -> str:
     _ensure_chunks(pid)
     hits = search_docs(pid, query, file_id or None)
     if not hits:
-        return "(no matching chunks)"
+        return "no hits"
     return json.dumps(hits, ensure_ascii=False)
 
 

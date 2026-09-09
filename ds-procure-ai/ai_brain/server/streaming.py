@@ -33,6 +33,62 @@ def _as_v2(chunk: Any) -> tuple[str, tuple, Any] | None:
     return None
 
 
+
+_TOOL_ROLES = frozenset({"tool", "toolmessage"})
+_MISS = "I could not find that in the uploaded files."
+_TOOL_LEAKS = (
+    "(no matching chunks)",
+    "(no hits)",
+    "(no files)",
+    "(no project_id)",
+    "(missing chunk)",
+)
+
+
+def _message_role(msg: Any) -> str:
+    if isinstance(msg, dict):
+        return str(msg.get("type") or msg.get("role") or "").lower()
+    return str(getattr(msg, "type", None) or getattr(msg, "role", None) or "").lower()
+
+
+def _tool_name(msg: Any) -> str:
+    if isinstance(msg, dict):
+        return str(msg.get("name") or msg.get("tool") or "tool")
+    return str(getattr(msg, "name", None) or "tool")
+
+
+def _is_tool_message(msg: Any) -> bool:
+    if getattr(msg, "tool_call_id", None):
+        return True
+    if isinstance(msg, dict) and msg.get("tool_call_id"):
+        return True
+    return _message_role(msg) in _TOOL_ROLES
+
+
+def _has_tool_calls(msg: Any) -> bool:
+    calls = None
+    if isinstance(msg, dict):
+        calls = msg.get("tool_calls") or msg.get("tool_call_chunks")
+    else:
+        calls = getattr(msg, "tool_calls", None) or getattr(msg, "tool_call_chunks", None)
+    return bool(calls)
+
+
+def _answer_text(text: str) -> str:
+    """Keep token whitespace. Strip only a finished tool leak, not each delta."""
+    if text is None:
+        return ""
+    value = str(text)
+    stripped = value.strip()
+    if not stripped:
+        return value
+    if any(leak in stripped for leak in _TOOL_LEAKS):
+        return ""
+    if stripped.startswith("/project/") or stripped.startswith("[{"):
+        return ""
+    return value
+
+
 def _message_payload(data: Any) -> tuple[Any, dict[str, Any]]:
     if isinstance(data, tuple) and len(data) == 2:
         meta = data[1] if isinstance(data[1], dict) else {}
@@ -196,7 +252,19 @@ async def iter_response_events(
 
                 msg, meta = _message_payload(data)
                 node = str(meta.get("langgraph_node") or "model")
+                if _is_tool_message(msg) or _has_tool_calls(msg):
+                    yield ResponsesAgentStreamEvent(
+                        **create_text_delta(delta="", item_id=f"tool_{uuid.uuid4().hex[:12]}"),
+                        custom_outputs={
+                            "kind": "tool",
+                            "node": node,
+                            "name": _tool_name(msg),
+                            "ns": list(ns),
+                        },
+                    )
+                    continue
                 answer, thought = split_message_kinds(msg)
+                answer = _answer_text(answer)
                 if thought:
                     thought_key = _item_key(ns, f"{node}:thought")
                     thought_id = item_ids.setdefault(
@@ -261,10 +329,13 @@ async def iter_response_events(
             for item_id, text in assembled.items():
                 if item_id in done_ids:
                     continue
+                clean = _answer_text(text).strip()
+                if not clean:
+                    continue
                 done_ids.add(item_id)
                 yield ResponsesAgentStreamEvent(
                     type="response.output_item.done",
-                    item=create_text_output_item(text=text, id=item_id),
+                    item=create_text_output_item(text=clean, id=item_id),
                     custom_outputs={
                         "kind": "answer",
                         "thread_id": thread_id,
@@ -276,11 +347,14 @@ async def iter_response_events(
                 proc = last_values.get("procurement") if isinstance(last_values, dict) else {}
                 fallback = ""
                 if isinstance(proc, dict):
-                    fallback = str(proc.get("main_agent") or proc.get("deep_agent") or "")
-                if not fallback:
                     fallback = str(
-                        (last_values or {}).get("route") or request_text or "done"
+                        proc.get("assistant_reply")
+                        or proc.get("main_agent")
+                        or proc.get("deep_agent")
+                        or ""
                     )
+                if not fallback or not _answer_text(fallback):
+                    fallback = _MISS
                 yield ResponsesAgentStreamEvent(
                     type="response.output_item.done",
                     item=create_text_output_item(

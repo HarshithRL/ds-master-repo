@@ -45,6 +45,46 @@ def build_comparison_xlsx(
     if evidence_used:
         insights = insights_from_source(insights, source)
     process = insights.get("process_type") or ""
+    from ai_brain.core.procurement_ai.packs.bafo_from_template import write_bafo_workbook
+
+    written = write_bafo_workbook(path, insights, facts={})
+    href = store.flask_href(project_id, "xlsx")
+    pack_status = "ready" if evidence_used and not written.get("placeholder_vendors") else "template"
+    pack_error = None
+    if not process:
+        pack_error = "process_type unset. Cells are ?, not N/A, until Direct or Indirect is known."
+    elif written.get("placeholder_vendors"):
+        pack_error = "Template only. No named vendors in evidence. Unevidenced cells are ?."
+    store.write_status(
+        project_id,
+        "xlsx",
+        status=pack_status,
+        href=href,
+        filename=filename,
+        thread_id=thread_id or None,
+        error=pack_error,
+    )
+    log.info(
+        "comparison xlsx {} project_id={} process={} evidence_used={} sheets={}",
+        pack_status,
+        project_id,
+        process or "unset",
+        evidence_used,
+        written.get("sheets"),
+    )
+    return {
+        "status": pack_status,
+        "href": href,
+        "filename": filename,
+        "path": str(path),
+        "llm_used": False,
+        "evidence_used": evidence_used,
+        "sheets": written.get("sheets") or [],
+        "error": pack_error,
+    }
+
+    process = insights.get("process_type") or ""
+
     if evidence_used:
         matrix = matrix_from_source(source, process)
     elif process == DIRECT_TG:
