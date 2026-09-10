@@ -208,8 +208,9 @@ def test_create_agent_wires_kb_middleware(monkeypatch):
             getattr(tool, "name", None) or getattr(tool, "__name__", "")
             for tool in captured["tools"]
         }
-        assert "search_project_kb" in names
-        assert "list_bid_chunks" in names
+        assert "search_docs" in names
+        assert "list_files" in names
+        assert "read_chunk" in names
         assert captured["context_schema"] is ProcuraContext
         assert procura_kb_prompt in captured["middleware"]
     finally:

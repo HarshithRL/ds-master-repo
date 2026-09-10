@@ -72,6 +72,19 @@ def search_project_kb(
         return f"search_kb unavailable: {exc}"
 
 
+def list_bids(project_id: str | None = None) -> str:
+    """List classified bid ids (artifact.vendor_id) for this project. Never guess from filenames."""
+    from ai_brain.core.kb.store.materialize import list_bid_ids
+
+    pid = (project_id or "").strip() or _current_project_id()
+    if not pid:
+        return "(no project_id)"
+    bids = list(list_bid_ids(pid))
+    if not bids:
+        return "(no bids)"
+    return json.dumps(bids, ensure_ascii=False)
+
+
 def list_project_paths(project_id: str | None = None) -> str:
     """List virtual /project paths materialized for this kb_build run."""
     pid = (project_id or "").strip() or _current_project_id()
@@ -209,16 +222,29 @@ def list_bid_chunk_rows(project_id: str | None, bid_id: str) -> list[dict[str, A
         return []
     from ai_brain.core.kb.store.search import _heading_from_json, _locator_from_location
 
-    sql = """
-        SELECT c.id AS chunk_id, c.artifact_id, c.ordinal, c.token_count,
-               c.heading_path_json, c.location_json, a.original_name, a.vendor_id
-          FROM chunk c
-          JOIN artifact a ON a.id = c.artifact_id
-         WHERE c.project_id = :pid AND a.vendor_id = :bid
-         ORDER BY a.original_name, c.ordinal
-    """
+    # bid_id=rfp is a virtual bid for RFP corpus (doc_role), not artifact.vendor_id.
+    if bid.lower() == "rfp":
+        sql = """
+            SELECT c.id AS chunk_id, c.artifact_id, c.ordinal, c.token_count,
+                   c.heading_path_json, c.location_json, a.original_name, a.vendor_id
+              FROM chunk c
+              JOIN artifact a ON a.id = c.artifact_id
+             WHERE c.project_id = :pid AND lower(coalesce(a.doc_role, '')) = 'rfp'
+             ORDER BY a.original_name, c.ordinal
+        """
+        params = {"pid": pid}
+    else:
+        sql = """
+            SELECT c.id AS chunk_id, c.artifact_id, c.ordinal, c.token_count,
+                   c.heading_path_json, c.location_json, a.original_name, a.vendor_id
+              FROM chunk c
+              JOIN artifact a ON a.id = c.artifact_id
+             WHERE c.project_id = :pid AND a.vendor_id = :bid
+             ORDER BY a.original_name, c.ordinal
+        """
+        params = {"pid": pid, "bid": bid}
     with session_scope() as session:
-        rows = session.execute(text(sql), {"pid": pid, "bid": bid}).mappings().all()
+        rows = session.execute(text(sql), params).mappings().all()
     out: list[dict[str, Any]] = []
     for row in rows:
         locator = _locator_from_location(row["location_json"])
@@ -277,6 +303,7 @@ def langchain_kb_tools() -> list[Any]:
     """Sync Python callables for tests and MCP-unavailable fallback."""
     return [
         search_project_kb,
+        list_bids,
         list_project_paths,
         list_bid_chunks,
         read_chunk,
@@ -292,6 +319,7 @@ def kb_fastmcp_server() -> Any:
 
     server = FastMCP("procurement-kb")
     server.add_tool(search_project_kb)
+    server.add_tool(list_bids)
     server.add_tool(list_project_paths)
     server.add_tool(list_bid_chunks)
     server.add_tool(read_chunk)

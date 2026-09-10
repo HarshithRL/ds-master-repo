@@ -28,6 +28,7 @@ def test_skill_md_files_exist():
         "be-entity-registry",
         "evidence-citation",
         "direct-tg",
+        "comparison-matrix",
     )
     for name, path in iter_skill_files():
         assert path.is_file(), name

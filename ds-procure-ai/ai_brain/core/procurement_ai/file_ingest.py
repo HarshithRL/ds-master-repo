@@ -1,29 +1,32 @@
-"""Graph ingest for uploaded files. Inventory in state. Markdown stays on disk."""
+"""Graph ingest for uploaded files. SQL chunks + parsed_json are source of truth."""
 
 from __future__ import annotations
 
 import asyncio
 import json
 import os
-import time
 from typing import Any
 
 from langgraph.types import Send
 from shared.db.connection import session_scope
-from shared.db.models import Artifact
-from shared.db.paths import artifact_absolute_path, parsed_storage_relpath
+from shared.db.models import Artifact, Chunk
 from shared.db.repos import artifacts as artifact_repo
+from shared.db.repos import chunks as chunk_repo
 from shared.logger_global import get_logger
 from sqlalchemy import func, select
 
 log = get_logger(__name__, service="ai_brain")
 
 MAX_FILES = 15
-DI_MODEL = "prebuilt-layout"
 DI_CONCURRENCY = 5
 _DI_SEM = asyncio.Semaphore(DI_CONCURRENCY)
 
+# Ephemeral memory store — gated. Matrix/MCP tools read SQL; do not treat this as truth.
 _CHUNK_STORE: dict[str, list[dict[str, Any]]] = {}
+
+
+def _memory_chunk_store_enabled() -> bool:
+    return os.getenv("MATE_USE_MEMORY_CHUNK_STORE", "0").strip().lower() in {"1", "true", "yes"}
 
 
 def count_files(project_id: str) -> int:
@@ -65,29 +68,66 @@ def route_new_files(state: dict[str, Any]) -> list[Send] | str:
     log.info("ingest fanout project_id={} files={}", project_id, len(files))
     return [Send("parse_one", {"project_id": project_id, "file": item}) for item in files]
 
-
 async def parse_one(task: dict[str, Any]) -> dict[str, Any]:
+    """Parse via shared ArtifactHandler path that persists parsed_json + SQL chunks."""
     file_card = dict(task.get("file") or {})
     project_id = str(task.get("project_id") or "").strip()
     file_id = str(file_card.get("file_id") or "")
     filename = str(file_card.get("filename") or "")
     try:
+        from ai_brain.core.kb.extract.ingest import load_artifact
+
+        # Prefer package import; fall back for apps that put backend on sys.path.
+        try:
+            from backend.services.artifact_parse import parse_and_store
+        except ImportError:  # pragma: no cover
+            import sys
+            from pathlib import Path
+
+            root = Path(__file__).resolve().parents[3]
+            backend = str(root / "backend")
+            if backend not in sys.path:
+                sys.path.insert(0, backend)
+            from services.artifact_parse import parse_and_store
+
+        artifact = await asyncio.to_thread(load_artifact, file_id)
         async with _DI_SEM:
-            markdown = await asyncio.to_thread(_analyze_markdown, file_card)
-        _write_markdown(project_id, file_id, markdown)
-        artifact_repo.save_parse_result(
-            file_id,
-            parse_status="ok",
-            parse_error=None,
-            parsed_relpath=parsed_storage_relpath(project_id, file_id),
-        )
-        chunks = _split_markdown(markdown, file_id, filename, project_id)
-        _store_chunks(project_id, chunks)
+            saved = await asyncio.to_thread(parse_and_store, artifact)
+        status = (getattr(saved, "parse_status", None) or "").strip()
+        if status != "ok":
+            detail = getattr(saved, "parse_error", None) or "parse did not succeed"
+            raise RuntimeError(detail)
+        markdown = _usable_markdown_from_artifact(saved)
+        sql_chunks = chunk_repo.list_for_artifact(file_id)
+        if not markdown or not sql_chunks:
+            detail = (
+                "parse_status=ok but no usable markdown"
+                if not markdown
+                else "parse_status=ok but no SQL chunks"
+            )
+            artifact_repo.save_parse_result(file_id, parse_status="error", parse_error=detail)
+            raise RuntimeError(detail)
+        if _memory_chunk_store_enabled():
+            _store_chunks(
+                project_id,
+                [
+                    {
+                        "chunk_id": row.id,
+                        "file_id": file_id,
+                        "filename": filename,
+                        "thread_id": project_id,
+                        "header": "",
+                        "chunk_index": int(row.ordinal or 0),
+                        "text": row.text or "",
+                    }
+                    for row in sql_chunks
+                ],
+            )
         log.info(
-            "parse_one ok parser=AzureDocumentIntelligence file_id={} file={} chunks={}",
+            "parse_one ok via parse_and_store file_id={} file={} chunks={}",
             file_id,
             filename,
-            len(chunks),
+            len(sql_chunks),
         )
         return {
             "file_results": [
@@ -95,7 +135,7 @@ async def parse_one(task: dict[str, Any]) -> dict[str, Any]:
                     "file_id": file_id,
                     "filename": filename,
                     "status": "chunked",
-                    "chunk_count": len(chunks),
+                    "chunk_count": len(sql_chunks),
                     "error": "",
                 }
             ]
@@ -114,22 +154,26 @@ async def parse_one(task: dict[str, Any]) -> dict[str, Any]:
 
 
 async def chunk_one(state: dict[str, Any]) -> dict[str, Any]:
-    """Chunk the latest parsed file result. Bodies stay on disk."""
+    """No-op when parse_and_store already wrote SQL chunks."""
     results = list(state.get("file_results") or [])
     if not results:
         return {}
     latest = results[-1]
-    if latest.get("status") != "parsed":
+    if latest.get("status") not in {"parsed", "chunked"}:
         return {}
-    project_id = str(state.get("project_id") or "").strip()
     file_id = str(latest.get("file_id") or "")
-    path = _markdown_path(project_id, file_id)
-    if not path.is_file():
-        return {}
-    chunks = _split_markdown(path.read_text(encoding="utf-8"), file_id, str(latest.get("filename") or ""), project_id)
-    _store_chunks(project_id, chunks)
-    log.info("chunk_one file_id={} chunks={}", file_id, len(chunks))
-    return {"file_results": [{"file_id": file_id, "filename": latest.get("filename"), "status": "chunked", "chunk_count": len(chunks)}]}
+    count = len(chunk_repo.list_for_artifact(file_id)) if file_id else 0
+    log.info("chunk_one sql file_id={} chunks={}", file_id, count)
+    return {
+        "file_results": [
+            {
+                "file_id": file_id,
+                "filename": latest.get("filename"),
+                "status": "chunked",
+                "chunk_count": count,
+            }
+        ]
+    }
 
 
 def join_docs(state: dict[str, Any]) -> dict[str, Any]:
@@ -141,10 +185,9 @@ def join_docs(state: dict[str, Any]) -> dict[str, Any]:
 
 def index_docs(state: dict[str, Any]) -> dict[str, Any]:
     project_id = str(state.get("project_id") or "").strip()
-    chunks = _CHUNK_STORE.get(project_id) or []
-    log.info("index_docs project_id={} chunks={}", project_id, len(chunks))
-    return {"procurement": {"index_ready": True, "chunk_count": len(chunks)}}
-
+    count = _sql_chunk_count(project_id)
+    log.info("index_docs project_id={} sql_chunks={}", project_id, count)
+    return {"procurement": {"index_ready": True, "chunk_count": count}}
 
 _SEARCH_STOP = frozenset({
     "a", "an", "the", "and", "or", "of", "to", "for", "in", "on", "at", "by",
@@ -176,10 +219,57 @@ def _card(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _sql_chunk_count(project_id: str) -> int:
+    if not project_id:
+        return 0
+    with session_scope() as session:
+        return int(
+            session.scalar(
+                select(func.count()).select_from(Chunk).where(Chunk.project_id == project_id)
+            )
+            or 0
+        )
+
+
+def _sql_chunk_rows(project_id: str, file_id: str | None = None) -> list[dict[str, Any]]:
+    with session_scope() as session:
+        stmt = (
+            select(Chunk, Artifact.original_name)
+            .join(Artifact, Artifact.id == Chunk.artifact_id)
+            .where(Chunk.project_id == project_id)
+            .order_by(Chunk.artifact_id, Chunk.ordinal)
+        )
+        if file_id:
+            stmt = stmt.where(Chunk.artifact_id == file_id)
+        out: list[dict[str, Any]] = []
+        for chunk, original_name in session.execute(stmt).all():
+            heading = ""
+            try:
+                path = json.loads(chunk.heading_path_json or "[]")
+                if isinstance(path, list):
+                    heading = " / ".join(str(p) for p in path if p)
+            except Exception:
+                heading = ""
+            out.append(
+                {
+                    "chunk_id": chunk.id,
+                    "file_id": chunk.artifact_id,
+                    "filename": original_name or "",
+                    "header": heading,
+                    "chunk_index": int(chunk.ordinal or 0),
+                    "text": chunk.text or "",
+                    "thread_id": project_id,
+                }
+            )
+        return out
+
+
 def search_docs(project_id: str, query: str, file_id: str | None = None, limit: int = 6) -> list[dict[str, Any]]:
-    rows = list(_CHUNK_STORE.get(project_id) or [])
-    if file_id:
-        rows = [row for row in rows if row.get("file_id") == file_id]
+    rows = _sql_chunk_rows(project_id, file_id=file_id)
+    if not rows and _memory_chunk_store_enabled():
+        rows = list(_CHUNK_STORE.get(project_id) or [])
+        if file_id:
+            rows = [row for row in rows if row.get("file_id") == file_id]
     terms = _search_terms(query)
     if not terms:
         return [_card(row) for row in rows[:limit]]
@@ -191,140 +281,31 @@ def search_docs(project_id: str, query: str, file_id: str | None = None, limit: 
             scored.append((hits, row))
     scored.sort(key=lambda item: item[0], reverse=True)
     picked = [row for _, row in scored[:limit]]
-    if not picked:
-        return []
     return [_card(row) for row in picked]
 
 
-def _analyze_markdown(file_card: dict[str, Any]) -> str:
-    relpath = str(file_card.get("storage_relpath") or "")
-    path = artifact_absolute_path(relpath)
-    data = path.read_bytes()
-    filename = str(file_card.get("filename") or path.name)
-    endpoint = (os.getenv("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT") or "").strip()
-    key = (os.getenv("AZURE_DOCUMENT_INTELLIGENCE_KEY") or "").strip()
-    if not endpoint or not key:
-        raise RuntimeError("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT and AZURE_DOCUMENT_INTELLIGENCE_KEY are required.")
-    content_type = _content_type(filename)
-    last_error: Exception | None = None
-    for attempt in range(3):
-        try:
-            return _call_di(endpoint, key, data, content_type=content_type)
-        except Exception as exc:
-            last_error = exc
-            if "429" not in str(exc) or attempt == 2:
-                raise
-            time.sleep(1.5 * (attempt + 1))
-    raise RuntimeError(str(last_error or "Document Intelligence failed"))
-
-
-def _content_type(filename: str) -> str | None:
-    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    return {
-        "pdf": "application/pdf",
-        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "png": "image/png",
-        "jpg": "image/jpeg",
-        "jpeg": "image/jpeg",
-        "html": "text/html",
-        "htm": "text/html",
-    }.get(ext)
-
-
-def _call_di(endpoint: str, key: str, data: bytes, content_type: str | None = None) -> str:
-    from azure.core.credentials import AzureKeyCredential
-
+def _usable_markdown_from_artifact(artifact: Artifact) -> str:
+    raw = getattr(artifact, "parsed_json", None) or ""
+    if not raw:
+        return ""
     try:
-        from azure.ai.documentintelligence import DocumentIntelligenceClient
-        from azure.ai.documentintelligence.models import AnalyzeDocumentRequest, DocumentContentFormat
-
-        client = DocumentIntelligenceClient(endpoint=endpoint, credential=AzureKeyCredential(key))
-        poller = client.begin_analyze_document(
-            DI_MODEL,
-            AnalyzeDocumentRequest(bytes_source=data),
-            output_content_format=DocumentContentFormat.MARKDOWN,
-        )
-        result = poller.result()
-        content = getattr(result, "content", None) or ""
-        if content.strip():
-            return content
-    except ImportError:
-        log.info("documentintelligence SDK missing, using formrecognizer")
-    from azure.ai.formrecognizer import DocumentAnalysisClient
-
-    client = DocumentAnalysisClient(endpoint=endpoint, credential=AzureKeyCredential(key))
-    kwargs: dict[str, Any] = {}
-    if content_type:
-        kwargs["content_type"] = content_type
-    poller = client.begin_analyze_document(DI_MODEL, data, **kwargs)
-    result = poller.result()
-    return (getattr(result, "content", None) or "").strip()
-
-
-def _write_markdown(project_id: str, file_id: str, markdown: str) -> None:
-    rel = parsed_storage_relpath(project_id, file_id)
-    json_path = artifact_absolute_path(rel)
-    json_path.parent.mkdir(parents=True, exist_ok=True)
-    md_path = json_path.with_suffix(".md")
-    md_path.write_text(markdown, encoding="utf-8")
-    json_path.write_text(
-        json.dumps(
-            {
-                "file_id": file_id,
-                "parser": "AzureDocumentIntelligence",
-                "model": DI_MODEL,
-                "markdown_relpath": str(md_path.name),
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
-
-
-def _markdown_path(project_id: str, file_id: str):
-    return artifact_absolute_path(parsed_storage_relpath(project_id, file_id)).with_suffix(".md")
-
-
-def _split_markdown(markdown: str, file_id: str, filename: str, project_id: str) -> list[dict[str, Any]]:
-    chunks: list[dict[str, Any]] = []
-    try:
-        from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
-
-        headered = MarkdownHeaderTextSplitter(headers_to_split_on=[("#", "h1"), ("##", "h2"), ("###", "h3")]).split_text(markdown)
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
-        pieces = splitter.split_documents(headered)
-        for index, doc in enumerate(pieces):
-            header = " / ".join(str(v) for v in (doc.metadata or {}).values() if v)
-            chunks.append(_chunk(project_id, file_id, filename, index, header, doc.page_content))
-        if chunks:
-            return chunks
-    except Exception:
-        log.info("header splitter unavailable, using plain split file_id={}", file_id)
-    text = markdown.strip()
-    if not text:
-        return []
-    step = 850
-    for index, start in enumerate(range(0, len(text), step)):
-        chunks.append(_chunk(project_id, file_id, filename, index, "", text[start : start + 1000]))
-    return chunks
-
-
-def _chunk(project_id: str, file_id: str, filename: str, index: int, header: str, text: str) -> dict[str, Any]:
-    return {
-        "chunk_id": f"{file_id}:{index}",
-        "file_id": file_id,
-        "filename": filename,
-        "thread_id": project_id,
-        "header": header,
-        "chunk_index": index,
-        "text": text,
-    }
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return ""
+    if not isinstance(data, dict):
+        return ""
+    markdown = data.get("markdown")
+    return markdown.strip() if isinstance(markdown, str) else ""
 
 
 def _store_chunks(project_id: str, chunks: list[dict[str, Any]]) -> None:
-    existing = [row for row in (_CHUNK_STORE.get(project_id) or []) if row.get("file_id") != (chunks[0]["file_id"] if chunks else "")]
+    if not _memory_chunk_store_enabled():
+        return
+    existing = [
+        row
+        for row in (_CHUNK_STORE.get(project_id) or [])
+        if row.get("file_id") != (chunks[0]["file_id"] if chunks else "")
+    ]
     _CHUNK_STORE[project_id] = existing + chunks
 
 
@@ -338,30 +319,6 @@ def _bound_project_id(project_id: str | None = None) -> str:
         return current_project_id()
     except Exception:
         return ""
-
-
-def _ensure_chunks(project_id: str) -> None:
-    """Reload markdown already written to disk if this process has no chunks."""
-    if not project_id or _CHUNK_STORE.get(project_id):
-        return
-    with session_scope() as session:
-        rows = session.scalars(
-            select(Artifact)
-            .where(Artifact.project_id == project_id, Artifact.parse_status == "ok")
-            .order_by(Artifact.created_at.asc())
-        ).all()
-        cards = [_file_card(row) for row in rows]
-    loaded = 0
-    for card in cards:
-        path = _markdown_path(project_id, str(card.get("file_id") or ""))
-        if not path.is_file():
-            continue
-        chunks = _split_markdown(path.read_text(encoding="utf-8"), str(card["file_id"]), str(card.get("filename") or ""), project_id)
-        if chunks:
-            _store_chunks(project_id, chunks)
-            loaded += len(chunks)
-    if loaded:
-        log.info("ingest chunks reloaded project_id={} chunks={}", project_id, loaded)
 
 
 def list_project_files(project_id: str | None = None) -> list[dict[str, Any]]:
@@ -385,16 +342,32 @@ def list_project_files(project_id: str | None = None) -> list[dict[str, Any]]:
 def read_indexed_chunk(chunk_id: str, project_id: str | None = None) -> dict[str, Any] | None:
     pid = _bound_project_id(project_id)
     if pid:
-        _ensure_chunks(pid)
-        for row in _CHUNK_STORE.get(pid) or []:
+        for row in _sql_chunk_rows(pid):
             if row.get("chunk_id") == chunk_id:
                 return row
-    if not pid:
+    if _memory_chunk_store_enabled():
+        if pid:
+            for row in _CHUNK_STORE.get(pid) or []:
+                if row.get("chunk_id") == chunk_id:
+                    return row
         for rows in _CHUNK_STORE.values():
             for row in rows:
                 if row.get("chunk_id") == chunk_id:
                     return row
-    return None
+    with session_scope() as session:
+        chunk = session.get(Chunk, chunk_id)
+        if chunk is None:
+            return None
+        art = session.get(Artifact, chunk.artifact_id)
+        return {
+            "chunk_id": chunk.id,
+            "file_id": chunk.artifact_id,
+            "filename": (art.original_name if art else "") or "",
+            "header": "",
+            "text": chunk.text or "",
+            "chunk_index": int(chunk.ordinal or 0),
+            "thread_id": chunk.project_id,
+        }
 
 
 def chat_list_files() -> str:
@@ -410,7 +383,6 @@ def chat_search_docs(query: str, file_id: str = "") -> str:
     pid = _bound_project_id(None)
     if not pid:
         return "(no project_id)"
-    _ensure_chunks(pid)
     hits = search_docs(pid, query, file_id or None)
     if not hits:
         return "no hits"
@@ -439,5 +411,5 @@ chat_read_chunk.__name__ = "read_chunk"
 
 
 def ingest_chat_tools() -> list[Any]:
-    """Chat tools over ingest chunks. Azure Document Intelligence is not a tool."""
+    """Chat tools over SQL chunks. Azure Document Intelligence is not a tool."""
     return [chat_list_files, chat_search_docs, chat_read_chunk]

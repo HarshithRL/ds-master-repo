@@ -1,3 +1,3 @@
 models:
-  fast_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
-  thinking_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+  fast_model: system.ai.claude-sonnet-4-5
+  thinking_model: system.ai.claude-opus-4-6

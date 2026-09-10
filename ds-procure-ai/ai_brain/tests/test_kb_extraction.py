@@ -626,6 +626,13 @@ def test_matrix_from_profile_and_evidence_fills_xlsx(db_env):
     from ai_brain.core.kb.store.persist import seed_swift_requirements, upsert_bid_profile, upsert_evidence_bundle
     from ai_brain.core.kb.api.schemas import BidProfile
     from ai_brain.core.procurement_ai.insights import build_insight_payload
+    from ai_brain.core.procurement_ai.ontology import (
+        ONTOLOGY_VERSION,
+        ComparisonMatrix,
+        Requirement,
+        VendorOffering,
+        VendorProfile,
+    )
     from ai_brain.core.procurement_ai.packs.compare_xlsx import build_comparison_xlsx
     from ai_brain.core.procurement_ai.packs.matrix_from_evidence import load_matrix_source, matrix_from_source
     from shared.db.connection import session_scope
@@ -711,6 +718,39 @@ def test_matrix_from_profile_and_evidence_fills_xlsx(db_env):
         "p1",
         build_insight_payload(_Project(), [_Artifact()], []),
         thread_id="t-extract",
+        matrix=ComparisonMatrix(
+            process_type="indirect_it_services",
+            ontology_version=ONTOLOGY_VERSION,
+            requirements=[
+                Requirement(
+                    id="R01",
+                    text="Two BIC codes in scope",
+                    category="scope",
+                )
+            ],
+            vendors=[
+                VendorProfile(
+                    vendor_id="acme-offer",
+                    legal_name="Acme",
+                    timeline="12 weeks from kickoff",
+                    ecovadis="Gold 72",
+                    y2_tco="EUR 21000",
+                    source_files="Acme_Offer.pdf",
+                )
+            ],
+            offerings=[
+                VendorOffering(
+                    vendor_id="acme-offer",
+                    vendor_legal_name="Acme",
+                    requirement_id="R01",
+                    value_text="✓ Acme will assess CSCF 2026 independently.",
+                    status="✓",
+                    state="met",
+                    locator="p.3 Acme_Offer.pdf",
+                    quote="Acme will assess CSCF 2026 independently.",
+                )
+            ],
+        ),
     )
     assert xlsx["evidence_used"] is True
     assert xlsx["status"] == "ready"

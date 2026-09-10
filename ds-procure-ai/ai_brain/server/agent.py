@@ -18,6 +18,7 @@ from ai_brain.server.request import (
 )
 from ai_brain.server.runtime import runtime
 from ai_brain.server.streaming import iter_response_events
+from shared.databricks_runtime import bind_obo_from_headers, clear_obo
 
 
 def _user_id() -> str:
@@ -59,6 +60,17 @@ async def _ensure_runtime() -> None:
 @stream()
 async def streaming(request: ResponsesAgentRequest):
     await _ensure_runtime()
+    bind_obo_from_headers(get_request_headers() or {})
+    try:
+        async for event in _stream_graph(request):
+            yield event
+    finally:
+        # AgentServer may iterate this generator after FastAPI middleware
+        # has already returned; do not leave a visitor token on the task.
+        clear_obo()
+
+
+async def _stream_graph(request: ResponsesAgentRequest):
     text, procurement, thread_id, resume, checkpoint_id = parse_responses_request(request)
     if resume is None and not text:
         raise ValueError("request text is required")

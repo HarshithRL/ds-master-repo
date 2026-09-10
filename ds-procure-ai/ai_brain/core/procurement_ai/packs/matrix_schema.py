@@ -35,6 +35,10 @@ class IndirectVendorFacts(BaseModel):
     creditscore: str
     architecture: str = SCORED
     security: str = SCORED
+    renewal_type: str = MISSING
+    supply_location: str = MISSING
+    ref_names: str = MISSING
+    ref_feedback: str = SCORED
     delivery_model: str
     assumptions: str
     legal: str

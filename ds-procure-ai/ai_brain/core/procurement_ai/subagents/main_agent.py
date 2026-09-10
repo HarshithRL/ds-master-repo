@@ -180,6 +180,8 @@ def get_procura_main_agent():
     from ai_brain.core.config import get_llm
     from ai_brain.core.procurement_ai.file_ingest import ingest_chat_tools
 
+    # ChatDatabricks prefers visitor OBO + system.ai Gateway when the
+    # forwarded JWT has ai-gateway; otherwise FM serving endpoints.
     return create_agent(
         model=get_llm(),
         tools=ingest_chat_tools(),

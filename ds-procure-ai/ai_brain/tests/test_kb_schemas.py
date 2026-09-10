@@ -386,6 +386,7 @@ def test_langchain_kb_tools_include_search():
 
     names = {getattr(t, "__name__", str(t)) for t in langchain_kb_tools()}
     assert "search_project_kb" in names
+    assert "list_bids" in names
     assert "list_project_paths" in names
     assert "list_bid_chunks" in names
     assert "read_chunks" in names
@@ -401,6 +402,7 @@ async def test_mcp_adapter_lists_in_process_kb_tools():
 
     async with mcp_kb_tools_context() as tools:
         names = {getattr(t, "name", "") for t in tools}
+        assert "list_bids" in names
         assert "search_project_kb" in names
         assert "list_bid_chunks" in names
         assert "read_chunks" in names
@@ -527,7 +529,8 @@ def test_child_runnable_config_strips_parent_checkpointer():
     assert cfg.get("thread_id") == "t1"
     assert cfg.get("user_id") == "u1"
     assert "checkpoint_id" not in cfg
-    assert "checkpoint_ns" not in cfg
+    assert "checkpoint_ns" in cfg
+    assert cfg.get("checkpoint_ns") == "nested"
     assert out.get("callbacks")
     err = RuntimeError(
         "Synchronous calls to AsyncSqliteSaver are only allowed from a "
