@@ -66,6 +66,8 @@ targets:
         level: CAN_MANAGE
       - user_name: harshith.raghunath@etexgroup.com
         level: CAN_MANAGE
+      - service_principal_name: 9e7c67eb-3d7a-4b0a-8338-f2ecc4d386e8
+        level: CAN_MANAGE
         
 
   P:
