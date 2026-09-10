@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify, request, session
 
+from shared.databricks_runtime import bind_obo_from_headers
 from shared.db.repos.users import upsert_user_from_identity
 from shared.logger_global import get_logger
 from services.identity import IdentityError, resolve_identities
@@ -13,6 +14,8 @@ SESSION_KEY = "identity"
 
 
 def get_or_resolve_identity() -> dict:
+    # Bind visitor OBO before any DB use (incl. identity cache hits).
+    bind_obo_from_headers(request.headers)
     cached = session.get(SESSION_KEY)
     obo = (request.headers.get("x-forwarded-access-token") or "").strip()
     if isinstance(cached, dict) and cached.get("user") and cached.get("app"):

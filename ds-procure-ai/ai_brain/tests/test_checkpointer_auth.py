@@ -78,3 +78,26 @@ def test_embeddings_sets_cli_profile_locally(monkeypatch):
     )
     _embeddings(settings)
     assert __import__("os").environ["DATABRICKS_CONFIG_PROFILE"] == "adb-7181820732839861"
+
+
+def test_embeddings_use_request_scoped_workspace_client(monkeypatch):
+    captured: dict = {}
+
+    class FakeEmbeddings:
+        model_fields = {"workspace_client": True, "endpoint": True}
+
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.delenv("DATABRICKS_APP_NAME", raising=False)
+    monkeypatch.delenv("DATABRICKS_CLIENT_ID", raising=False)
+    monkeypatch.delenv("DATABRICKS_CLIENT_SECRET", raising=False)
+    monkeypatch.setattr("databricks_langchain.DatabricksEmbeddings", FakeEmbeddings)
+    settings = SimpleNamespace(
+        embedding_endpoint="databricks-gte-large-en",
+        config_profile="adb-7181820732839861",
+    )
+    _embeddings(settings)
+    from shared.databricks_runtime import RequestScopedWorkspaceClient
+
+    assert isinstance(captured.get("workspace_client"), RequestScopedWorkspaceClient)

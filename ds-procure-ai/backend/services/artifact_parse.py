@@ -56,18 +56,36 @@ def parse_and_store(artifact: Artifact) -> Artifact:
         len(document.blocks),
     )
     payload: dict[str, Any] = document.to_dict()
+    markdown = str(payload.get("markdown") or "").strip()
+    chunks = list(getattr(document, "chunks", None) or [])
+    if not markdown or not chunks:
+        detail = (
+            "parse produced empty markdown"
+            if not markdown
+            else "parse produced no chunks"
+        )
+        log.warning(
+            "artifact parse empty content artifact_id={} name={} detail={}",
+            artifact.id,
+            artifact.original_name,
+            detail,
+        )
+        return _store_parse_failure(artifact, PARSE_ERROR, detail)
     relpath = parsed_storage_relpath(artifact.project_id, artifact.id)
     absolute = artifact_absolute_path(relpath)
     absolute.parent.mkdir(parents=True, exist_ok=True)
     serialized = json.dumps(payload, ensure_ascii=False)
     absolute.write_text(serialized, encoding="utf-8")
+    # Sidecar markdown for materialize fallback when DB JSON is truncated/missing.
+    absolute.with_suffix(".md").write_text(markdown, encoding="utf-8")
     saved = artifact_repo.save_parse_result(
         artifact.id,
         parse_status=PARSE_OK,
         parsed_json=serialized,
         parsed_relpath=relpath,
+        parse_error=None,
     )
-    _replace_chunks(saved, getattr(document, "chunks", None) or [])
+    _replace_chunks(saved, chunks)
     return saved
 
 

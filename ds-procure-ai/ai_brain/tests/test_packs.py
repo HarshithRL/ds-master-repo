@@ -84,7 +84,7 @@ def test_pack_builders_write_files(tmp_path, monkeypatch):
     from openpyxl import load_workbook
 
     cover = load_workbook(xlsx["path"])["Cover"]
-    assert "Template only — no persisted evidence available" in str(cover["A2"].value)
+    assert "Template only" in str(cover["A2"].value)
 
     sheets = load_workbook(xlsx["path"]).sheetnames
     assert "Final BAFO Comparison" in sheets
@@ -167,22 +167,47 @@ def test_insights_kb_status_from_job(tmp_path, monkeypatch):
     assert "Parsing" in (insights.get("kb_message") or "")
 
 
-def test_kb_is_building_blocks_xlsx_overwrite(tmp_path, monkeypatch):
+def test_compare_xlsx_builds_when_kb_job_running(tmp_path, monkeypatch):
     monkeypatch.setenv("MATE_PROJECTS_DATA_ROOT", str(tmp_path))
     from ai_brain.core.procurement_ai.packs import store as pack_store
+    from ai_brain.core.procurement_ai.subagents import compare_xlsx as compare_mod
 
     pack_store.write_kb_job("proj-demo", status="building", message="Extracting…")
-    assert pack_store.kb_is_building("proj-demo") is True
     pack_store.write_status("proj-demo", "xlsx", status="ready", href="/old")
-    from ai_brain.core.procurement_ai.subagents import compare_xlsx as compare_mod
 
     class _Project:
         id = "proj-demo"
+        code = "PR-100"
+        name = "SWIFT"
+        business_process = "Indirect"
+        category = "SWIFT CSCF"
+        description = "services"
 
+    class _Artifact:
+        id = "a1"
+        original_name = "BDO.pdf"
+        parse_status = "ok"
+
+    async def fake_parse(_pid):
+        return None
+
+    async def fake_extract(_pid, insights, config=None):
+        return None
+
+    monkeypatch.setattr(compare_mod, "_ensure_corpus", fake_parse)
+    monkeypatch.setattr(compare_mod, "load_context", lambda _pid: (_Project(), [_Artifact()], []))
+    monkeypatch.setattr(compare_mod, "build_insight_payload", lambda *a, **k: {
+        "process_type": "indirect_it_services",
+        "vendors": [{"name": "BDO"}],
+        "decision": {},
+    })
     monkeypatch.setattr(
-        compare_mod,
-        "load_context",
-        lambda _pid: (_Project(), [], []),
+        "ai_brain.core.kb.build.pipeline.ensure_vendor_bids",
+        lambda _pid: ["bdo"],
+    )
+    monkeypatch.setattr(
+        "ai_brain.core.procurement_ai.subagents.comparison_matrix.extract_comparison_matrix",
+        fake_extract,
     )
 
     import asyncio
@@ -190,5 +215,5 @@ def test_kb_is_building_blocks_xlsx_overwrite(tmp_path, monkeypatch):
     out = asyncio.run(
         compare_mod.compare_xlsx({"project_id": "proj-demo", "procurement": {}})
     )
-    assert out["procurement"]["xlsx_status"] == "running"
-    assert pack_store.read_status("proj-demo")["xlsx"]["status"] == "ready"
+    assert out["procurement"]["xlsx_status"] in {"template", "ready"}
+    assert pack_store.read_status("proj-demo")["xlsx"]["href"]

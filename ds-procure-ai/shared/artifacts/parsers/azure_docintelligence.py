@@ -129,13 +129,72 @@ def document_from_layout(path: Path, kind: ArtifactType, result, options: ParseO
 
 
 def _credentials() -> tuple[str, str]:
-    endpoint = (os.getenv("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT") or "").strip()
-    key = (os.getenv("AZURE_DOCUMENT_INTELLIGENCE_KEY") or "").strip()
+    endpoint = (
+        os.getenv("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT")
+        or os.getenv("azure-di-endpoint")
+        or ""
+    ).strip()
+    key = (
+        os.getenv("AZURE_DOCUMENT_INTELLIGENCE_KEY")
+        or os.getenv("azure-di-key")
+        or ""
+    ).strip()
+    if not endpoint or not key:
+        endpoint, key = _credentials_from_secret_scope()
     if not endpoint or not key:
         raise ArtifactParseError(
             "AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT and AZURE_DOCUMENT_INTELLIGENCE_KEY are required."
         )
+    os.environ["AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT"] = endpoint
+    os.environ["AZURE_DOCUMENT_INTELLIGENCE_KEY"] = key
     return endpoint, key
+
+
+def _credentials_from_secret_scope() -> tuple[str, str]:
+    """Apps secret resources may inject by resource key; fall back to scope read."""
+    scope = (os.getenv("MATE_DI_SECRET_SCOPE") or "procure-ai").strip()
+    endpoint_key = (
+        os.getenv("MATE_DI_ENDPOINT_SECRET_KEY")
+        or "azure-document-intelligence-endpoint"
+    ).strip()
+    key_key = (
+        os.getenv("MATE_DI_KEY_SECRET_KEY") or "azure-document-intelligence-key"
+    ).strip()
+    try:
+        from shared.databricks_runtime import workspace_client
+
+        client = workspace_client()
+        endpoint = _secret_value(client.secrets.get_secret(scope, endpoint_key))
+        key = _secret_value(client.secrets.get_secret(scope, key_key))
+        return endpoint, key
+    except Exception:
+        return "", ""
+
+
+def _secret_value(secret: object) -> str:
+    raw = getattr(secret, "value", secret)
+    if raw is None:
+        return ""
+    if isinstance(raw, bytes):
+        import base64
+
+        try:
+            return base64.b64decode(raw).decode("utf-8").strip()
+        except Exception:
+            return raw.decode("utf-8", errors="ignore").strip()
+    text = str(raw).strip()
+    if not text:
+        return ""
+    # Some SDK builds still return base64 text.
+    try:
+        import base64
+
+        decoded = base64.b64decode(text).decode("utf-8")
+        if decoded and decoded.isprintable():
+            return decoded.strip()
+    except Exception:
+        pass
+    return text
 
 
 def _pages_arg(max_pages: int | None) -> str | None:

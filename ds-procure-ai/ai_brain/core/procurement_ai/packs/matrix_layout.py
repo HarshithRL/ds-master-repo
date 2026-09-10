@@ -79,6 +79,7 @@ SCORED_BY_ETEX = frozenset(
         "Score Card score",
         "Architecture Assessment",
         "Security Assessment",
+        "Reference: Customer Feedback",
     }
 )
 

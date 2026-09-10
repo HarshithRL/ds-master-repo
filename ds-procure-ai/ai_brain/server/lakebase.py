@@ -15,8 +15,8 @@ from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
-from ai_brain.core.config.llm import get_workspace_client
 from ai_brain.core.config.memory import get_memory_settings, search_path_options
+from shared.databricks_runtime import workspace_client
 from shared.logger_global import get_logger
 
 log = get_logger(__name__, service="ai_brain")
@@ -87,10 +87,12 @@ def _mint_token(workspace: Any, endpoint: str) -> str:
     return str(token)
 
 
-def _resolve_username(workspace: Any) -> str:
-    injected = os.getenv("PGUSER", "").strip()
-    if injected:
-        return injected
+def _resolve_username(workspace: Any, *, allow_pguser: bool = True) -> str:
+    """Lakebase role is always the app SP (or injected PGUSER), never the visitor."""
+    if allow_pguser:
+        injected = os.getenv("PGUSER", "").strip()
+        if injected:
+            return injected
     user = workspace.current_user.me()
     name = getattr(user, "user_name", None)
     if not name:
@@ -133,12 +135,16 @@ def _conninfo(*, host: str, dbname: str, user: str, sslmode: str, schema: str) -
 
 
 async def open_lakebase_pool() -> LakebasePoolHandle:
-    """Open an async pool. Password is always a Lakebase OAuth token."""
+    """Open an async pool as the Apps service principal (WorkspaceClient M2M).
+
+    Visitor OBO is not used here. Password is always ``generate_database_credential``
+    from ``workspace_client()``.
+    """
     settings = get_memory_settings()
     if not settings.lakebase_endpoint:
         raise RuntimeError("LAKEBASE_ENDPOINT is required for the lakebase backend")
 
-    workspace = get_workspace_client()
+    workspace = workspace_client()
     endpoint = settings.lakebase_endpoint
     host, username, token = await asyncio.gather(
         asyncio.to_thread(_resolve_host, workspace, endpoint, settings.lakebase_host),
@@ -162,6 +168,11 @@ async def open_lakebase_pool() -> LakebasePoolHandle:
             return await super().connect(conninfo, **kwargs)
 
     async def _configure(conn: Any) -> None:
+        await conn.execute(
+            sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(
+                _schema_identifier(schema_name)
+            )
+        )
         await apply_search_path(conn, schema_name)
 
     pool = AsyncConnectionPool(

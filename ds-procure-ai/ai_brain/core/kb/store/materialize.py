@@ -46,7 +46,7 @@ def project_files(project_id: str) -> dict[str, str]:
             files[path] = quality_note(artifact, flags_by_artifact.get(artifact.id, []))
             used_paths.add(path)
             continue
-        markdown = _document_markdown(artifact.parsed_json)
+        markdown = _document_markdown(artifact.parsed_json, artifact=artifact)
         if markdown is None:
             path = f"/project/{code}/_quality/{artifact.id}.md"
             files[path] = quality_note(
@@ -170,18 +170,40 @@ def _folder_for(artifact: Artifact) -> str:
     return template.format(bid=bid)
 
 
-def _document_markdown(parsed_json: str | None) -> str | None:
-    if not parsed_json:
-        return None
-    try:
-        data = json.loads(parsed_json)
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(data, dict):
-        return None
-    markdown = data.get("markdown")
-    if isinstance(markdown, str) and markdown.strip():
-        return markdown
+def _document_markdown(
+    parsed_json: str | None,
+    *,
+    artifact: Artifact | None = None,
+) -> str | None:
+    if parsed_json:
+        try:
+            data = json.loads(parsed_json)
+        except json.JSONDecodeError:
+            data = None
+        if isinstance(data, dict):
+            markdown = data.get("markdown")
+            if isinstance(markdown, str) and markdown.strip():
+                return markdown
+            # Legacy ingest wrote markdown_relpath only (no markdown body).
+            rel_name = data.get("markdown_relpath")
+            if artifact is not None and isinstance(rel_name, str) and rel_name.strip():
+                from shared.db.paths import artifact_absolute_path
+
+                base = artifact.parsed_relpath or ""
+                if base:
+                    candidate = artifact_absolute_path(base).with_name(Path(rel_name).name)
+                    if candidate.is_file():
+                        text = candidate.read_text(encoding="utf-8")
+                        if text.strip():
+                            return text
+    if artifact is not None and artifact.parsed_relpath:
+        from shared.db.paths import artifact_absolute_path
+
+        md_path = artifact_absolute_path(artifact.parsed_relpath).with_suffix(".md")
+        if md_path.is_file():
+            text = md_path.read_text(encoding="utf-8")
+            if text.strip():
+                return text
     return None
 
 

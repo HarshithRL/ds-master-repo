@@ -185,6 +185,10 @@ export function useWorkspaceChatStream({
             });
           } else if (evt.type === "done") {
             assembled = evt.text || assembled;
+            const packHref = evt.xlsx_href || evt.ppt_href || "";
+            if (packHref && !String(assembled).includes(packHref)) {
+              assembled = `${String(assembled || "").trim()} Download: ${packHref}`.trim();
+            }
             if (Array.isArray(evt.thoughts) && evt.thoughts.length) {
               thoughts = evt.thoughts;
             }

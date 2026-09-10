@@ -81,18 +81,6 @@ def _local_pack(project_id: str, owner_id: str, capability: str, thread_id: str)
     artifacts = artifact_repo.list_for_project(project_id, owner_id)
     chunks = chunk_repo.list_for_project(project_id)
     if capability == "compare_xlsx":
-        from ai_brain.core.procurement_ai.packs import store as pack_store
-
-        if pack_store.kb_is_building(project_id):
-            return {
-                "route": "procurement",
-                "thread_id": thread_id,
-                "procurement": {
-                    "xlsx_status": "running",
-                    "xlsx_href": "",
-                    "evidence_used": False,
-                },
-            }
         insights = build_insight_payload(project, artifacts, chunks)
         result = build_comparison_xlsx(
             project_id,

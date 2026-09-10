@@ -19,7 +19,7 @@ log = get_logger(__name__)
 from shared.db import init_db
 
 init_db()
-log.info("sqlite database initialized path={}", os.getenv("MATE_SQLITE_PATH", "mate.sqlite"))
+log.info("database initialized backend={}", os.getenv("MATE_DB_BACKEND", "sqlite"))
 
 from flask import Flask, g, jsonify, request, send_from_directory
 from flask_cors import CORS

@@ -84,6 +84,9 @@ ruff>=0.5.0,<1.0
 
 # Databricks SDK & utilities
 databricks-sdk==0.125.0
+# Mate UC Delta via DBSQL (SQLAlchemy dialect `databricks://`)
+databricks-sql-connector>=4.0.0
+databricks-sqlalchemy>=2.0.0
 urllib3>=2.2.0,<3.0
 
 langgraph-cli[inmem]

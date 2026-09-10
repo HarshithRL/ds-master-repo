@@ -23,6 +23,7 @@ from langchain.agents.middleware import (
 )
 
 from ai_brain.core.kb.build.coverage import CoverageMiddleware
+from ai_brain.core.kb.middleware.strip_tool_content_ids import StripToolContentIdsMiddleware
 from ai_brain.core.kb.store.materialize import project_files, vendor_paths
 from ai_brain.core.kb.api.schemas import BidProfile, PricingExtraction, VendorEvidenceBundle
 from ai_brain.core.procurement_ai.packs.matrix_layout import EXTRACT_MAX_TOKENS
@@ -52,7 +53,7 @@ VENDOR_ANALYST_PROMPT = STABLE_RULES + CITATION_DOCTRINE + (
 
 VENDOR_EMIT_PROMPT = STABLE_RULES + CITATION_DOCTRINE + (
     "Finish by calling the VendorEvidenceBundle structured-output tool: "
-    "one item per requirement (R01–R40). Use only facts already in this "
+    "one item per requirement (R01â€“R40). Use only facts already in this "
     "conversation. Do not call file tools.\n"
 )
 
@@ -65,7 +66,7 @@ PRICING_PROMPT = (
 
 PROFILE_PROMPT = (
     "Extract BAFO commercial facts for this bid from the conversation: "
-    "Y1–Y3 TCO strings, blended rate, mandays, timeline, EcoVadis, credit score, "
+    "Y1â€“Y3 TCO strings, blended rate, mandays, timeline, EcoVadis, credit score, "
     "delivery model, assumptions, legal, Etex obligations, risk plan, "
     "scope completeness, missing requirements. "
     "Copy quoted figures. If the source does not state a figure, omit the field. "
@@ -127,7 +128,7 @@ def _skill_file_data() -> dict[str, dict[str, str]]:
 
 
 def invoke_payload(project_id: str, user_content: str) -> dict[str, Any]:
-    """Input dict for agent.ainvoke — messages plus optional file map."""
+    """Input dict for agent.ainvoke â€” messages plus optional file map."""
     return {
         "messages": [{"role": "user", "content": user_content}],
         "files": files_for_invoke(project_id),
@@ -141,10 +142,10 @@ def bid_invoke_payload(project_id: str, bid_id: str) -> dict[str, Any]:
     index = chunk_manifest_block(project_id, bid_id)
     content = (
         f"Analyse bid `{bid_id}` only. Corpus is under "
-        f"/project/*/vendors/{bid_id}/_chunks/ — ls/grep/read_file there and the RFP. "
+        f"/project/*/vendors/{bid_id}/_chunks/ â€” ls/grep/read_file there and the RFP. "
         "Use MCP search_project_kb / read_chunk / read_chunks / read_chunk_window only "
         "to re-open a cited id. If you call MCP reads, emit several in one turn. "
-        "Gather cited facts for VendorEvidenceBundle (R01–R40) and BidProfile. "
+        "Gather cited facts for VendorEvidenceBundle (R01â€“R40) and BidProfile. "
         "Citation-or-abstain. Dual pricing (T&M and fixed) when present.\n\n"
         f"{index}"
     )
@@ -160,7 +161,7 @@ def emit_user_message(bid_id: str) -> dict[str, str]:
         "role": "user",
         "content": (
             f"Call the VendorEvidenceBundle structured-output tool now for bid "
-            f"`{bid_id}`. One item per requirement (R01–R40). Citation-or-abstain."
+            f"`{bid_id}`. One item per requirement (R01â€“R40). Citation-or-abstain."
         ),
     }
 
@@ -178,8 +179,14 @@ def coverage_refill_message(unread: list[str]) -> dict[str, str]:
 
 
 def extraction_middleware(fallback_model: Any) -> list[Any]:
-    """User middleware for MCP research agents. TodoListMiddleware is not included."""
+    """User middleware for MCP research agents. TodoListMiddleware is not included.
+
+    Includes StripToolContentIdsMiddleware so MCP tool_result blocks from
+    langchain-mcp-adapters do not send Anthropic/FM-rejected id fields
+    (langchain-mcp-adapters#397). Shared by comparison orchestrator and KB extract.
+    """
     return [
+        StripToolContentIdsMiddleware(),
         ModelCallLimitMiddleware(run_limit=30),
         ToolCallLimitMiddleware(run_limit=80),
         ModelRetryMiddleware(),
@@ -262,7 +269,7 @@ def build_pricing_extractor(
     fallback_model: Any | None = None,
     tools: list[Any] | None = None,
 ):
-    """Pricing emit agent. No MCP tools — ToolStrategy only."""
+    """Pricing emit agent. No MCP tools â€” ToolStrategy only."""
     from langchain.agents import create_agent
     from langchain.agents.structured_output import ToolStrategy
 
@@ -285,7 +292,7 @@ def build_profile_extractor(
     model: Any | None = None,
     fallback_model: Any | None = None,
 ):
-    """BAFO BidProfile emit. No MCP tools — ToolStrategy only."""
+    """BAFO BidProfile emit. No MCP tools â€” ToolStrategy only."""
     from langchain.agents import create_agent
     from langchain.agents.structured_output import ToolStrategy
 
@@ -309,7 +316,7 @@ def build_requirement_extractor(
     store: Any | None = None,
     tools: list[Any] | None = None,
 ):
-    """RFP-only extractor. Stateless. Align to R01–R40."""
+    """RFP-only extractor. Stateless. Align to R01â€“R40."""
     from langchain.agents import create_agent
 
     from ai_brain.core.kb.api.mcp_tools import langchain_kb_tools
@@ -322,7 +329,7 @@ def build_requirement_extractor(
         tools=tools if tools is not None else langchain_kb_tools(),
         system_prompt=(
             "Extract procurement requirements from /project/*/rfp/ only. "
-            "Align to R01–R40. Extra requirements use ids R-E-001+. "
+            "Align to R01â€“R40. Extra requirements use ids R-E-001+. "
             "Cite artifact_id + page. Do not invent."
         ),
         middleware=extraction_middleware(fast),
