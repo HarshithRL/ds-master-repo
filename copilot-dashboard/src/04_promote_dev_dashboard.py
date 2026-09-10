@@ -61,9 +61,26 @@ class _Lakeview:
         d = r.json()
         sd = d.get("serialized_dashboard") or ""
         dn = d.get("display_name") or ""
-        print(f"  [lv.get] id={dashboard_id}, display_name='{dn}', serialized_dashboard={len(sd)} chars, response_keys={sorted(d.keys())}")
-        if not sd:
-            print(f"  [lv.get] WARNING: serialized_dashboard is empty/None!")
+        print(f"  [lv.get] id={dashboard_id}, display_name='{dn}', serialized_dashboard={len(sd)} chars (draft)")
+
+        # Fall back to published version if draft is empty/too small
+        if len(sd) < 100:
+            print(f"  [lv.get] Draft content too small ({len(sd)} chars) — trying published version...")
+            try:
+                rp = _req.get(f"{_lv_api}/api/2.0/lakeview/dashboards/{dashboard_id}/published", headers=_lv_hdr)
+                rp.raise_for_status()
+                dp = rp.json()
+                sd_pub = dp.get("serialized_dashboard") or ""
+                if len(sd_pub) > len(sd):
+                    sd = sd_pub
+                    print(f"  [lv.get] Using published version: {len(sd)} chars")
+                else:
+                    print(f"  [lv.get] Published version also small ({len(sd_pub)} chars)")
+            except Exception as e:
+                print(f"  [lv.get] Could not fetch published version: {e}")
+
+        if not sd or len(sd) < 100:
+            print(f"  [lv.get] WARNING: serialized_dashboard is empty/too small!")
         return _NS(serialized_dashboard=sd, display_name=dn)
 
     def update(self, *, dashboard_id, serialized_dashboard, **kw):
@@ -499,6 +516,19 @@ elif has_dev_changes and AUTO_PROMOTE:
 
 else:
     print("No DEV changes detected. Proceeding with _v2 sync + publish.")
+
+# --- Guard: skip update if Main content is empty and we're not promoting ---
+if len(final_ser_str or "") < 100:
+    print("\n⚠️  Main dashboard content is empty (draft & published both empty) — skipping update and publish.")
+    if has_dev_changes:
+        print("   Set auto_promote='yes' and re-run to populate Main from DEV.")
+    dbutils.notebook.exit(json.dumps({
+        "status": "SKIPPED",
+        "reason": "Main dashboard empty, needs promotion",
+        "dashboard_id": MAIN_DASHBOARD_ID,
+        "dev_changes": total_changes if HAS_DEV else 0,
+        "v2_synced": v2_changes
+    }))
 
 # --- Update Main dashboard ---
 lv.update(
