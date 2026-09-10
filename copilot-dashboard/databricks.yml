@@ -39,8 +39,6 @@ targets:
       warehouse_id: 69ada62b2fb9b9e2
       policy_id: 306312B9730019AB
     permissions:
-      - service_principal_name: ${workspace.current_user.userName}
-        level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
@@ -60,10 +58,6 @@ targets:
       warehouse_id: 0ef3e37fbbd5b772
       policy_id: 306312B973005677
     permissions:
-      - service_principal_name: ${workspace.current_user.userName}
-        level: CAN_MANAGE
-      - service_principal_name: 9e7c67eb-3d7a-4b0a-8338-f2ecc4d386e8
-        level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
@@ -72,6 +66,7 @@ targets:
         level: CAN_MANAGE
       - user_name: harshith.raghunath@etexgroup.com
         level: CAN_MANAGE
+        
 
   P:
     mode: production
@@ -83,8 +78,6 @@ targets:
       warehouse_id: f500d0d670ae024b
       policy_id: 306312B973005150
     permissions:
-      - service_principal_name: ${workspace.current_user.userName}
-        level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
