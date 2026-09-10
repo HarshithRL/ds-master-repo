@@ -159,8 +159,8 @@ print(f"Target schema: {S}")
 # MAGIC   CAST(ROUND(TRY_CAST(Entitled_Quantity AS DOUBLE), 0) AS BIGINT) AS entitled_quantity,
 # MAGIC   CAST(ROUND(TRY_CAST(Prepaid_Consumed_Quantity AS DOUBLE), 0) AS BIGINT) AS prepaid_consumed_quantity,
 # MAGIC   CAST(ROUND(TRY_CAST(Pay_As_You_Go_Consumed_Quantity AS DOUBLE), 0) AS BIGINT) AS pay_as_you_go_consumed_quantity,
-# MAGIC   to_date(Usage_Date, 'M/d/yyyy') AS usage_date,
-# MAGIC   DATE_FORMAT(to_date(Usage_Date, 'M/d/yyyy'), 'dd/MM/yyyy') AS usage_date_eu
+# MAGIC   COALESCE(to_date(Usage_Date, 'M/d/yyyy h:mm:ss a'), to_date(Usage_Date, 'M/d/yyyy'), to_date(SPLIT(Usage_Date, ' ')[0], 'M/d/yyyy'), to_date(Usage_Date)) AS usage_date,
+# MAGIC   DATE_FORMAT(COALESCE(to_date(Usage_Date, 'M/d/yyyy h:mm:ss a'), to_date(Usage_Date, 'M/d/yyyy'), to_date(SPLIT(Usage_Date, ' ')[0], 'M/d/yyyy'), to_date(Usage_Date)), 'dd/MM/yyyy') AS usage_date_eu
 # MAGIC FROM ${pipeline_schema}.environment_level_credit_consumption;
 
 # COMMAND ----------
