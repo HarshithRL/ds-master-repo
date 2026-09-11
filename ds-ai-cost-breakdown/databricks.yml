@@ -10,6 +10,8 @@ variables:
     description: Cluster policy ID to use
   catalog:
     description: Unity Catalog for this environment
+  warehouse_id:
+    description: SQL warehouse ID for the AI cost dashboard
 
 targets:
   D:
@@ -21,6 +23,7 @@ targets:
     variables:
       policy_id: 306312B9730019AB
       catalog: automation_d
+      warehouse_id: 69ada62b2fb9b9e2
 
   T:
     mode: production
@@ -30,6 +33,7 @@ targets:
     variables:
       policy_id: 306312B9730019AB
       catalog: automation_d
+      warehouse_id: 69ada62b2fb9b9e2
     permissions:
       - service_principal_name: ${workspace.current_user.userName}
         level: CAN_MANAGE
@@ -37,7 +41,7 @@ targets:
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
-      - user_name: AUTOMATION.DSAICOSTBREAKDOWN.CONSUMER.READ
+      - group_name: AUTOMATION.DSAICOSTBREAKDOWN.CONSUMER.READ
         level: CAN_VIEW
 
   A:
@@ -48,6 +52,7 @@ targets:
     variables:
       policy_id: 306312B973005677
       catalog: automation_a
+      warehouse_id: f68599b38752394a
     permissions:
       - service_principal_name: ${workspace.current_user.userName}
         level: CAN_MANAGE
@@ -55,7 +60,7 @@ targets:
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
-      - user_name: AUTOMATION.DSAICOSTBREAKDOWN.CONSUMER.READ
+      - group_name: AUTOMATION.DSAICOSTBREAKDOWN.CONSUMER.READ
         level: CAN_VIEW
 
   P:
@@ -66,6 +71,7 @@ targets:
     variables:
       policy_id: 306312B973005150
       catalog: automation_p
+      warehouse_id: efc56ffbe4189cdf
     permissions:
       - service_principal_name: ${workspace.current_user.userName}
         level: CAN_MANAGE
@@ -73,5 +79,5 @@ targets:
         level: CAN_MANAGE
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
-      - user_name: AUTOMATION.DSAICOSTBREAKDOWN.CONSUMER.READ
+      - group_name: AUTOMATION.DSAICOSTBREAKDOWN.CONSUMER.READ
         level: CAN_VIEW
