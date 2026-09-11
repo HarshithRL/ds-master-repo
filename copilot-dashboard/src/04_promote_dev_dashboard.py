@@ -519,21 +519,34 @@ else:
 
 # --- Fallback: if Main dashboard content is empty (e.g. initial DAB deploy in PROD where no DEV dashboard exists), seed from lvdash.json ---
 if len(final_ser_str or "") < 100:
-    print(f"\n⚠️ Main dashboard content is empty ({len(final_ser_str or '')} chars). Attempting fallback seed from {LVDASH_PATH}...")
+    print(f"\n⚠️ Main dashboard content is empty ({len(final_ser_str or '')} chars). Attempting fallback seed from candidate files...")
     seed_loaded = False
-    for candidate_path in [LVDASH_PATH, f"/Workspace{PIPELINE_FOLDER}/dashboards/DEV -  agent_dashboard_phase_1.lvdash.json"]:
+    candidate_paths = [
+        LVDASH_PATH,
+        f"/Workspace{PIPELINE_FOLDER}/dashboards/DEV -  agent_dashboard_phase_1.lvdash.json",
+        f"/Workspace{PIPELINE_FOLDER}/dashboards/agent_dashboard_phase_1.lvdash.json",
+        f"/Volumes/{CATALOG}/bronze/bronze_volume/Copilot_Dashboard_Data/_dashboard_template.json",
+        "/Volumes/automation_d/bronze/bronze_volume/Copilot_Dashboard_Data/_dashboard_template.json"
+    ]
+    for candidate_path in candidate_paths:
         try:
             if os.path.exists(candidate_path):
                 with open(candidate_path, "r", encoding="utf-8") as f:
                     dash_file_data = json.load(f)
+                    candidate_ser = ""
                     if isinstance(dash_file_data, dict) and "serialized_dashboard" in dash_file_data:
                         ser_val = dash_file_data["serialized_dashboard"]
-                        final_ser_str = json.dumps(ser_val) if isinstance(ser_val, dict) else str(ser_val)
+                        candidate_ser = json.dumps(ser_val) if isinstance(ser_val, dict) else str(ser_val)
                     else:
-                        final_ser_str = json.dumps(dash_file_data)
-                print(f"  ✓ Loaded seed content from {candidate_path} ({len(final_ser_str)} chars)")
-                seed_loaded = True
-                break
+                        candidate_ser = json.dumps(dash_file_data)
+                    
+                    if len(candidate_ser) >= 100:
+                        final_ser_str = candidate_ser
+                        print(f"  ✓ Loaded valid seed content from {candidate_path} ({len(final_ser_str)} chars)")
+                        seed_loaded = True
+                        break
+                    else:
+                        print(f"  ⚠️ Candidate file {candidate_path} content too small ({len(candidate_ser)} chars) — trying next...")
         except Exception as e:
             print(f"  ⚠️ Could not read {candidate_path}: {e}")
 
