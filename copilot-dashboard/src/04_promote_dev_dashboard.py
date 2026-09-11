@@ -517,18 +517,56 @@ elif has_dev_changes and AUTO_PROMOTE:
 else:
     print("No DEV changes detected. Proceeding with _v2 sync + publish.")
 
-# --- Guard: skip update if Main content is empty and we're not promoting ---
+# --- Fallback: if Main dashboard content is empty (e.g. initial DAB deploy in PROD where no DEV dashboard exists), seed from lvdash.json ---
 if len(final_ser_str or "") < 100:
-    print("\n⚠️  Main dashboard content is empty (draft & published both empty) — skipping update and publish.")
-    if has_dev_changes:
-        print("   Set auto_promote='yes' and re-run to populate Main from DEV.")
-    dbutils.notebook.exit(json.dumps({
-        "status": "SKIPPED",
-        "reason": "Main dashboard empty, needs promotion",
-        "dashboard_id": MAIN_DASHBOARD_ID,
-        "dev_changes": total_changes if HAS_DEV else 0,
-        "v2_synced": v2_changes
-    }))
+    print(f"\n⚠️ Main dashboard content is empty ({len(final_ser_str or '')} chars). Attempting fallback seed from {LVDASH_PATH}...")
+    seed_loaded = False
+    for candidate_path in [LVDASH_PATH, f"/Workspace{PIPELINE_FOLDER}/dashboards/DEV -  agent_dashboard_phase_1.lvdash.json"]:
+        try:
+            if os.path.exists(candidate_path):
+                with open(candidate_path, "r", encoding="utf-8") as f:
+                    dash_file_data = json.load(f)
+                    if isinstance(dash_file_data, dict) and "serialized_dashboard" in dash_file_data:
+                        ser_val = dash_file_data["serialized_dashboard"]
+                        final_ser_str = json.dumps(ser_val) if isinstance(ser_val, dict) else str(ser_val)
+                    else:
+                        final_ser_str = json.dumps(dash_file_data)
+                print(f"  ✓ Loaded seed content from {candidate_path} ({len(final_ser_str)} chars)")
+                seed_loaded = True
+                break
+        except Exception as e:
+            print(f"  ⚠️ Could not read {candidate_path}: {e}")
+
+    if seed_loaded:
+        # Patch catalog references for the loaded seed
+        if CATALOG != "automation_d" and "automation_d" in final_ser_str:
+            final_ser_str = final_ser_str.replace('"automation_d"', f'"{CATALOG}"')
+            final_ser_str = final_ser_str.replace("automation_d.silver", f"{CATALOG}.silver")
+            print(f"  Catalog patched: automation_d → {CATALOG}")
+
+        # Apply _v2 metric view sync to the seeded JSON
+        for mv, actual in metric_view_names.items():
+            if actual is None:
+                continue
+            orig_ref = f"{S}.{mv}"
+            v2_ref = f"{S}.{mv}_v2"
+            if actual.endswith("_v2"):
+                if orig_ref in final_ser_str and v2_ref not in final_ser_str:
+                    final_ser_str = final_ser_str.replace(orig_ref, v2_ref)
+            else:
+                if v2_ref in final_ser_str:
+                    final_ser_str = final_ser_str.replace(v2_ref, orig_ref)
+    else:
+        print("\n⚠️ Main dashboard content is empty and no seed file could be loaded — skipping update and publish.")
+        if has_dev_changes:
+            print("   Set auto_promote='yes' and re-run to populate Main from DEV.")
+        dbutils.notebook.exit(json.dumps({
+            "status": "SKIPPED",
+            "reason": "Main dashboard empty, no seed file found",
+            "dashboard_id": MAIN_DASHBOARD_ID,
+            "dev_changes": total_changes if HAS_DEV else 0,
+            "v2_synced": v2_changes
+        }))
 
 # --- Update Main dashboard ---
 lv.update(
