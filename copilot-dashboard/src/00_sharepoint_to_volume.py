@@ -161,68 +161,71 @@ import msal
 import requests
 import json
 
+CLIENT_ID = dbutils.secrets.get(scope=SECRET_SCOPE, key=KV_SECRET_CLIENT_ID)
+CLIENT_SECRET = dbutils.secrets.get(scope=SECRET_SCOPE, key=KV_SECRET_CLIENT_SECRET)
+
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 SCOPE = ["https://graph.microsoft.com/.default"]
 
-sp_files = []
-try:
-    CLIENT_ID = dbutils.secrets.get(scope=SECRET_SCOPE, key=KV_SECRET_CLIENT_ID)
-    CLIENT_SECRET = dbutils.secrets.get(scope=SECRET_SCOPE, key=KV_SECRET_CLIENT_SECRET)
+app = msal.ConfidentialClientApplication(
+    CLIENT_ID,
+    authority=f"https://login.microsoftonline.com/{TENANT_ID}",
+    client_credential=CLIENT_SECRET,
+)
+token_result = app.acquire_token_for_client(scopes=SCOPE)
+assert "access_token" in token_result, f"Auth failed: {token_result.get('error_description')}"
 
-    app = msal.ConfidentialClientApplication(
-        CLIENT_ID,
-        authority=f"https://login.microsoftonline.com/{TENANT_ID}",
-        client_credential=CLIENT_SECRET,
-    )
-    token_result = app.acquire_token_for_client(scopes=SCOPE)
-    assert "access_token" in token_result, f"Auth failed: {token_result.get('error_description')}"
+HEADERS = {"Authorization": f"Bearer {token_result['access_token']}"}
+print("Successfully authenticated to Microsoft Graph API.")
 
-    HEADERS = {"Authorization": f"Bearer {token_result['access_token']}"}
-    print("Successfully authenticated to Microsoft Graph API.")
+# COMMAND ----------
 
-    # DBTITLE 1,Resolve SharePoint Site & Drive
-    site_url = f"{GRAPH_BASE}/sites/{SHAREPOINT_HOST}:{SHAREPOINT_SITE_PATH}"
-    site_resp = requests.get(site_url, headers=HEADERS)
-    site_resp.raise_for_status()
-    site_data = site_resp.json()
-    SITE_ID = site_data["id"]
+# DBTITLE 1,Resolve SharePoint Site & Drive
+site_url = f"{GRAPH_BASE}/sites/{SHAREPOINT_HOST}:{SHAREPOINT_SITE_PATH}"
+site_resp = requests.get(site_url, headers=HEADERS)
+site_resp.raise_for_status()
+site_data = site_resp.json()
+SITE_ID = site_data["id"]
+print(f"Site: {site_data['displayName']}  (ID: {SITE_ID})")
 
-    drives_resp = requests.get(f"{GRAPH_BASE}/sites/{SITE_ID}/drives", headers=HEADERS)
-    drives_resp.raise_for_status()
-    DRIVE_ID = next(d["id"] for d in drives_resp.json()["value"] if d["driveType"] == "documentLibrary")
+drives_resp = requests.get(f"{GRAPH_BASE}/sites/{SITE_ID}/drives", headers=HEADERS)
+drives_resp.raise_for_status()
+DRIVE_ID = next(d["id"] for d in drives_resp.json()["value"] if d["driveType"] == "documentLibrary")
+print(f"Drive ID: {DRIVE_ID}")
 
-    from urllib.parse import quote
+# COMMAND ----------
 
-    def list_sharepoint_files(drive_id, folder_path):
-        encoded = quote(folder_path, safe='')
-        url = f"{GRAPH_BASE}/drives/{drive_id}/root:/{encoded}:/children"
-        files = []
-        while url:
-            resp = requests.get(url, headers=HEADERS)
-            resp.raise_for_status()
-            data = resp.json()
-            for item in data.get("value", []):
-                if "file" in item:
-                    files.append({
-                        "id": item["id"],
-                        "name": item["name"],
-                        "size": item["size"],
-                        "lastModifiedDateTime": item["lastModifiedDateTime"],
-                        "downloadUrl": item.get("@microsoft.graph.downloadUrl"),
-                    })
-            url = data.get("@odata.nextLink")
-        return files
+# DBTITLE 1,List SharePoint Files
+from urllib.parse import quote
 
-    all_sp_files = list_sharepoint_files(DRIVE_ID, SHAREPOINT_FOLDER_PATH)
-    sp_files = [f for f in all_sp_files if f["name"].lower().endswith((".xlsx", ".xls", ".csv"))]
+def list_sharepoint_files(drive_id, folder_path):
+    """Return list of file metadata dicts from the specified SharePoint folder."""
+    encoded = quote(folder_path, safe='')
+    url = f"{GRAPH_BASE}/drives/{drive_id}/root:/{encoded}:/children"
+    files = []
+    while url:
+        resp = requests.get(url, headers=HEADERS)
+        resp.raise_for_status()
+        data = resp.json()
+        for item in data.get("value", []):
+            if "file" in item:  # skip folders
+                files.append({
+                    "id": item["id"],
+                    "name": item["name"],
+                    "size": item["size"],
+                    "lastModifiedDateTime": item["lastModifiedDateTime"],
+                    "downloadUrl": item.get("@microsoft.graph.downloadUrl"),
+                })
+        url = data.get("@odata.nextLink")
+    return files
 
-    print(f"Found {len(sp_files)} Excel/CSV file(s) in SharePoint folder:")
-    for f in sp_files:
-        print(f"  {f['name']:60s} {f['size']/1024:.1f} KB  modified {f['lastModifiedDateTime']}")
+# List only Excel and CSV files
+all_sp_files = list_sharepoint_files(DRIVE_ID, SHAREPOINT_FOLDER_PATH)
+sp_files = [f for f in all_sp_files if f["name"].lower().endswith((".xlsx", ".xls", ".csv"))]
 
-except Exception as e:
-    print(f"⚠️ WARNING: Could not connect to SharePoint Graph API ({e}).")
-    print("   Falling back to existing volume files in bronze_volume.")
+print(f"Found {len(sp_files)} Excel/CSV file(s) in SharePoint folder:")
+for f in sp_files:
+    print(f"  {f['name']:60s} {f['size']/1024:.1f} KB  modified {f['lastModifiedDateTime']}")
 
 # COMMAND ----------
 
