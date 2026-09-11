@@ -1856,6 +1856,481 @@
             "width": 4,
             "height": 7
           }
+        },
+        {
+          "widget": {
+            "name": "es_cost_divider",
+            "multilineTextboxSpec": {
+              "lines": [
+                "**COST DEEP-DIVE**  product split, billing status & daily burn-down"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 19,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "es_cost_total_credits",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_add_cost_headline",
+                  "fields": [
+                    {
+                      "name": "measure(Total Credits)",
+                      "expression": "MEASURE(`Total Credits`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "contentAlignment": "center",
+                "headerAlignment": "center",
+                "title": "Total Consumption (Credits)",
+                "description": {
+                  "value": "(MCSMessages, snapshot)",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Total Credits)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none"
+                  },
+                  "displayName": "Total Consumption (Credits)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 20,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "es_cost_total_eur",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_add_cost_headline",
+                  "fields": [
+                    {
+                      "name": "measure(Total Cost EUR)",
+                      "expression": "MEASURE(`Total Cost EUR`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "contentAlignment": "center",
+                "headerAlignment": "center",
+                "title": "Total Consumption (EUR)",
+                "description": {
+                  "value": "(ex-VAT, prepaid pack rate)",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Total Cost EUR)",
+                  "format": {
+                    "type": "number-currency",
+                    "abbreviation": "none",
+                    "currencyCode": "EUR"
+                  },
+                  "displayName": "Total Consumption (EUR)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 20,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "es_cost_runrate",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_add_cost_runrate",
+                  "fields": [
+                    {
+                      "name": "measure(Projected Monthly Credits)",
+                      "expression": "MEASURE(`Projected Monthly Credits`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "contentAlignment": "center",
+                "headerAlignment": "center",
+                "title": "Projected Monthly (Credits)",
+                "description": {
+                  "value": "(29 Apr  27 May window only)",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Projected Monthly Credits)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none"
+                  },
+                  "displayName": "Projected Monthly (Credits)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 20,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "es_cost_product",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_add_cost_product",
+                  "fields": [
+                    {
+                      "name": "product",
+                      "expression": "`product`"
+                    },
+                    {
+                      "name": "measure(credits)",
+                      "expression": "MEASURE(`credits`)"
+                    },
+                    {
+                      "name": "measure(cost_eur)",
+                      "expression": "MEASURE(`cost_eur`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "DESC",
+                      "expression": "MEASURE(`credits`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Credit by Product (Billing View)",
+                "description": {
+                  "value": "Dataverse MCP = platform cost driver (3,247 of 3,309.9).",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "headerStyle": {
+                "foregroundColor": "#C4540B",
+                "bold": true
+              },
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "product",
+                    "displayName": "Product"
+                  },
+                  {
+                    "fieldName": "measure(credits)",
+                    "displayName": "Copilot Credits"
+                  },
+                  {
+                    "fieldName": "measure(cost_eur)",
+                    "displayName": "Cost (EUR)"
+                  }
+                ],
+                "rowOrder": [
+                  {
+                    "by": "column-reversed",
+                    "field": {
+                      "index": 1
+                    }
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 23,
+            "width": 6,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "es_cost_billed",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_add_cost_billed_absorbed",
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "measure(Credits)",
+                      "expression": "MEASURE(`Credits`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Billed vs Absorbed Credits",
+                "description": {
+                  "value": "1,985 billed / 1,324.9 absorbed by license (~40%).",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "category",
+                  "displayName": "Category",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Credits)",
+                  "displayName": "Copilot Credits",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 23,
+            "width": 6,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "es_cost_license",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_add_cost_by_license",
+                  "fields": [
+                    {
+                      "name": "license_status",
+                      "expression": "`license_status`"
+                    },
+                    {
+                      "name": "measure(users)",
+                      "expression": "MEASURE(`users`)"
+                    },
+                    {
+                      "name": "measure(credits)",
+                      "expression": "MEASURE(`credits`)"
+                    },
+                    {
+                      "name": "measure(cost_eur)",
+                      "expression": "MEASURE(`cost_eur`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "DESC",
+                      "expression": "MEASURE(`credits`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": false,
+                "title": "Consumption by License Status"
+              },
+              "version": 2,
+              "headerStyle": {
+                "foregroundColor": "#C4540B",
+                "bold": true
+              },
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "license_status",
+                    "displayName": "License Status"
+                  },
+                  {
+                    "fieldName": "measure(users)",
+                    "displayName": "Users"
+                  },
+                  {
+                    "fieldName": "measure(credits)",
+                    "displayName": "Copilot Credits"
+                  },
+                  {
+                    "fieldName": "measure(cost_eur)",
+                    "displayName": "Cost (EUR)"
+                  }
+                ],
+                "rowOrder": [
+                  {
+                    "by": "column-reversed",
+                    "field": {
+                      "index": 2
+                    }
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 27,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "es_cost_burndown",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_add_cost_burndown",
+                  "fields": [
+                    {
+                      "name": "date_eu",
+                      "expression": "`date_eu`"
+                    },
+                    {
+                      "name": "measure(Daily Credits)",
+                      "expression": "MEASURE(`Daily Credits`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Daily Prepaid Burn-down",
+                "description": {
+                  "value": "Environment-level MCS consumption, 29 Apr 27 May 2026.",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "date_eu",
+                  "displayName": "Date",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Daily Credits)",
+                  "displayName": "Daily Credits",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 27,
+            "width": 6,
+            "height": 5
+          }
         }
       ],
       "pageType": "PAGE_TYPE_CANVAS",
@@ -2869,1298 +3344,8 @@
       "layoutVersion": "GRID_V1"
     },
     {
-      "name": "usage_overview_v2",
-      "displayName": "Usage & Adoption-1",
-      "layout": [
-        {
-          "widget": {
-            "name": "usage_hero_title_v2",
-            "multilineTextboxSpec": {
-              "lines": [
-                "# Copilot Analysis - User Usage\n",
-                "\n",
-                "#### Adoption & reach across the Etex tenant\n",
-                "\n",
-                "*Grain: one Copilot interaction (Purview audit event) not an agent, not a credit row. Interactions do&#32;&#32; **not**&#32;reconcile to MCS credits: most are base M365 Copilot, absorbed by the licence and never billed.*"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_TOP"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "usage_f_region_v2",
-            "queries": [
-              {
-                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "Region",
-                      "expression": "`Region`"
-                    },
-                    {
-                      "name": "Region_associativity",
-                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Region / Admin Unit",
-                  "fields": []
-                }
-              },
-              "widgetType": "filter-multi-select",
-              "encodings": {
-                "fields": [
-                  {
-                    "fieldName": "Region",
-                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region"
-                  }
-                ]
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 3,
-            "width": 6,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "usage_f_licence_v2",
-            "queries": [
-              {
-                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "License Type",
-                      "expression": "`License Type`"
-                    },
-                    {
-                      "name": "License Type_associativity",
-                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "License Type",
-                  "fields": []
-                }
-              },
-              "widgetType": "filter-multi-select",
-              "encodings": {
-                "fields": [
-                  {
-                    "fieldName": "License Type",
-                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type"
-                  }
-                ]
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 3,
-            "width": 6,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "usage_div_scale_v2",
-            "multilineTextboxSpec": {
-              "lines": [
-                "**ADOPTION AT A GLANCE** -  volume, people, intensity"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#F4D5BE"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 4,
-            "width": 12,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "usage_div_reach_v2",
-            "multilineTextboxSpec": {
-              "lines": [
-                "**REACH**  - how far Copilot has spread"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#F4D5BE"
-              },
-              "widgetBorderColor": {
-                "light": "#F59A3E"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 8,
-            "width": 12,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "usage_div_region_v2",
-            "multilineTextboxSpec": {
-              "lines": [
-                "**BY ADMIN UNIT**   where the usage sits"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#F4D5BE"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 11,
-            "width": 12,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "bar_chart1_v2",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "measure(Total Interactions)",
-                      "expression": "MEASURE(`Total Interactions`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Total Copilot Interactions",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Total Interactions)",
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "compact"
-                  }
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 5,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_unique_users_v2",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "measure(Unique Active Users)",
-                      "expression": "MEASURE(`Unique Active Users`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Unique Active Users",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Unique Active Users)"
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 4,
-            "y": 5,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_avg_interactions_v2",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "measure(Avg Interactions per User)",
-                      "expression": "MEASURE(`Avg Interactions per User`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Avg Interactions per User",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Avg Interactions per User)"
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 8,
-            "y": 5,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_unique_regions_v2",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "measure(Unique Regions)",
-                      "expression": "MEASURE(`Unique Regions`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Unique Regions",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Unique Regions)"
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 9,
-            "width": 6,
-            "height": 2
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_unique_environments_v2",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "measure(Unique Environments)",
-                      "expression": "MEASURE(`Unique Environments`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Unique Environments",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Unique Environments)"
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 9,
-            "width": 6,
-            "height": 2
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_interactions_per_region_v2",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "Region",
-                      "expression": "`Region`"
-                    },
-                    {
-                      "name": "measure(Interactions by Region)",
-                      "expression": "MEASURE(`Interactions by Region`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Interactions by Admin Unit",
-                  "fields": []
-                }
-              },
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "Region",
-                  "scale": {
-                    "type": "categorical"
-                  }
-                },
-                "y": {
-                  "fieldName": "measure(Interactions by Region)",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 12,
-            "width": 6,
-            "height": 6
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_avg_per_user_region_v2",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "Region",
-                      "expression": "`Region`"
-                    },
-                    {
-                      "name": "measure(Avg Interactions per User by Region)",
-                      "expression": "MEASURE(`Avg Interactions per User by Region`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Avg Interactions per User by Region",
-                  "fields": []
-                }
-              },
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "Region",
-                  "scale": {
-                    "type": "categorical"
-                  }
-                },
-                "y": {
-                  "fieldName": "measure(Avg Interactions per User by Region)",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 12,
-            "width": 6,
-            "height": 6
-          }
-        }
-      ],
-      "pageType": "PAGE_TYPE_CANVAS",
-      "layoutVersion": "GRID_V1"
-    },
-    {
-      "name": "usage_adoption_2",
-      "displayName": "Usage & Adoption-2",
-      "layout": [
-        {
-          "widget": {
-            "name": "title",
-            "multilineTextboxSpec": {
-              "lines": [
-                "# Copilot Analysis - Usage Detail\n",
-                "\n",
-                "#### Licensing mix, grounding & model, interaction surfaces"
-              ]
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 2
-          }
-        },
-        {
-          "widget": {
-            "name": "f_region",
-            "queries": [
-              {
-                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "Region",
-                      "expression": "`Region`"
-                    },
-                    {
-                      "name": "Region_associativity",
-                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Region / Admin Unit",
-                  "fields": []
-                }
-              },
-              "widgetType": "filter-multi-select",
-              "encodings": {
-                "fields": [
-                  {
-                    "fieldName": "Region",
-                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region"
-                  }
-                ]
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 2,
-            "width": 6,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "f_licence",
-            "queries": [
-              {
-                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "License Type",
-                      "expression": "`License Type`"
-                    },
-                    {
-                      "name": "License Type_associativity",
-                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "License Type",
-                  "fields": []
-                }
-              },
-              "widgetType": "filter-multi-select",
-              "encodings": {
-                "fields": [
-                  {
-                    "fieldName": "License Type",
-                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type"
-                  }
-                ]
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 2,
-            "width": 6,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "div_licence",
-            "multilineTextboxSpec": {
-              "lines": [
-                "**LICENSING**   Premium vs Starter interaction mix"
-              ]
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 3,
-            "width": 12,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_premium",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "measure(Premium Interactions)",
-                      "expression": "MEASURE(`Premium Interactions`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Premium Interactions",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Premium Interactions)",
-                  "rowNumber": 0
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 4,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_starter",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "measure(Starter Interactions)",
-                      "expression": "MEASURE(`Starter Interactions`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Starter Interactions",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Starter Interactions)",
-                  "rowNumber": 0
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 4,
-            "y": 4,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_premium_share",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "measure(Premium Share)",
-                      "expression": "MEASURE(`Premium Share`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Premium Share",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Premium Share)",
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "none",
-                    "decimalPlaces": {
-                      "type": "exact",
-                      "places": 1
-                    }
-                  },
-                  "formatTemplate": "{{@formatted}}%"
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 8,
-            "y": 4,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "div_ground",
-            "multilineTextboxSpec": {
-              "lines": [
-                "**GROUNDING & MODEL**   Bing web search and model provider"
-              ]
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 7,
-            "width": 12,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_bing",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "measure(Bing Interactions)",
-                      "expression": "MEASURE(`Bing Interactions`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Bing Interactions",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Bing Interactions)",
-                  "rowNumber": 0
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 8,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_pct_bing",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "measure(Pct Using Bing)",
-                      "expression": "MEASURE(`Pct Using Bing`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "% Interactions Using Bing",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Pct Using Bing)",
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "none",
-                    "decimalPlaces": {
-                      "type": "exact",
-                      "places": 1
-                    }
-                  },
-                  "formatTemplate": "{{@formatted}}%"
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 4,
-            "y": 8,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_openai",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "measure(OpenAI Interactions)",
-                      "expression": "MEASURE(`OpenAI Interactions`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "OpenAI Interactions",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(OpenAI Interactions)",
-                  "rowNumber": 0
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 8,
-            "y": 8,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "div_surface",
-            "multilineTextboxSpec": {
-              "lines": [
-                "**INTERACTION SURFACE**  M365 Copilot Chat vs declarative vs custom-engine agents"
-              ]
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 11,
-            "width": 12,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_bizchat",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "measure(BizChat M365 Interactions)",
-                      "expression": "MEASURE(`BizChat M365 Interactions`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Microsoft 365 Copilot Chat Interactions",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(BizChat M365 Interactions)",
-                  "rowNumber": 0
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 12,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_declarative",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "measure(Declarative Interactions)",
-                      "expression": "MEASURE(`Declarative Interactions`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Declarative Interactions",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Declarative Interactions)",
-                  "rowNumber": 0
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 4,
-            "y": 12,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_custom_engine",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "measure(Custom Engine Interactions)",
-                      "expression": "MEASURE(`Custom Engine Interactions`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Custom Engine Interactions",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Custom Engine Interactions)",
-                  "rowNumber": 0
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 8,
-            "y": 12,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "div_detail",
-            "multilineTextboxSpec": {
-              "lines": [
-                "**INTERACTION DETAIL**  row-level audit records"
-              ]
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 15,
-            "width": 12,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "tbl_detail",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "Interaction Type",
-                      "expression": "`Interaction Type`"
-                    },
-                    {
-                      "name": "License Type",
-                      "expression": "`License Type`"
-                    },
-                    {
-                      "name": "Uses Bing Search",
-                      "expression": "`Uses Bing Search`"
-                    },
-                    {
-                      "name": "Model Provider",
-                      "expression": "`Model Provider`"
-                    },
-                    {
-                      "name": "Region",
-                      "expression": "`Region`"
-                    },
-                    {
-                      "name": "Interaction Date",
-                      "expression": "`Interaction Date`"
-                    },
-                    {
-                      "name": "User Email",
-                      "expression": "`User Email`"
-                    },
-                    {
-                      "name": "Agent Name",
-                      "expression": "`Agent Name`"
-                    },
-                    {
-                      "name": "Target Agent ID",
-                      "expression": "`Target Agent ID`"
-                    },
-                    {
-                      "name": "Environment ID",
-                      "expression": "`Environment ID`"
-                    }
-                  ],
-                  "disaggregated": true
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Interaction Detail",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "rowsPerPage": 25,
-              "widgetType": "table",
-              "encodings": {
-                "columns": [
-                  {
-                    "fieldName": "Interaction Type"
-                  },
-                  {
-                    "fieldName": "License Type"
-                  },
-                  {
-                    "fieldName": "Uses Bing Search",
-                    "contentAlignment": "right"
-                  },
-                  {
-                    "fieldName": "Model Provider"
-                  },
-                  {
-                    "fieldName": "Region"
-                  },
-                  {
-                    "fieldName": "Interaction Date",
-                    "contentAlignment": "right",
-                    "format": {
-                      "type": "moment.js",
-                      "format": "DD/MM/YYYY"
-                    }
-                  },
-                  {
-                    "fieldName": "User Email"
-                  },
-                  {
-                    "fieldName": "Agent Name"
-                  },
-                  {
-                    "fieldName": "Target Agent ID"
-                  },
-                  {
-                    "fieldName": "Environment ID"
-                  }
-                ]
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 16,
-            "width": 12,
-            "height": 8
-          }
-        }
-      ],
-      "pageType": "PAGE_TYPE_CANVAS",
-      "layoutVersion": "GRID_V1"
-    },
-    {
       "name": "ecc9e436",
-      "displayName": "Governance & Risk",
+      "displayName": "Governance, Risk & Knowledge",
       "layout": [
         {
           "widget": {
@@ -4795,6 +3980,1994 @@
             "width": 12,
             "height": 7
           }
+        },
+        {
+          "widget": {
+            "name": "kg_title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "### Knowledge & Grounding which agents are grounded, and on what\n",
+                "\n",
+                "Every Copilot Studio agent can be attached to **knowledge bases** (SharePoint sites, files, public sites, Dataverse and federated sources). This page shows how many each agent has and, reading it the other way, **which knowledge bases are shared across many agents**: a shared source is a single point of change."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 26,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_subtitle",
+            "multilineTextboxSpec": {
+              "lines": [
+                "*Counts come from the parsed knowledge-source details for each agent in the Copilot Studio Kit.*"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 28,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_f_agent",
+            "queries": [
+              {
+                "name": "dashboards/01f1ab7d65c8195f81a0c625d5f52111/datasets/01f1acf28db815609572b54415f78c41_agent_name",
+                "query": {
+                  "datasetName": "ds_kb_detail",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "expression": "`agent_name`"
+                    },
+                    {
+                      "name": "agent_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Select Agent"
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "agent_name",
+                    "queryName": "dashboards/01f1ab7d65c8195f81a0c625d5f52111/datasets/01f1acf28db815609572b54415f78c41_agent_name"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 29,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_kpi_grounded",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kb_detail",
+                  "fields": [
+                    {
+                      "name": "measure(Grounded Agents)",
+                      "expression": "MEASURE(`Grounded Agents`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Grounded Agents",
+                "description": {
+                  "value": "(>=1 knowledge source)",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Grounded Agents)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 30,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_kpi_coverage",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kb_coverage",
+                  "fields": [
+                    {
+                      "name": "measure(Grounding Coverage %)",
+                      "expression": "MEASURE(`Grounding Coverage %`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Grounding Coverage %",
+                "description": {
+                  "value": "(of valid Studio agents)",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Grounding Coverage %)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 30,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_kpi_bases",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kb_detail",
+                  "fields": [
+                    {
+                      "name": "measure(Knowledge Bases)",
+                      "expression": "MEASURE(`Knowledge Bases`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Knowledge Bases",
+                "description": {
+                  "value": "(distinct sources)",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Knowledge Bases)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 30,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_kpi_links",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kb_detail",
+                  "fields": [
+                    {
+                      "name": "measure(Agent-KB Links)",
+                      "expression": "MEASURE(`Agent-KB Links`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Agent-KB Links",
+                "description": {
+                  "value": "(edges of the grounding graph)",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Agent-KB Links)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 30,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_kpi_shared",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kb_detail",
+                  "fields": [
+                    {
+                      "name": "measure(Shared Knowledge Bases)",
+                      "expression": "MEASURE(`Shared Knowledge Bases`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Shared Knowledge Bases",
+                "description": {
+                  "value": "(grounding 2+ agents)",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Shared Knowledge Bases)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 30,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_kpi_avg",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kb_detail",
+                  "fields": [
+                    {
+                      "name": "measure(Avg Sources per Agent)",
+                      "expression": "MEASURE(`Avg Sources per Agent`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Avg Sources per Agent",
+                "description": {
+                  "value": "(grounded agents only)",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Avg Sources per Agent)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 10,
+            "y": 30,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_bar_type",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kb_detail",
+                  "fields": [
+                    {
+                      "name": "kb_type",
+                      "expression": "`kb_type`"
+                    },
+                    {
+                      "name": "measure(Agent-KB Links)",
+                      "expression": "MEASURE(`Agent-KB Links`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Knowledge Sources by Type",
+                "description": {
+                  "value": "What agents are grounded on. SharePoint dominates.",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "kb_type",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Agent-KB Links)",
+                  "displayName": "Agent-KB Links",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "kb_type",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 33,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_bar_reused",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kb_detail",
+                  "fields": [
+                    {
+                      "name": "kb_display_name",
+                      "expression": "`kb_display_name`"
+                    },
+                    {
+                      "name": "measure(Grounded Agents)",
+                      "expression": "MEASURE(`Grounded Agents`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Most-Reused Knowledge Bases",
+                "description": {
+                  "value": "Blast radius: how many agents each knowledge base grounds.",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "kb_display_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Grounded Agents)",
+                  "displayName": "Grounded Agents",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "kb_display_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 33,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_bar_agents",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kb_detail",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "expression": "`agent_name`"
+                    },
+                    {
+                      "name": "measure(Knowledge Bases)",
+                      "expression": "MEASURE(`Knowledge Bases`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Top Agents by Knowledge Base Count",
+                "description": {
+                  "value": "Agents attached to the most distinct knowledge bases.",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "agent_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Knowledge Bases)",
+                  "displayName": "Knowledge Bases",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "agent_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 39,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_bar_env",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kb_detail",
+                  "fields": [
+                    {
+                      "name": "environment_name",
+                      "expression": "`environment_name`"
+                    },
+                    {
+                      "name": "measure(Grounded Agents)",
+                      "expression": "MEASURE(`Grounded Agents`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Grounded Agents by Environment",
+                "description": {
+                  "value": "Where grounded agents sit.",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "environment_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Grounded Agents)",
+                  "displayName": "Grounded Agents",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "environment_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 39,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_tbl_per_agent",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kb_detail",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "expression": "`agent_name`"
+                    },
+                    {
+                      "name": "agent_owner",
+                      "expression": "`agent_owner`"
+                    },
+                    {
+                      "name": "environment_name",
+                      "expression": "`environment_name`"
+                    },
+                    {
+                      "name": "measure(Knowledge Bases)",
+                      "expression": "MEASURE(`Knowledge Bases`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "DESC",
+                      "expression": "MEASURE(`Knowledge Bases`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Knowledge Bases per Agent",
+                "description": {
+                  "value": "Distinct knowledge bases attached to each grounded agent. Click a row to narrow the page to that agent.",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "headerStyle": {
+                "foregroundColor": "#E86810",
+                "bold": true
+              },
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "agent_name",
+                    "useForSearch": true,
+                    "displayName": "Agent"
+                  },
+                  {
+                    "fieldName": "agent_owner",
+                    "useForSearch": true,
+                    "displayName": "Owner"
+                  },
+                  {
+                    "fieldName": "environment_name",
+                    "useForSearch": true,
+                    "displayName": "Environment"
+                  },
+                  {
+                    "fieldName": "measure(Knowledge Bases)",
+                    "displayName": "# Knowledge Bases"
+                  }
+                ],
+                "rowOrder": [
+                  {
+                    "by": "column-reversed",
+                    "field": {
+                      "index": 3
+                    }
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 45,
+            "width": 12,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_tbl_kb_list",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_kb_detail",
+                  "fields": [
+                    {
+                      "name": "agent_name",
+                      "expression": "`agent_name`"
+                    },
+                    {
+                      "name": "kb_display_name",
+                      "expression": "`kb_display_name`"
+                    },
+                    {
+                      "name": "kb_type",
+                      "expression": "`kb_type`"
+                    },
+                    {
+                      "name": "kb_value",
+                      "expression": "`kb_value`"
+                    },
+                    {
+                      "name": "is_shared",
+                      "expression": "`is_shared`"
+                    },
+                    {
+                      "name": "kb_agent_count",
+                      "expression": "`kb_agent_count`"
+                    },
+                    {
+                      "name": "in_inventory",
+                      "expression": "`in_inventory`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": "Knowledge Bases for Selected Agent",
+                "description": {
+                  "value": "Every knowledge base attached to the selected agent. Unfiltered, this lists all agent-knowledge-base links.",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "headerStyle": {
+                "foregroundColor": "#E86810",
+                "bold": true
+              },
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "agent_name",
+                    "useForSearch": true,
+                    "displayName": "Agent"
+                  },
+                  {
+                    "fieldName": "kb_display_name",
+                    "useForSearch": true,
+                    "displayName": "Knowledge Base"
+                  },
+                  {
+                    "fieldName": "kb_type",
+                    "useForSearch": true,
+                    "displayName": "Type"
+                  },
+                  {
+                    "fieldName": "kb_value",
+                    "displayName": "Source"
+                  },
+                  {
+                    "fieldName": "is_shared",
+                    "displayName": "Shared?"
+                  },
+                  {
+                    "fieldName": "kb_agent_count",
+                    "displayName": "# Agents Sharing"
+                  },
+                  {
+                    "fieldName": "in_inventory",
+                    "displayName": "In Inventory"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 54,
+            "width": 12,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
+            "name": "kg_caveats",
+            "multilineTextboxSpec": {
+              "lines": [
+                "How to read these numbers. Counts come from the parsed knowledge-source details for each agent in the Copilot Studio Kit. They are deduplicated by agent and knowledge base. Three limits worth knowing: (1) Some valid Studio agents are flagged as using knowledge but do not appear in the parsed data. (2) Agent Builder agents do not expose knowledge sources in the export kit. (3) Public-website sources may be generic (e.g. microsoft.com) and shared status may be inflated."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 63,
+            "width": 12,
+            "height": 3
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "usage_overview_v2",
+      "displayName": "Usage & Adoption",
+      "layout": [
+        {
+          "widget": {
+            "name": "usage_hero_title_v2",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Copilot Analysis - User Usage\n",
+                "\n",
+                "#### Adoption & reach across the Etex tenant\n",
+                "\n",
+                "*Grain: one Copilot interaction (Purview audit event) not an agent, not a credit row. Interactions do&#32;&#32; **not**&#32;reconcile to MCS credits: most are base M365 Copilot, absorbed by the licence and never billed.*"
+              ],
+              "verticalAlign": "VERTICAL_ALIGN_TOP"
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#FFFFFF"
+              },
+              "widgetBorderColor": {
+                "light": "#E86810"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "usage_f_region_v2",
+            "queries": [
+              {
+                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "Region",
+                      "expression": "`Region`"
+                    },
+                    {
+                      "name": "Region_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Region / Admin Unit",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "Region",
+                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "usage_f_licence_v2",
+            "queries": [
+              {
+                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "License Type",
+                      "expression": "`License Type`"
+                    },
+                    {
+                      "name": "License Type_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "License Type",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "License Type",
+                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "usage_div_scale_v2",
+            "multilineTextboxSpec": {
+              "lines": [
+                "**ADOPTION AT A GLANCE** -  volume, people, intensity"
+              ],
+              "verticalAlign": "VERTICAL_ALIGN_CENTER"
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#F4D5BE"
+              },
+              "widgetBorderColor": {
+                "light": "#E86810"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "usage_div_reach_v2",
+            "multilineTextboxSpec": {
+              "lines": [
+                "**REACH**  - how far Copilot has spread"
+              ],
+              "verticalAlign": "VERTICAL_ALIGN_CENTER"
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#F4D5BE"
+              },
+              "widgetBorderColor": {
+                "light": "#F59A3E"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "usage_div_region_v2",
+            "multilineTextboxSpec": {
+              "lines": [
+                "**BY ADMIN UNIT**   where the usage sits"
+              ],
+              "verticalAlign": "VERTICAL_ALIGN_CENTER"
+            },
+            "specExtensions": {
+              "widgetBackgroundColor": {
+                "light": "#F4D5BE"
+              },
+              "widgetBorderColor": {
+                "light": "#E86810"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_chart1_v2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "measure(Total Interactions)",
+                      "expression": "MEASURE(`Total Interactions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Total Copilot Interactions",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Total Interactions)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_unique_users_v2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "measure(Unique Active Users)",
+                      "expression": "MEASURE(`Unique Active Users`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Unique Active Users",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Unique Active Users)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 5,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_avg_interactions_v2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "measure(Avg Interactions per User)",
+                      "expression": "MEASURE(`Avg Interactions per User`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Avg Interactions per User",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Avg Interactions per User)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 5,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_unique_regions_v2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "measure(Unique Regions)",
+                      "expression": "MEASURE(`Unique Regions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Unique Regions",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Unique Regions)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_unique_environments_v2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "measure(Unique Environments)",
+                      "expression": "MEASURE(`Unique Environments`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Unique Environments",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Unique Environments)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 9,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_interactions_per_region_v2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "Region",
+                      "expression": "`Region`"
+                    },
+                    {
+                      "name": "measure(Interactions by Region)",
+                      "expression": "MEASURE(`Interactions by Region`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Interactions by Admin Unit",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Region",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Interactions by Region)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_avg_per_user_region_v2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "Region",
+                      "expression": "`Region`"
+                    },
+                    {
+                      "name": "measure(Avg Interactions per User by Region)",
+                      "expression": "MEASURE(`Avg Interactions per User by Region`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Avg Interactions per User by Region",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Region",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Avg Interactions per User by Region)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 12,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "u2_div_licence",
+            "multilineTextboxSpec": {
+              "lines": [
+                "**LICENSING**   Premium vs Starter interaction mix"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "u2_kpi_premium",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "measure(Premium Interactions)",
+                      "expression": "MEASURE(`Premium Interactions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Premium Interactions"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Premium Interactions)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 19,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "u2_kpi_starter",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "measure(Starter Interactions)",
+                      "expression": "MEASURE(`Starter Interactions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Starter Interactions"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Starter Interactions)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 19,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "u2_kpi_premium_share",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "measure(Premium Share)",
+                      "expression": "MEASURE(`Premium Share`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Premium Share"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Premium Share)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 1
+                    }
+                  },
+                  "formatTemplate": "{{@formatted}}%"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 19,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "u2_div_ground",
+            "multilineTextboxSpec": {
+              "lines": [
+                "**GROUNDING & MODEL**   Bing web search and model provider"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 22,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "u2_kpi_bing",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "measure(Bing Interactions)",
+                      "expression": "MEASURE(`Bing Interactions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Bing Interactions"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Bing Interactions)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 23,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "u2_kpi_pct_bing",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "measure(Pct Using Bing)",
+                      "expression": "MEASURE(`Pct Using Bing`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "% Interactions Using Bing"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Pct Using Bing)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 1
+                    }
+                  },
+                  "formatTemplate": "{{@formatted}}%"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 23,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "u2_kpi_openai",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "measure(OpenAI Interactions)",
+                      "expression": "MEASURE(`OpenAI Interactions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "OpenAI Interactions"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(OpenAI Interactions)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 23,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "u2_div_surface",
+            "multilineTextboxSpec": {
+              "lines": [
+                "**INTERACTION SURFACE**  M365 Copilot Chat vs declarative vs custom-engine agents"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 26,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "u2_kpi_bizchat",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "measure(BizChat M365 Interactions)",
+                      "expression": "MEASURE(`BizChat M365 Interactions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Microsoft 365 Copilot Chat Interactions"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(BizChat M365 Interactions)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 27,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "u2_kpi_declarative",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "measure(Declarative Interactions)",
+                      "expression": "MEASURE(`Declarative Interactions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Declarative Interactions"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Declarative Interactions)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 27,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "u2_kpi_custom_engine",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "measure(Custom Engine Interactions)",
+                      "expression": "MEASURE(`Custom Engine Interactions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Custom Engine Interactions"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Custom Engine Interactions)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 27,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "u2_div_detail",
+            "multilineTextboxSpec": {
+              "lines": [
+                "**INTERACTION DETAIL**  row-level audit records"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 30,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "u2_tbl_detail",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_copilot_metrics",
+                  "fields": [
+                    {
+                      "name": "Interaction Type",
+                      "expression": "`Interaction Type`"
+                    },
+                    {
+                      "name": "License Type",
+                      "expression": "`License Type`"
+                    },
+                    {
+                      "name": "Uses Bing Search",
+                      "expression": "`Uses Bing Search`"
+                    },
+                    {
+                      "name": "Model Provider",
+                      "expression": "`Model Provider`"
+                    },
+                    {
+                      "name": "Region",
+                      "expression": "`Region`"
+                    },
+                    {
+                      "name": "Interaction Date",
+                      "expression": "`Interaction Date`"
+                    },
+                    {
+                      "name": "User Email",
+                      "expression": "`User Email`"
+                    },
+                    {
+                      "name": "Agent Name",
+                      "expression": "`Agent Name`"
+                    },
+                    {
+                      "name": "Target Agent ID",
+                      "expression": "`Target Agent ID`"
+                    },
+                    {
+                      "name": "Environment ID",
+                      "expression": "`Environment ID`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Interaction Detail"
+              },
+              "version": 2,
+              "rowsPerPage": 25,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "Interaction Type"
+                  },
+                  {
+                    "fieldName": "License Type"
+                  },
+                  {
+                    "fieldName": "Uses Bing Search",
+                    "contentAlignment": "right"
+                  },
+                  {
+                    "fieldName": "Model Provider"
+                  },
+                  {
+                    "fieldName": "Region"
+                  },
+                  {
+                    "fieldName": "Interaction Date",
+                    "contentAlignment": "right",
+                    "format": {
+                      "type": "moment.js",
+                      "format": "DD/MM/YYYY"
+                    }
+                  },
+                  {
+                    "fieldName": "User Email"
+                  },
+                  {
+                    "fieldName": "Agent Name"
+                  },
+                  {
+                    "fieldName": "Target Agent ID"
+                  },
+                  {
+                    "fieldName": "Environment ID"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 31,
+            "width": 12,
+            "height": 8
+          }
         }
       ],
       "pageType": "PAGE_TYPE_CANVAS",
@@ -4802,7 +5975,7 @@
     },
     {
       "name": "0394fe6a",
-      "displayName": "Adoption & Momentum",
+      "displayName": "Agent Composition",
       "layout": [
         {
           "widget": {
@@ -5158,470 +6331,8 @@
       "layoutVersion": "GRID_V1"
     },
     {
-      "name": "ca2354f8",
-      "displayName": "Cost Intelligence",
-      "layout": [
-        {
-          "widget": {
-            "name": "cost_note",
-            "multilineTextboxSpec": {
-              "lines": [
-                "*Env prepaid daily series differs from headline consumption different grains. Product split uses billing view (metric\\_agent\\_feature\\_credit).*"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_TOP"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#C4540B"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 2,
-            "width": 12,
-            "height": 2
-          }
-        },
-        {
-          "widget": {
-            "name": "cost_total_credits",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_add_cost_headline",
-                  "fields": [
-                    {
-                      "name": "measure(Total Credits)",
-                      "expression": "MEASURE(`Total Credits`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "frame": {
-                "title": "Total Consumption (Credits)",
-                "showTitle": true,
-                "showDescription": true,
-                "contentAlignment": "center",
-                "headerAlignment": "center",
-                "description": "(MCSMessages, snapshot)"
-              },
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Total Credits)",
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "none"
-                  },
-                  "displayName": "Total Consumption (Credits)"
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 4,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "cost_total_eur",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_add_cost_headline",
-                  "fields": [
-                    {
-                      "name": "measure(Total Cost EUR)",
-                      "expression": "MEASURE(`Total Cost EUR`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "frame": {
-                "title": "Total Consumption (EUR)",
-                "showTitle": true,
-                "showDescription": true,
-                "contentAlignment": "center",
-                "headerAlignment": "center",
-                "description": "(ex-VAT, prepaid pack rate)"
-              },
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Total Cost EUR)",
-                  "format": {
-                    "type": "number-currency",
-                    "abbreviation": "none",
-                    "currencyCode": "EUR"
-                  },
-                  "displayName": "Total Consumption (EUR)"
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 4,
-            "y": 4,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "cost_runrate",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_add_cost_runrate",
-                  "fields": [
-                    {
-                      "name": "measure(Projected Monthly Credits)",
-                      "expression": "MEASURE(`Projected Monthly Credits`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "frame": {
-                "title": "Projected Monthly (Credits)",
-                "showTitle": true,
-                "showDescription": true,
-                "contentAlignment": "center",
-                "headerAlignment": "center",
-                "description": "(29 Apr 27 May window only)"
-              },
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Projected Monthly Credits)",
-                  "format": {
-                    "type": "number-plain",
-                    "abbreviation": "none"
-                  },
-                  "displayName": "Projected Monthly (Credits)"
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 8,
-            "y": 4,
-            "width": 4,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "cost_product_split",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_add_cost_product",
-                  "fields": [
-                    {
-                      "name": "product",
-                      "expression": "`product`"
-                    },
-                    {
-                      "name": "measure(credits)",
-                      "expression": "MEASURE(`credits`)"
-                    },
-                    {
-                      "name": "measure(cost_eur)",
-                      "expression": "MEASURE(`cost_eur`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "frame": {
-                "title": "Credit by Product (Billing View)",
-                "showTitle": true,
-                "showDescription": true,
-                "description": "Dataverse MCP = platform cost driver (3,247 of 3,309.9)."
-              },
-              "headerStyle": {
-                "foregroundColor": "#C4540B",
-                "bold": true
-              },
-              "widgetType": "table",
-              "encodings": {
-                "columns": [
-                  {
-                    "fieldName": "product",
-                    "displayName": "Product"
-                  },
-                  {
-                    "fieldName": "measure(credits)",
-                    "displayName": "Copilot Credits"
-                  },
-                  {
-                    "fieldName": "measure(cost_eur)",
-                    "displayName": "Cost (EUR)"
-                  }
-                ],
-                "rowOrder": [
-                  {
-                    "by": "column-reversed",
-                    "field": {
-                      "index": 1
-                    }
-                  }
-                ]
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 7,
-            "width": 6,
-            "height": 4
-          }
-        },
-        {
-          "widget": {
-            "name": "cost_billed_absorbed",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_add_cost_billed_absorbed",
-                  "fields": [
-                    {
-                      "name": "category",
-                      "expression": "`category`"
-                    },
-                    {
-                      "name": "measure(Credits)",
-                      "expression": "MEASURE(`Credits`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "frame": {
-                "title": "Billed vs Absorbed Credits",
-                "showTitle": true,
-                "showDescription": true,
-                "description": "1,985 billed / 1,324.9 absorbed by license (~40%)."
-              },
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "category",
-                  "displayName": "Category",
-                  "scale": {
-                    "type": "categorical"
-                  }
-                },
-                "y": {
-                  "fieldName": "measure(Credits)",
-                  "displayName": "Copilot Credits",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 7,
-            "width": 6,
-            "height": 4
-          }
-        },
-        {
-          "widget": {
-            "name": "cost_by_license",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_add_cost_by_license",
-                  "fields": [
-                    {
-                      "name": "license_status",
-                      "expression": "`license_status`"
-                    },
-                    {
-                      "name": "measure(users)",
-                      "expression": "MEASURE(`users`)"
-                    },
-                    {
-                      "name": "measure(credits)",
-                      "expression": "MEASURE(`credits`)"
-                    },
-                    {
-                      "name": "measure(cost_eur)",
-                      "expression": "MEASURE(`cost_eur`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "frame": {
-                "title": "Consumption by License Status",
-                "showTitle": true,
-                "showDescription": false
-              },
-              "headerStyle": {
-                "foregroundColor": "#C4540B",
-                "bold": true
-              },
-              "widgetType": "table",
-              "encodings": {
-                "columns": [
-                  {
-                    "fieldName": "license_status",
-                    "displayName": "License Status"
-                  },
-                  {
-                    "fieldName": "measure(users)",
-                    "displayName": "Users"
-                  },
-                  {
-                    "fieldName": "measure(credits)",
-                    "displayName": "Copilot Credits"
-                  },
-                  {
-                    "fieldName": "measure(cost_eur)",
-                    "displayName": "Cost (EUR)"
-                  }
-                ],
-                "rowOrder": [
-                  {
-                    "by": "column-reversed",
-                    "field": {
-                      "index": 2
-                    }
-                  }
-                ]
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 11,
-            "width": 6,
-            "height": 5
-          }
-        },
-        {
-          "widget": {
-            "name": "cost_burndown",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_add_cost_burndown",
-                  "fields": [
-                    {
-                      "name": "date_eu",
-                      "expression": "`date_eu`"
-                    },
-                    {
-                      "name": "measure(Daily Credits)",
-                      "expression": "MEASURE(`Daily Credits`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 3,
-              "frame": {
-                "title": "Daily Prepaid Burn-down",
-                "showTitle": true,
-                "showDescription": true,
-                "description": "Environment-level MCS consumption, 29 Apr 27 May 2026."
-              },
-              "widgetType": "line",
-              "encodings": {
-                "x": {
-                  "fieldName": "date_eu",
-                  "displayName": "Date",
-                  "scale": {
-                    "type": "categorical"
-                  }
-                },
-                "y": {
-                  "fieldName": "measure(Daily Credits)",
-                  "displayName": "Daily Credits",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 11,
-            "width": 6,
-            "height": 5
-          }
-        }
-      ],
-      "pageType": "PAGE_TYPE_CANVAS",
-      "layoutVersion": "GRID_V1"
-    },
-    {
       "name": "copilot_users",
-      "displayName": "Copilot Analysis - Users",
+      "displayName": "User Interactions",
       "layout": [
         {
           "widget": {
@@ -6043,50 +6754,31 @@
             "width": 12,
             "height": 12
           }
-        }
-      ],
-      "pageType": "PAGE_TYPE_CANVAS",
-      "layoutVersion": "GRID_V1"
-    },
-    {
-      "name": "usage_user_detail_v2",
-      "displayName": "Copilot Analysis - User Detail",
-      "layout": [
+        },
         {
           "widget": {
-            "name": "usage4_hero_title_v2",
+            "name": "ud_div",
             "multilineTextboxSpec": {
               "lines": [
-                "# Copilot Analysis User Detail\n",
+                "# User Detail\n",
                 "\n",
-                "#### Every interaction for one person\n",
-                "\n",
-                "*Pick a user below, or right-click them on the&#32; **Users**&#32;page&#32; **Drill to**&#32;this page. With no user selected, the page shows the whole tenant.*"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_TOP"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#FFFFFF"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
+                "#### Pick a user below, or right-click them in the table above  **Drill to** this section. With no user selected, the section shows the whole tenant."
+              ]
             }
           },
           "position": {
             "x": 0,
-            "y": 0,
+            "y": 21,
             "width": 12,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "usage4_f_user_v2",
+            "name": "ud_f_user",
             "queries": [
               {
-                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_User Email",
+                "name": "dashboards/01f1ab7d65c8195f81a0c625d5f52111/datasets/01f1acf28db81564b0f026da1df0ce07_User Email",
                 "query": {
                   "datasetName": "ds_copilot_metrics",
                   "fields": [
@@ -6107,17 +6799,14 @@
               "version": 2,
               "frame": {
                 "showTitle": true,
-                "title": {
-                  "value": "User",
-                  "fields": []
-                }
+                "title": "User"
               },
               "widgetType": "filter-single-select",
               "encodings": {
                 "fields": [
                   {
                     "fieldName": "User Email",
-                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_User Email"
+                    "queryName": "dashboards/01f1ab7d65c8195f81a0c625d5f52111/datasets/01f1acf28db81564b0f026da1df0ce07_User Email"
                   }
                 ]
               }
@@ -6125,137 +6814,30 @@
           },
           "position": {
             "x": 0,
-            "y": 3,
+            "y": 24,
             "width": 4,
             "height": 1
           }
         },
         {
           "widget": {
-            "name": "usage4_f_region_v2",
-            "queries": [
-              {
-                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "Region",
-                      "expression": "`Region`"
-                    },
-                    {
-                      "name": "Region_associativity",
-                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "Region / Admin Unit",
-                  "fields": []
-                }
-              },
-              "widgetType": "filter-multi-select",
-              "encodings": {
-                "fields": [
-                  {
-                    "fieldName": "Region",
-                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_Region"
-                  }
-                ]
-              }
-            }
-          },
-          "position": {
-            "x": 4,
-            "y": 3,
-            "width": 4,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "usage4_f_licence_v2",
-            "queries": [
-              {
-                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type",
-                "query": {
-                  "datasetName": "ds_copilot_metrics",
-                  "fields": [
-                    {
-                      "name": "License Type",
-                      "expression": "`License Type`"
-                    },
-                    {
-                      "name": "License Type_associativity",
-                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "frame": {
-                "showTitle": true,
-                "title": {
-                  "value": "License Type",
-                  "fields": []
-                }
-              },
-              "widgetType": "filter-multi-select",
-              "encodings": {
-                "fields": [
-                  {
-                    "fieldName": "License Type",
-                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab6e15371bcda73e08e9fe5ae210_License Type"
-                  }
-                ]
-              }
-            }
-          },
-          "position": {
-            "x": 8,
-            "y": 3,
-            "width": 4,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "usage4_div_kpi_v2",
+            "name": "ud_div_kpi",
             "multilineTextboxSpec": {
               "lines": [
                 "**SELECTED USER**   volume and interaction mix"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#F4D5BE"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
+              ]
             }
           },
           "position": {
             "x": 0,
-            "y": 4,
+            "y": 25,
             "width": 12,
             "height": 1
           }
         },
         {
           "widget": {
-            "name": "usage4_kpi_total_v2",
+            "name": "ud_kpi_total",
             "queries": [
               {
                 "name": "main_query",
@@ -6274,13 +6856,9 @@
             "spec": {
               "frame": {
                 "showTitle": true,
-                "showDescription": false,
                 "contentAlignment": "center",
                 "headerAlignment": "center",
-                "title": {
-                  "value": "Total Interactions",
-                  "fields": []
-                }
+                "title": "Total Interactions (User)"
               },
               "version": 2,
               "widgetType": "counter",
@@ -6290,8 +6868,7 @@
                   "format": {
                     "type": "number-plain",
                     "abbreviation": "none"
-                  },
-                  "displayName": "Total Interactions"
+                  }
                 }
               },
               "data": {
@@ -6301,14 +6878,14 @@
           },
           "position": {
             "x": 0,
-            "y": 5,
+            "y": 26,
             "width": 3,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "usage4_kpi_bing_v2",
+            "name": "ud_kpi_bing",
             "queries": [
               {
                 "name": "main_query",
@@ -6327,13 +6904,9 @@
             "spec": {
               "frame": {
                 "showTitle": true,
-                "showDescription": false,
                 "contentAlignment": "center",
                 "headerAlignment": "center",
-                "title": {
-                  "value": "Bing Interactions",
-                  "fields": []
-                }
+                "title": "Bing Interactions (User)"
               },
               "version": 2,
               "widgetType": "counter",
@@ -6343,8 +6916,7 @@
                   "format": {
                     "type": "number-plain",
                     "abbreviation": "none"
-                  },
-                  "displayName": "Bing Interactions"
+                  }
                 }
               },
               "data": {
@@ -6354,14 +6926,14 @@
           },
           "position": {
             "x": 3,
-            "y": 5,
+            "y": 26,
             "width": 3,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "usage4_kpi_premium_v2",
+            "name": "ud_kpi_premium",
             "queries": [
               {
                 "name": "main_query",
@@ -6380,13 +6952,9 @@
             "spec": {
               "frame": {
                 "showTitle": true,
-                "showDescription": false,
                 "contentAlignment": "center",
                 "headerAlignment": "center",
-                "title": {
-                  "value": "Premium Interactions",
-                  "fields": []
-                }
+                "title": "Premium Interactions (User)"
               },
               "version": 2,
               "widgetType": "counter",
@@ -6396,8 +6964,7 @@
                   "format": {
                     "type": "number-plain",
                     "abbreviation": "none"
-                  },
-                  "displayName": "Premium Interactions"
+                  }
                 }
               },
               "data": {
@@ -6407,14 +6974,14 @@
           },
           "position": {
             "x": 6,
-            "y": 5,
+            "y": 26,
             "width": 3,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "usage4_kpi_starter_v2",
+            "name": "ud_kpi_starter",
             "queries": [
               {
                 "name": "main_query",
@@ -6433,13 +7000,9 @@
             "spec": {
               "frame": {
                 "showTitle": true,
-                "showDescription": false,
                 "contentAlignment": "center",
                 "headerAlignment": "center",
-                "title": {
-                  "value": "Starter Interactions",
-                  "fields": []
-                }
+                "title": "Starter Interactions (User)"
               },
               "version": 2,
               "widgetType": "counter",
@@ -6449,8 +7012,7 @@
                   "format": {
                     "type": "number-plain",
                     "abbreviation": "none"
-                  },
-                  "displayName": "Starter Interactions"
+                  }
                 }
               },
               "data": {
@@ -6460,14 +7022,14 @@
           },
           "position": {
             "x": 9,
-            "y": 5,
+            "y": 26,
             "width": 3,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "usage4_kpi_bizchat_v2",
+            "name": "ud_kpi_bizchat",
             "queries": [
               {
                 "name": "main_query",
@@ -6486,13 +7048,9 @@
             "spec": {
               "frame": {
                 "showTitle": true,
-                "showDescription": false,
                 "contentAlignment": "center",
                 "headerAlignment": "center",
-                "title": {
-                  "value": "Microsoft 365 Copilot Chat",
-                  "fields": []
-                }
+                "title": "Microsoft 365 Copilot Chat (User)"
               },
               "version": 2,
               "widgetType": "counter",
@@ -6502,8 +7060,7 @@
                   "format": {
                     "type": "number-plain",
                     "abbreviation": "none"
-                  },
-                  "displayName": "Microsoft 365 Copilot Chat"
+                  }
                 }
               },
               "data": {
@@ -6513,14 +7070,14 @@
           },
           "position": {
             "x": 0,
-            "y": 8,
+            "y": 29,
             "width": 4,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "usage4_kpi_declarative_v2",
+            "name": "ud_kpi_declarative",
             "queries": [
               {
                 "name": "main_query",
@@ -6539,13 +7096,9 @@
             "spec": {
               "frame": {
                 "showTitle": true,
-                "showDescription": false,
                 "contentAlignment": "center",
                 "headerAlignment": "center",
-                "title": {
-                  "value": "Declarative Agents",
-                  "fields": []
-                }
+                "title": "Declarative Agents (User)"
               },
               "version": 2,
               "widgetType": "counter",
@@ -6555,8 +7108,7 @@
                   "format": {
                     "type": "number-plain",
                     "abbreviation": "none"
-                  },
-                  "displayName": "Declarative Agents"
+                  }
                 }
               },
               "data": {
@@ -6566,14 +7118,14 @@
           },
           "position": {
             "x": 4,
-            "y": 8,
+            "y": 29,
             "width": 4,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "usage4_kpi_custom_v2",
+            "name": "ud_kpi_custom",
             "queries": [
               {
                 "name": "main_query",
@@ -6592,13 +7144,9 @@
             "spec": {
               "frame": {
                 "showTitle": true,
-                "showDescription": false,
                 "contentAlignment": "center",
                 "headerAlignment": "center",
-                "title": {
-                  "value": "Custom Engine Agents",
-                  "fields": []
-                }
+                "title": "Custom Engine Agents (User)"
               },
               "version": 2,
               "widgetType": "counter",
@@ -6608,8 +7156,7 @@
                   "format": {
                     "type": "number-plain",
                     "abbreviation": "none"
-                  },
-                  "displayName": "Custom Engine Agents"
+                  }
                 }
               },
               "data": {
@@ -6619,39 +7166,30 @@
           },
           "position": {
             "x": 8,
-            "y": 8,
+            "y": 29,
             "width": 4,
             "height": 3
           }
         },
         {
           "widget": {
-            "name": "usage4_div_trend_v2",
+            "name": "ud_div_trend",
             "multilineTextboxSpec": {
               "lines": [
                 "**DAILY ACTIVITY**   interactions over time"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#F4D5BE"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
+              ]
             }
           },
           "position": {
             "x": 0,
-            "y": 11,
+            "y": 32,
             "width": 12,
             "height": 1
           }
         },
         {
           "widget": {
-            "name": "usage4_trend_v2",
+            "name": "ud_trend",
             "queries": [
               {
                 "name": "main_query",
@@ -6675,10 +7213,7 @@
               "frame": {
                 "showTitle": true,
                 "showDescription": true,
-                "title": {
-                  "value": "Interactions per Day",
-                  "fields": []
-                },
+                "title": "Interactions per Day",
                 "description": {
                   "value": "Audit window: 1 May - 1 Jun 2026.",
                   "fields": []
@@ -6709,39 +7244,30 @@
           },
           "position": {
             "x": 0,
-            "y": 12,
+            "y": 33,
             "width": 12,
             "height": 5
           }
         },
         {
           "widget": {
-            "name": "usage4_div_log_v2",
+            "name": "ud_div_log",
             "multilineTextboxSpec": {
               "lines": [
                 "**INTERACTION LOG**   row-level audit records"
-              ],
-              "verticalAlign": "VERTICAL_ALIGN_CENTER"
-            },
-            "specExtensions": {
-              "widgetBackgroundColor": {
-                "light": "#F4D5BE"
-              },
-              "widgetBorderColor": {
-                "light": "#E86810"
-              }
+              ]
             }
           },
           "position": {
             "x": 0,
-            "y": 17,
+            "y": 38,
             "width": 12,
             "height": 1
           }
         },
         {
           "widget": {
-            "name": "usage4_log_v2",
+            "name": "ud_log",
             "queries": [
               {
                 "name": "main_query",
@@ -6803,10 +7329,7 @@
               "frame": {
                 "showTitle": true,
                 "showDescription": true,
-                "title": {
-                  "value": "All Interactions",
-                  "fields": []
-                },
+                "title": "All Interactions",
                 "description": {
                   "value": "One row per Copilot interaction, newest first.",
                   "fields": []
@@ -6876,869 +7399,9 @@
           },
           "position": {
             "x": 0,
-            "y": 18,
+            "y": 39,
             "width": 12,
             "height": 10
-          }
-        }
-      ],
-      "pageType": "PAGE_TYPE_CANVAS",
-      "layoutVersion": "GRID_V1"
-    },
-    {
-      "name": "knowledge_grounding",
-      "displayName": "Knowledge & Grounding",
-      "layout": [
-        {
-          "widget": {
-            "name": "title",
-            "multilineTextboxSpec": {
-              "lines": [
-                "### Knowledge & Grounding which agents are grounded, and on what\n",
-                "\n",
-                "Every Copilot Studio agent can be attached to **knowledge bases** (SharePoint sites, files, public sites, Dataverse and federated sources). This page shows how many each agent has and, reading it the other way, **which knowledge bases are shared across many agents**: a shared source is a single point of change."
-              ]
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 0,
-            "width": 12,
-            "height": 2
-          }
-        },
-        {
-          "widget": {
-            "name": "subtitle",
-            "multilineTextboxSpec": {
-              "lines": [
-                "*Counts come from the parsed knowledge-source details for each agent in the Copilot Studio Kit.*"
-              ]
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 2,
-            "width": 12,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "f_agent",
-            "queries": [
-              {
-                "name": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab661fb01db8919aa468b0e32302_agent_name",
-                "query": {
-                  "datasetName": "ds_kb_detail",
-                  "fields": [
-                    {
-                      "name": "agent_name",
-                      "expression": "`agent_name`"
-                    },
-                    {
-                      "name": "agent_name_associativity",
-                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "frame": {
-                "showTitle": true,
-                "title": "Select Agent"
-              },
-              "widgetType": "filter-single-select",
-              "encodings": {
-                "fields": [
-                  {
-                    "fieldName": "agent_name",
-                    "queryName": "dashboards/01f1aac92536171e9b34635f5023c819/datasets/01f1ab661fb01db8919aa468b0e32302_agent_name"
-                  }
-                ]
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 3,
-            "width": 6,
-            "height": 1
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_grounded",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_kb_detail",
-                  "fields": [
-                    {
-                      "name": "measure(Grounded Agents)",
-                      "expression": "MEASURE(`Grounded Agents`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "showDescription": true,
-                "title": "Grounded Agents",
-                "description": {
-                  "value": "(>=1 knowledge source)",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Grounded Agents)",
-                  "rowNumber": 0
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 4,
-            "width": 2,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_coverage",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_kb_coverage",
-                  "fields": [
-                    {
-                      "name": "measure(Grounding Coverage %)",
-                      "expression": "MEASURE(`Grounding Coverage %`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "showDescription": true,
-                "title": "Grounding Coverage %",
-                "description": {
-                  "value": "(of valid Studio agents)",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Grounding Coverage %)",
-                  "rowNumber": 0
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 2,
-            "y": 4,
-            "width": 2,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_bases",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_kb_detail",
-                  "fields": [
-                    {
-                      "name": "measure(Knowledge Bases)",
-                      "expression": "MEASURE(`Knowledge Bases`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "showDescription": true,
-                "title": "Knowledge Bases",
-                "description": {
-                  "value": "(distinct sources)",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Knowledge Bases)",
-                  "rowNumber": 0
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 4,
-            "y": 4,
-            "width": 2,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_links",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_kb_detail",
-                  "fields": [
-                    {
-                      "name": "measure(Agent-KB Links)",
-                      "expression": "MEASURE(`Agent-KB Links`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "showDescription": true,
-                "title": "Agent-KB Links",
-                "description": {
-                  "value": "(edges of the grounding graph)",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Agent-KB Links)",
-                  "rowNumber": 0
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 4,
-            "width": 2,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_shared",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_kb_detail",
-                  "fields": [
-                    {
-                      "name": "measure(Shared Knowledge Bases)",
-                      "expression": "MEASURE(`Shared Knowledge Bases`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "showDescription": true,
-                "title": "Shared Knowledge Bases",
-                "description": {
-                  "value": "(grounding 2+ agents)",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Shared Knowledge Bases)",
-                  "rowNumber": 0
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 8,
-            "y": 4,
-            "width": 2,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "kpi_avg",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_kb_detail",
-                  "fields": [
-                    {
-                      "name": "measure(Avg Sources per Agent)",
-                      "expression": "MEASURE(`Avg Sources per Agent`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "showDescription": true,
-                "title": "Avg Sources per Agent",
-                "description": {
-                  "value": "(grounded agents only)",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "measure(Avg Sources per Agent)",
-                  "rowNumber": 0
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 10,
-            "y": 4,
-            "width": 2,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
-            "name": "bar_by_type",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_kb_detail",
-                  "fields": [
-                    {
-                      "name": "kb_type",
-                      "expression": "`kb_type`"
-                    },
-                    {
-                      "name": "measure(Agent-KB Links)",
-                      "expression": "MEASURE(`Agent-KB Links`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "showDescription": true,
-                "title": "Knowledge Sources by Type",
-                "description": {
-                  "value": "What agents are grounded on. SharePoint dominates.",
-                  "fields": []
-                }
-              },
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "kb_type",
-                  "scale": {
-                    "type": "categorical"
-                  }
-                },
-                "y": {
-                  "fieldName": "measure(Agent-KB Links)",
-                  "displayName": "Agent-KB Links",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                },
-                "color": {
-                  "fieldName": "kb_type",
-                  "scale": {
-                    "type": "categorical"
-                  }
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 7,
-            "width": 6,
-            "height": 6
-          }
-        },
-        {
-          "widget": {
-            "name": "bar_most_reused",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_kb_detail",
-                  "fields": [
-                    {
-                      "name": "kb_display_name",
-                      "expression": "`kb_display_name`"
-                    },
-                    {
-                      "name": "measure(Grounded Agents)",
-                      "expression": "MEASURE(`Grounded Agents`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "showDescription": true,
-                "title": "Most-Reused Knowledge Bases",
-                "description": {
-                  "value": "Blast radius: how many agents each knowledge base grounds.",
-                  "fields": []
-                }
-              },
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "kb_display_name",
-                  "scale": {
-                    "type": "categorical"
-                  }
-                },
-                "y": {
-                  "fieldName": "measure(Grounded Agents)",
-                  "displayName": "Grounded Agents",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                },
-                "color": {
-                  "fieldName": "kb_display_name",
-                  "scale": {
-                    "type": "categorical"
-                  }
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 7,
-            "width": 6,
-            "height": 6
-          }
-        },
-        {
-          "widget": {
-            "name": "bar_top_agents",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_kb_detail",
-                  "fields": [
-                    {
-                      "name": "agent_name",
-                      "expression": "`agent_name`"
-                    },
-                    {
-                      "name": "measure(Knowledge Bases)",
-                      "expression": "MEASURE(`Knowledge Bases`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "showDescription": true,
-                "title": "Top Agents by Knowledge Base Count",
-                "description": {
-                  "value": "Agents attached to the most distinct knowledge bases.",
-                  "fields": []
-                }
-              },
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "agent_name",
-                  "scale": {
-                    "type": "categorical"
-                  }
-                },
-                "y": {
-                  "fieldName": "measure(Knowledge Bases)",
-                  "displayName": "Knowledge Bases",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                },
-                "color": {
-                  "fieldName": "agent_name",
-                  "scale": {
-                    "type": "categorical"
-                  }
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 13,
-            "width": 6,
-            "height": 6
-          }
-        },
-        {
-          "widget": {
-            "name": "bar_by_env",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_kb_detail",
-                  "fields": [
-                    {
-                      "name": "environment_name",
-                      "expression": "`environment_name`"
-                    },
-                    {
-                      "name": "measure(Grounded Agents)",
-                      "expression": "MEASURE(`Grounded Agents`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "showDescription": true,
-                "title": "Grounded Agents by Environment",
-                "description": {
-                  "value": "Where grounded agents sit.",
-                  "fields": []
-                }
-              },
-              "version": 3,
-              "widgetType": "bar",
-              "encodings": {
-                "x": {
-                  "fieldName": "environment_name",
-                  "scale": {
-                    "type": "categorical"
-                  }
-                },
-                "y": {
-                  "fieldName": "measure(Grounded Agents)",
-                  "displayName": "Grounded Agents",
-                  "scale": {
-                    "type": "quantitative"
-                  }
-                },
-                "color": {
-                  "fieldName": "environment_name",
-                  "scale": {
-                    "type": "categorical"
-                  }
-                }
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 6,
-            "y": 13,
-            "width": 6,
-            "height": 6
-          }
-        },
-        {
-          "widget": {
-            "name": "tbl_per_agent",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_kb_detail",
-                  "fields": [
-                    {
-                      "name": "agent_name",
-                      "expression": "`agent_name`"
-                    },
-                    {
-                      "name": "agent_owner",
-                      "expression": "`agent_owner`"
-                    },
-                    {
-                      "name": "environment_name",
-                      "expression": "`environment_name`"
-                    },
-                    {
-                      "name": "measure(Knowledge Bases)",
-                      "expression": "MEASURE(`Knowledge Bases`)"
-                    }
-                  ],
-                  "disaggregated": false,
-                  "orders": [
-                    {
-                      "direction": "DESC",
-                      "expression": "MEASURE(`Knowledge Bases`)"
-                    }
-                  ]
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "showDescription": true,
-                "title": "Knowledge Bases per Agent",
-                "description": {
-                  "value": "Distinct knowledge bases attached to each grounded agent. Click a row to narrow the page to that agent.",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "headerStyle": {
-                "foregroundColor": "#E86810",
-                "bold": true
-              },
-              "widgetType": "table",
-              "encodings": {
-                "columns": [
-                  {
-                    "fieldName": "agent_name",
-                    "useForSearch": true,
-                    "displayName": "Agent"
-                  },
-                  {
-                    "fieldName": "agent_owner",
-                    "useForSearch": true,
-                    "displayName": "Owner"
-                  },
-                  {
-                    "fieldName": "environment_name",
-                    "useForSearch": true,
-                    "displayName": "Environment"
-                  },
-                  {
-                    "fieldName": "measure(Knowledge Bases)",
-                    "displayName": "# Knowledge Bases"
-                  }
-                ],
-                "rowOrder": [
-                  {
-                    "by": "column-reversed",
-                    "field": {
-                      "index": 3
-                    }
-                  }
-                ]
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 19,
-            "width": 12,
-            "height": 9
-          }
-        },
-        {
-          "widget": {
-            "name": "tbl_kb_list",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_kb_detail",
-                  "fields": [
-                    {
-                      "name": "agent_name",
-                      "expression": "`agent_name`"
-                    },
-                    {
-                      "name": "kb_display_name",
-                      "expression": "`kb_display_name`"
-                    },
-                    {
-                      "name": "kb_type",
-                      "expression": "`kb_type`"
-                    },
-                    {
-                      "name": "kb_value",
-                      "expression": "`kb_value`"
-                    },
-                    {
-                      "name": "is_shared",
-                      "expression": "`is_shared`"
-                    },
-                    {
-                      "name": "kb_agent_count",
-                      "expression": "`kb_agent_count`"
-                    },
-                    {
-                      "name": "in_inventory",
-                      "expression": "`in_inventory`"
-                    }
-                  ],
-                  "disaggregated": true
-                }
-              }
-            ],
-            "spec": {
-              "frame": {
-                "showTitle": true,
-                "showDescription": true,
-                "title": "Knowledge Bases for Selected Agent",
-                "description": {
-                  "value": "Every knowledge base attached to the selected agent. Unfiltered, this lists all agent-knowledge-base links.",
-                  "fields": []
-                }
-              },
-              "version": 2,
-              "headerStyle": {
-                "foregroundColor": "#E86810",
-                "bold": true
-              },
-              "widgetType": "table",
-              "encodings": {
-                "columns": [
-                  {
-                    "fieldName": "agent_name",
-                    "useForSearch": true,
-                    "displayName": "Agent"
-                  },
-                  {
-                    "fieldName": "kb_display_name",
-                    "useForSearch": true,
-                    "displayName": "Knowledge Base"
-                  },
-                  {
-                    "fieldName": "kb_type",
-                    "useForSearch": true,
-                    "displayName": "Type"
-                  },
-                  {
-                    "fieldName": "kb_value",
-                    "displayName": "Source"
-                  },
-                  {
-                    "fieldName": "is_shared",
-                    "displayName": "Shared?"
-                  },
-                  {
-                    "fieldName": "kb_agent_count",
-                    "displayName": "# Agents Sharing"
-                  },
-                  {
-                    "fieldName": "in_inventory",
-                    "displayName": "In Inventory"
-                  }
-                ]
-              },
-              "data": {
-                "queryName": "main_query"
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 28,
-            "width": 12,
-            "height": 9
-          }
-        },
-        {
-          "widget": {
-            "name": "caveats",
-            "multilineTextboxSpec": {
-              "lines": [
-                "How to read these numbers. Counts come from the parsed knowledge-source details for each agent in the Copilot Studio Kit. They are deduplicated by agent and knowledge base. Three limits worth knowing: (1) Some valid Studio agents are flagged as using knowledge but do not appear in the parsed data. (2) Agent Builder agents do not expose knowledge sources in the export kit. (3) Public-website sources may be generic (e.g. microsoft.com) and shared status may be inflated."
-              ]
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 37,
-            "width": 12,
-            "height": 3
           }
         }
       ],
