@@ -68,7 +68,7 @@ STEPS = [
         "name": "04_promote_dev_dashboard",
         "path": f"{BASE}/04_promote_dev_dashboard",
         "timeout": 15,
-        "params": {"catalog": CATALOG, "warehouse_id": WAREHOUSE_ID, "auto_promote": "no"},
+        "params": {"catalog": CATALOG, "warehouse_id": WAREHOUSE_ID, "auto_promote": "yes"},
     },
 ]
 
