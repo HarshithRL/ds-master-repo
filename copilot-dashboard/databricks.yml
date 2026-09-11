@@ -3,11 +3,8 @@ bundle:
 
 include:
   - resources/jobs/*.yml
- - resources/dashboards/*.yml
+  - resources/dashboards/*.yml
 
-sync:
-  exclude:
-    - src/dashboards/DEV*
 
 variables:
   catalog:
