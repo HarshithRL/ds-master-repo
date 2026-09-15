@@ -81,6 +81,10 @@ resources:
         # Legacy `database` / instance_name is Provisioned-only and will fail.
         # Schema mate_agent is created by the app SP on first ACC boot.
         # Do not DROP it on later deploys.
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.sql_warehouse_id}
+            permission: CAN_USE
         - name: postgres
           postgres:
             branch: ${var.lakebase_branch}

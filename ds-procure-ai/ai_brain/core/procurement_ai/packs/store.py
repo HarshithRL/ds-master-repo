@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from shared.db.paths import project_root, projects_data_root
+from shared.db.volume_fs import ensure_dir, exists as vol_exists, read_text as vol_read_text, write_text as vol_write_text
 
 KINDS = ("xlsx", "ppt")
 VIEW_KINDS = ("overview", "requirements", "vendors")
@@ -26,7 +27,7 @@ def utc_now_iso() -> str:
 
 def packs_dir(project_id: str) -> Path:
     path = project_root(project_id) / "packs"
-    path.mkdir(parents=True, exist_ok=True)
+    ensure_dir(path)
     return path
 
 
@@ -58,11 +59,11 @@ def _kb_row(row: dict[str, Any] | None) -> dict[str, Any]:
 
 def read_status(project_id: str) -> dict[str, Any]:
     path = status_path(project_id)
-    if not path.exists():
+    if not vol_exists(path):
         return {"xlsx": dict(_IDLE_PACK), "ppt": dict(_IDLE_PACK), "kb": dict(_IDLE_KB)}
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+        data = json.loads(vol_read_text(path))
+    except (json.JSONDecodeError, Exception):
         data = {}
     return {
         "xlsx": _pack_row(data.get("xlsx") if isinstance(data.get("xlsx"), dict) else None),
@@ -82,10 +83,7 @@ def pack_status(project_id: str) -> dict[str, Any]:
 
 
 def _write_status(project_id: str, current: dict[str, Any]) -> dict[str, Any]:
-    status_path(project_id).write_text(
-        json.dumps(current, indent=2),
-        encoding="utf-8",
-    )
+    vol_write_text(status_path(project_id), json.dumps(current, indent=2))
     return current
 
 
@@ -119,7 +117,7 @@ def write_kb_job(
 
 def views_dir(project_id: str) -> Path:
     path = packs_dir(project_id) / "views"
-    path.mkdir(parents=True, exist_ok=True)
+    ensure_dir(path)
     return path
 
 
@@ -135,9 +133,9 @@ def write_view(project_id: str, kind: str, payload: dict[str, Any]) -> dict[str,
         return payload
     if kind not in VIEW_KINDS:
         raise ValueError(f"unknown view kind: {kind}")
-    view_path(project_id, kind).write_text(
+    vol_write_text(
+        view_path(project_id, kind),
         json.dumps(payload, indent=2, default=str),
-        encoding="utf-8",
     )
     return payload
 
@@ -146,11 +144,11 @@ def read_view(project_id: str, kind: str) -> dict[str, Any] | None:
     if not (project_id or "").strip() or kind not in VIEW_KINDS:
         return None
     path = view_path(project_id, kind)
-    if not path.exists():
+    if not vol_exists(path):
         return None
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+        data = json.loads(vol_read_text(path))
+    except (json.JSONDecodeError, Exception):
         return None
     return data if isinstance(data, dict) else None
 

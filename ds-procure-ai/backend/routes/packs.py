@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from io import BytesIO
+
 from flask import Blueprint, jsonify, send_file
 
 from services import procurement_packs
@@ -61,4 +63,7 @@ def download_project_pack(project_id, kind):
     if path is None:
         return jsonify({"error": "not_found"}), 404
     download_name = "comparison_matrix.xlsx" if kind == "xlsx" else "steerco_pack.pptx"
-    return send_file(path, as_attachment=True, download_name=download_name)
+    # Read via Files API (FUSE not available in Databricks Apps)
+    from shared.db.volume_fs import read_bytes as vol_read_bytes
+    data = vol_read_bytes(path)
+    return send_file(BytesIO(data), as_attachment=True, download_name=download_name)

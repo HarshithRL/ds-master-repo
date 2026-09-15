@@ -53,7 +53,12 @@ def build_steerco_ppt(project_id: str, *, thread_id: str = "") -> dict[str, Any]
         f"Award: {fields.get('FIELD_AWARD') or 'Not awarded'}",
         "Agents draft. Humans award. Deck reads evidence + pricing_line; no LLM in this path.",
     ])
-    prs.save(path)
+    # Save via Files API (FUSE not available in Databricks Apps)
+    import io as _io
+    _buf = _io.BytesIO()
+    prs.save(_buf)
+    from shared.db.volume_fs import write_bytes as _vol_ppt
+    _vol_ppt(path, _buf.getvalue())
     href = store.flask_href(project_id, "ppt")
     store.write_status(project_id, "ppt", status="ready", href=href, filename=filename, thread_id=thread_id or None, error=None)
     return {"status": "ready", "href": href, "filename": filename, "path": str(path)}

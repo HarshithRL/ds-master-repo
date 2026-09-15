@@ -69,7 +69,8 @@ def pack_download_path(project_id: str, owner_id: str, kind: str) -> Path | None
     if not filename:
         return None
     path = pack_store.pack_file(project_id, filename)
-    return path if path.exists() else None
+    from shared.db.volume_fs import exists as vol_exists
+    return path if vol_exists(path) else None
 
 
 def _local_pack(project_id: str, owner_id: str, capability: str, thread_id: str) -> dict[str, Any]:
