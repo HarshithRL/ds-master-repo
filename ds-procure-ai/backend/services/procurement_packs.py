@@ -111,7 +111,7 @@ def _local_pack(project_id: str, owner_id: str, capability: str, thread_id: str)
 
 def _brain_get(path: str) -> dict[str, Any]:
     url = f"{brain_base_url()}{path}"
-    with httpx.Client(timeout=5.0) as client:
+    with httpx.Client(timeout=15.0) as client:
         response = client.get(url, headers=brain_request_headers())
         if response.status_code == 404:
             raise LookupError(f"brain {path} not found")
