@@ -11,6 +11,7 @@ import asyncio
 import os
 import inspect
 import sys
+import contextvars
 import threading
 import time
 from collections.abc import Awaitable, Callable, Sequence
@@ -335,9 +336,11 @@ def enqueue_kb_build(project_id: str) -> threading.Thread:
         status="building",
         message="Extracting vendor evidence from uploaded files…",
     )
+    # Propagate visitor OBO context for UC writes in kb_build.
+    ctx = contextvars.copy_context()
     thread = threading.Thread(
-        target=_run_kb_build_thread,
-        args=(project_id,),
+        target=ctx.run,
+        args=(_run_kb_build_thread, project_id),
         daemon=True,
         name=f"kb-build-{project_id[:12]}",
     )
@@ -442,9 +445,11 @@ def enqueue_ingest(project_id: str, artifact_ids: Sequence[str]) -> threading.Th
         status="ingesting",
         message="Parsing uploaded files…",
     )
+    # Capture the visitor OBO context so background thread can write UC tables.
+    ctx = contextvars.copy_context()
     thread = threading.Thread(
-        target=_run_ingest_thread,
-        args=(project_id, ids),
+        target=ctx.run,
+        args=(_run_ingest_thread, project_id, ids),
         daemon=True,
         name=f"kb-ingest-{project_id[:12]}",
     )

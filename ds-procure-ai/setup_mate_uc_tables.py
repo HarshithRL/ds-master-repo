@@ -72,6 +72,11 @@ tables = {
         heading_path_json STRING, block_ids_json STRING, location_json STRING, table_json STRING,
         page_kind STRING, reconstructor STRING, created_at STRING NOT NULL
     """,
+    "mate_chunk_embedding": """
+        chunk_id STRING NOT NULL, project_id STRING NOT NULL, vendor_id STRING,
+        doc_role STRING, chunk_type STRING, embedding STRING NOT NULL,
+        model_version STRING NOT NULL
+    """,
     "mate_vendor": """
         id STRING NOT NULL, project_id STRING NOT NULL, name STRING NOT NULL, legal_entity STRING,
         registry_id STRING, status STRING, created_at STRING NOT NULL
