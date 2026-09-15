@@ -160,6 +160,19 @@
           "grants": [
             {
               "catalog": "automation",
+              "privileges": [
+                "USE_CATALOG"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
               "schema": "bronze",
               "table": "air_monitoring_output",
               "privileges": [
