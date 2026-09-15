@@ -27,8 +27,24 @@ def db_backend() -> str:
     return "uc" if raw == "uc" else "sqlite"
 
 
+_CATALOG_BY_WORKSPACE: dict[str, str] = {
+    "7181820732839861": "automation_d",
+    "4796304964978539": "automation_a",
+    "4844910598668398": "automation_p",
+}
+
+def _detect_catalog() -> str:
+    explicit = os.getenv("MATE_UC_CATALOG", "").strip()
+    if explicit:
+        return explicit
+    host = os.getenv("DATABRICKS_HOST", "")
+    for ws_id, catalog in _CATALOG_BY_WORKSPACE.items():
+        if ws_id in host:
+            return catalog
+    return ""
+
 def uc_catalog() -> str:
-    return os.getenv("MATE_UC_CATALOG", "").strip()
+    return _detect_catalog()
 
 
 def uc_schema() -> str:

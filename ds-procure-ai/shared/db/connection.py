@@ -74,11 +74,27 @@ def _enable_wal(dbapi_conn, _connection_record) -> None:
     cursor.close()
 
 
+# Auto-detect warehouse from workspace ID in DATABRICKS_HOST when env var is
+# not set (same pattern as ds-air-monitoring-app).
+_WAREHOUSE_BY_WORKSPACE: dict[str, str] = {
+    "7181820732839861": "69ada62b2fb9b9e2",   # dau-automation-sqlwh-d-01 (DEV/TEST)
+    "4796304964978539": "69bb7020516c64f5",   # aut-dsprocureai-consumer-sqlwh-a (ACC)
+    "4844910598668398": "",                     # PRD — fill when known
+}
+
+
 def _warehouse_id() -> str:
-    return (
+    wh = (
         os.getenv("DATABRICKS_WAREHOUSE_ID", "").strip()
         or os.getenv("MATE_UC_WAREHOUSE_ID", "").strip()
     )
+    if wh:
+        return wh
+    host = os.getenv("DATABRICKS_HOST", "")
+    for ws_id, fallback_wh in _WAREHOUSE_BY_WORKSPACE.items():
+        if ws_id in host:
+            return fallback_wh
+    return ""
 
 
 def _uc_connect_args() -> dict:

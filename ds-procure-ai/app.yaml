@@ -58,5 +58,16 @@ env:
     value: "https://we-spoke-mdp-t-formrecogniser.cognitiveservices.azure.com/"
   - name: AZURE_DOCUMENT_INTELLIGENCE_KEY
     value: "1bdb532656d248bda3c6b58a9b75441f"
-  # Mate UC catalog/warehouse/DI secrets are target config.env in databricks.yml
-  # (D/T attach procure-ai secrets; A/P do not). Do not pin automation_d here.
+  # Mate UC app-data backend. Catalog and warehouse are auto-detected at
+  # runtime from DATABRICKS_HOST (see shared/db/paths.py) so app.yaml
+  # does not need per-target overrides.
+  - name: MATE_DB_BACKEND
+    value: uc
+  - name: MATE_UC_AUTH
+    value: obo
+  - name: MATE_UC_SCHEMA
+    value: bronze
+  - name: MATE_UC_VOLUME
+    value: bronze_volume
+  - name: FLASK_SECRET_KEY
+    value: ds-procure-ai
