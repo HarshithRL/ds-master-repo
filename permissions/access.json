@@ -75,14 +75,6 @@
               "privileges": [
                 "USE_SCHEMA"
               ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "ai_cost_breakdown_enriched",
-              "privileges": [
-                "SELECT"
-              ]
             }
           ],
           "members": [
