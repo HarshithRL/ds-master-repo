@@ -13,6 +13,15 @@ from pathlib import Path
 from shared.db.paths import db_backend
 from shared.logger_global import get_logger
 
+__all__ = [
+    "ensure_dir",
+    "exists",
+    "read_bytes",
+    "read_text",
+    "write_bytes",
+    "write_text",
+]
+
 log = get_logger(__name__)
 
 
@@ -48,6 +57,32 @@ def write_bytes(path: Path, data: bytes) -> None:
 
 def write_text(path: Path, text: str, *, encoding: str = "utf-8") -> None:
     write_bytes(path, text.encode(encoding))
+
+
+def read_bytes(path: Path) -> bytes:
+    """Read file contents from a UC Volume (Files API) or local FS."""
+    if db_backend() != "uc":
+        return path.read_bytes()
+    posix = path.as_posix()
+    resp = _files_client().files.download(posix)
+    return resp.contents.read()
+
+
+def read_text(path: Path, *, encoding: str = "utf-8") -> str:
+    """Read text from a UC Volume (Files API) or local FS."""
+    return read_bytes(path).decode(encoding)
+
+
+def exists(path: Path) -> bool:
+    """Check whether a file or directory exists on UC Volume (Files API) or local FS."""
+    if db_backend() != "uc":
+        return path.exists()
+    posix = path.as_posix()
+    try:
+        _files_client().files.get_status(posix)
+        return True
+    except Exception:
+        return False
 
 
 def _files_mkdirs(path: Path) -> None:

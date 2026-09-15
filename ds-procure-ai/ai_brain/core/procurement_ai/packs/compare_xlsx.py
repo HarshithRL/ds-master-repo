@@ -63,7 +63,12 @@ def build_comparison_xlsx(
         if not isinstance(direct, DirectMatrix):
             direct = empty_direct(insights)
         write_direct(wb, insights, direct)
-    wb.save(path)
+    # Save via Files API (FUSE not available in Databricks Apps)
+    import io as _io
+    _buf = _io.BytesIO()
+    wb.save(_buf)
+    from shared.db.volume_fs import write_bytes as _vol_wb
+    _vol_wb(path, _buf.getvalue())
     href = store.flask_href(project_id, "xlsx")
     placeholder = not (insights.get("vendors") or [])
     pack_status = "ready" if rich else "template"
@@ -184,4 +189,5 @@ def existing_xlsx_path(project_id: str) -> Path | None:
     if not filename:
         return None
     path = store.pack_file(project_id, filename)
-    return path if path.exists() else None
+    from shared.db.volume_fs import exists as vol_exists
+    return path if vol_exists(path) else None

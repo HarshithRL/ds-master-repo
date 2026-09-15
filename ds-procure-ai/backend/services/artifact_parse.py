@@ -71,13 +71,16 @@ def parse_and_store(artifact: Artifact) -> Artifact:
             detail,
         )
         return _store_parse_failure(artifact, PARSE_ERROR, detail)
+    
     relpath = parsed_storage_relpath(artifact.project_id, artifact.id)
     absolute = artifact_absolute_path(relpath)
-    absolute.parent.mkdir(parents=True, exist_ok=True)
+    
+    from shared.db.volume_fs import ensure_dir, write_text as vol_write_text
+
     serialized = json.dumps(payload, ensure_ascii=False)
-    absolute.write_text(serialized, encoding="utf-8")
-    # Sidecar markdown for materialize fallback when DB JSON is truncated/missing.
-    absolute.with_suffix(".md").write_text(markdown, encoding="utf-8")
+    ensure_dir(absolute.parent)
+    vol_write_text(absolute, serialized)
+    vol_write_text(absolute.with_suffix(".md"), markdown)
     saved = artifact_repo.save_parse_result(
         artifact.id,
         parse_status=PARSE_OK,
