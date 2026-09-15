@@ -192,16 +192,18 @@ def _document_markdown(
                 base = artifact.parsed_relpath or ""
                 if base:
                     candidate = artifact_absolute_path(base).with_name(Path(rel_name).name)
-                    if candidate.is_file():
-                        text = candidate.read_text(encoding="utf-8")
+                    from shared.db.volume_fs import exists as vol_exists, read_text as vol_read_text
+                    if vol_exists(candidate):
+                        text = vol_read_text(candidate)
                         if text.strip():
                             return text
     if artifact is not None and artifact.parsed_relpath:
         from shared.db.paths import artifact_absolute_path
 
         md_path = artifact_absolute_path(artifact.parsed_relpath).with_suffix(".md")
-        if md_path.is_file():
-            text = md_path.read_text(encoding="utf-8")
+        from shared.db.volume_fs import exists as vol_exists, read_text as vol_read_text
+        if vol_exists(md_path):
+            text = vol_read_text(md_path)
             if text.strip():
                 return text
     return None
