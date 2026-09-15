@@ -36,7 +36,7 @@ resources:
           - name: MATE_DB_BACKEND
             value: uc
           - name: MATE_UC_AUTH
-            value: sp
+            value: obo
           - name: MATE_UC_CATALOG
             value: ${var.catalog}
           - name: MATE_UC_SCHEMA

@@ -1,0 +1,27 @@
+# =============================================================================
+# Job: Setup Mate UC Tables
+# =============================================================================
+# One-time (or on-demand) job to create the 21 mate_* Delta tables + volume
+# in the target environment's catalog. Run this BEFORE the consumer access
+# pipeline so that GRANT statements don't fail on non-existent objects.
+#
+# Usage:
+#   databricks bundle run setup_mate_uc_tables --target D
+#   databricks bundle run setup_mate_uc_tables --target A
+# =============================================================================
+
+resources:
+  jobs:
+    setup_mate_uc_tables:
+      name: "[${bundle.target}] ds-procure-ai – Setup Mate UC Tables"
+      tags:
+        project: ds-procure-ai
+        purpose: table-setup
+      tasks:
+        - task_key: create_tables
+          notebook_task:
+            notebook_path: ../setup_mate_uc_tables.py
+            base_parameters:
+              catalog: ${var.catalog}
+      # No schedule — this is an on-demand job.
+      # No cluster — uses serverless by default.
