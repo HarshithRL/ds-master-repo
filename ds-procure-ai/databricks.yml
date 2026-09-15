@@ -219,7 +219,7 @@ targets:
       host: https://adb-4796304964978539.19.azuredatabricks.net
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
-      sql_warehouse_id: "0ef3e37fbbd5b772"  # dau-automation-sqlwh-a-01
+      sql_warehouse_id: "69bb7020516c64f5"  # aut-dsprocureai-consumer-sqlwh-a
       catalog: automation_a
       databricks_model: system.ai.claude-opus-4-5
       fast_model: system.ai.claude-sonnet-4-5
