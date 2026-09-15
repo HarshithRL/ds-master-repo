@@ -31,6 +31,12 @@ _DI_NAMES = (
     "AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT",
     "AZURE_DOCUMENT_INTELLIGENCE_KEY",
 )
+try:
+    from shared.artifacts.parsers.azure_docintelligence import _credentials as _ensure_di
+
+    _ensure_di()
+except Exception as _di_exc:  # noqa: BLE001
+    log.warning("azure DI credentials not ready yet: {}", _di_exc)
 _di_status = {name: bool((__import__("os").getenv(name) or "").strip()) for name in _DI_NAMES}
 log.info(
     "dotenv loaded path={} loaded={} azure_di_endpoint={} azure_di_key={}",

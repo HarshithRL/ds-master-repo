@@ -22,14 +22,29 @@ failure, not a style choice.
 
 ## Rubric stance
 
-- The bid list comes from SQL, never from the model.
+- The bid list comes from classified `artifact.vendor_id` via MCP
+  `list_bids`, never from guessed filenames.
 - Mandatory requirements (`mandatory=1`) fail closed: no citation →
   `not_stated`, never a guessed ✓.
 - A high-severity `quality_flag` on the cited artifact is a source-quality
   warning on the cell, not a reason to mark `not_stated`.
 - `reviewed_by` cells are pinned; do not "improve" them on re-extraction.
 
+## Matrix cell text
+
+The Excel cell is `value_text`, not the raw status enum. SWIFT baseline:
+
+- `✓` plus a short cited fact (`✓ 21 mandatory/BIC`, `✓ signed`)
+- `~` plus the condition (`~ single F&R report for both`)
+- `✗` plus the gap (`✗ T&M only`, `✗ reporting Nov`)
+- `?` when the submission is silent (`Not stated in submission`)
+- `—` for Etex-side process steps (shortlist, award calendar)
+
+Do not collapse these into a single "missing" token.
+
 ## Scoring
 
 Do not invent weights. Copy `requirement.weight` / `section` from the
 requirement row. Narrative commentary belongs in notes, not in `status`.
+The comparison matrix is filled at request time from parsed chunks, not
+from SQL `evidence` rows.

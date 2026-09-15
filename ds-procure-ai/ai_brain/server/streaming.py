@@ -43,6 +43,30 @@ _TOOL_LEAKS = (
     "(no project_id)",
     "(missing chunk)",
 )
+# User-facing chat nodes. Nested comparison/deep-agent loops are thoughts only.
+_ANSWER_NODES = frozenset({"main_agent", "deepagent"})
+_THOUGHT_NODES = frozenset(
+    {
+        "compare_xlsx",
+        "steerco_ppt",
+        "comparison_orchestrator",
+        "comparison_emit",
+        "rfp_analyst",
+        "vendor_analyst",
+        "bafo_compiler",
+        "extract_requirements",
+        "analyze_bid",
+        "audit_kb",
+        "fill_overview",
+        "fill_requirements",
+        "fill_vendors",
+        "ingest",
+        "parse_one",
+        "chunk_one",
+        "join_docs",
+        "index_docs",
+    }
+)
 
 
 def _message_role(msg: Any) -> str:
@@ -168,6 +192,41 @@ def _item_key(ns: tuple, node: str) -> str:
     return f"{suffix}:{node}"
 
 
+def _ns_is_nested(ns: tuple) -> bool:
+    """True when chunk comes from child_runnable_config(checkpoint_ns='nested')."""
+    return any("nested" in str(part).lower() for part in (ns or ()))
+
+
+def _route_message_as_thought(ns: tuple, node: str) -> bool:
+    """Deep-agent / pack-tool chatter → Thinking tab; main_agent stays chat answer."""
+    name = (node or "").strip()
+    if name in _ANSWER_NODES:
+        return False
+    if name in _THOUGHT_NODES:
+        return True
+    if _ns_is_nested(ns):
+        return True
+    return False
+
+
+def _procurement_dict(values: Any) -> dict[str, Any]:
+    if not isinstance(values, dict):
+        return {}
+    proc = values.get("procurement")
+    return proc if isinstance(proc, dict) else {}
+
+
+def _business_reply(proc: dict[str, Any]) -> str:
+    """Prefer pack/compare assistant_reply (includes Download href) over raw essays."""
+    reply = str(proc.get("assistant_reply") or "").strip()
+    if reply:
+        href = str(proc.get("xlsx_href") or proc.get("ppt_href") or "").strip()
+        if href and href not in reply:
+            return f"{reply.rstrip()} Download: {href}"
+        return reply
+    return ""
+
+
 def _procurement_text(payload_out: dict[str, Any]) -> str:
     proc = payload_out.get("procurement")
     if isinstance(proc, dict):
@@ -190,6 +249,12 @@ async def iter_response_events(
     done_ids: set[str] = set()
     last_values: dict[str, Any] = {}
     thought_nodes: set[str] = set()
+    # Pack capabilities: stream all LLM chatter to Thinking; final bubble = assistant_reply.
+    pack_mode = str((procurement or {}).get("capability") or "").strip() in {
+        "compare_xlsx",
+        "steerco_ppt",
+        "kb_build",
+    }
 
     with mlflow.start_span(name="nexus_graph", span_type=SpanType.AGENT) as span:
         bind_run_trace(thread_id=thread_id, user_id=user_id)
@@ -265,6 +330,10 @@ async def iter_response_events(
                     continue
                 answer, thought = split_message_kinds(msg)
                 answer = _answer_text(answer)
+                # Nested deep-agent / pack loops: keep chatter in Thinking only.
+                if answer and (pack_mode or _route_message_as_thought(ns, node)):
+                    thought = f"{thought}{answer}" if thought else answer
+                    answer = ""
                 if thought:
                     thought_key = _item_key(ns, f"{node}:thought")
                     thought_id = item_ids.setdefault(
@@ -326,6 +395,28 @@ async def iter_response_events(
                 )
                 return
 
+            proc = _procurement_dict(last_values)
+            business = _business_reply(proc)
+            if business:
+                # Pack/compare path: never let orchestrator essays win the chat bubble.
+                item_id = f"msg_{uuid.uuid4().hex[:12]}"
+                done_ids.add(item_id)
+                custom_out: dict[str, Any] = {
+                    "kind": "answer",
+                    "thread_id": thread_id,
+                    "final": True,
+                    "values": _jsonable(last_values),
+                }
+                href = str(proc.get("xlsx_href") or proc.get("ppt_href") or "").strip()
+                if href:
+                    custom_out["xlsx_href" if proc.get("xlsx_href") else "ppt_href"] = href
+                yield ResponsesAgentStreamEvent(
+                    type="response.output_item.done",
+                    item=create_text_output_item(text=business, id=item_id),
+                    custom_outputs=custom_out,
+                )
+                return
+
             for item_id, text in assembled.items():
                 if item_id in done_ids:
                     continue
@@ -344,12 +435,10 @@ async def iter_response_events(
                 )
 
             if not done_ids:
-                proc = last_values.get("procurement") if isinstance(last_values, dict) else {}
                 fallback = ""
-                if isinstance(proc, dict):
+                if proc:
                     fallback = str(
-                        proc.get("assistant_reply")
-                        or proc.get("main_agent")
+                        proc.get("main_agent")
                         or proc.get("deep_agent")
                         or ""
                     )

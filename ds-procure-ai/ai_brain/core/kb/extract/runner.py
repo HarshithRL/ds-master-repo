@@ -1,4 +1,4 @@
-"""Run kb_build then deterministic comparison xlsx."""
+"""Run kb_build. Excel is written only when write_xlsx=True (off by default)."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ _KB_BUILD_INPUT = {
 }
 
 
-async def arun_kb_build(project_id: str, *, write_xlsx: bool = True) -> dict:
+async def arun_kb_build(project_id: str, *, write_xlsx: bool = False) -> dict:
     pack_store.write_kb_job(
         project_id,
         status="building",
@@ -72,7 +72,7 @@ async def arun_kb_build(project_id: str, *, write_xlsx: bool = True) -> dict:
     return {"state": state, "xlsx": xlsx}
 
 
-def run_kb_build(project_id: str, *, write_xlsx: bool = True) -> dict:
+def run_kb_build(project_id: str, *, write_xlsx: bool = False) -> dict:
     return asyncio.run(arun_kb_build(project_id, write_xlsx=write_xlsx))
 
 

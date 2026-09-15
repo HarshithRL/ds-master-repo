@@ -36,15 +36,15 @@ class CheckpointHandle:
 def _embeddings(settings: Any) -> Any:
     from databricks_langchain import DatabricksEmbeddings
 
-    from ai_brain.core.config.llm import get_workspace_client
-
     endpoint = settings.embedding_endpoint
     kwargs: dict[str, Any] = {"endpoint": endpoint}
     fields = getattr(DatabricksEmbeddings, "model_fields", None) or getattr(
         DatabricksEmbeddings, "__fields__", {}
     )
     if "workspace_client" in fields:
-        kwargs["workspace_client"] = get_workspace_client()
+        from shared.databricks_runtime import RequestScopedWorkspaceClient
+
+        kwargs["workspace_client"] = RequestScopedWorkspaceClient()
     # DatabricksEmbeddings uses MLflow default auth. Set a CLI profile only
     # locally — Apps has no ~/.databrickscfg and uses injected OAuth M2M.
     if not is_databricks_app():
@@ -107,12 +107,52 @@ async def _open_postgres_uri_saver() -> tuple[Any, Callable[[], Awaitable[None]]
     return saver, close
 
 
-async def _open_lakebase_saver(pool: Any) -> Any:
+async def _ensure_app_schema(pool: Any, schema: str) -> None:
+    """Create mate_agent if missing, then refuse if the app user does not own it.
+
+    The app service principal can create objects. It cannot write a schema a
+    laptop user already owns. Do not drop that schema from here.
+    """
+    from psycopg import sql
+
+    from ai_brain.server.lakebase import _schema_identifier, apply_search_path
+
+    name = (schema or "mate_agent").strip()
+    async with pool.connection() as conn:
+        await conn.execute(
+            sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(_schema_identifier(name))
+        )
+        cur = await conn.execute(
+            """
+            SELECT r.rolname AS owner, current_user AS me
+            FROM pg_namespace n
+            JOIN pg_roles r ON r.oid = n.nspowner
+            WHERE n.nspname = %s
+            """,
+            (name,),
+        )
+        found = await cur.fetchone()
+        if not found:
+            raise RuntimeError(f"Lakebase schema {name} was not created")
+        owner = found["owner"]
+        me = found["me"]
+        if owner != me:
+            raise RuntimeError(
+                f"Lakebase schema {name} is owned by {owner}, not the app user {me}. "
+                "The app service principal must own this schema before checkpoint tables "
+                "can be created. Do not drop it from the app process."
+            )
+        await apply_search_path(conn, name)
+        log.info("lakebase schema ready name={} owner={}", name, me)
+
+
+async def _open_lakebase_saver(pool: Any, schema: str) -> Any:
     from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
+    await _ensure_app_schema(pool, schema)
     saver = AsyncPostgresSaver(conn=pool)
     await saver.setup()
-    log.info("checkpointer backend=lakebase")
+    log.info("checkpointer backend=lakebase schema={}", schema)
     return saver
 
 
@@ -155,7 +195,7 @@ async def open_checkpointer() -> CheckpointHandle:
     elif checkpoint_backend == "lakebase":
         if pool_handle is None:
             raise RuntimeError("Lakebase pool was not opened")
-        saver = await _open_lakebase_saver(pool_handle.pool)
+        saver = await _open_lakebase_saver(pool_handle.pool, settings.lakebase_schema)
     else:
         raise RuntimeError(f"Unknown BRAIN_CHECKPOINT_BACKEND: {checkpoint_backend}")
 

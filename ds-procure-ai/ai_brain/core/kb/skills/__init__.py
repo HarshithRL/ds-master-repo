@@ -23,6 +23,7 @@ SKILL_NAMES: tuple[str, ...] = (
     "be-entity-registry",
     "evidence-citation",
     "direct-tg",
+    "comparison-matrix",
 )
 STORE_PREFIX = "/procurement"
 

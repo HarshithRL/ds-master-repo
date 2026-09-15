@@ -23,6 +23,7 @@ from shared.db.connection import session_scope
 from shared.db.models import Artifact
 from shared.db.repos import artifacts as artifact_repo
 from shared.logger_global import get_logger
+from sqlalchemy import func, select
 
 log = get_logger(__name__)
 
@@ -327,7 +328,7 @@ def _auto_kb_build_enabled() -> bool:
 
 
 def enqueue_kb_build(project_id: str) -> threading.Thread:
-    """Fire-and-forget kb_build + comparison xlsx after parse/classify."""
+    """Fire-and-forget kb_build after parse/classify. Does not write Excel."""
     log.info("enqueue kb_build project_id={}", project_id)
     _set_kb_job(
         project_id,
@@ -360,6 +361,77 @@ def _run_kb_build_thread(project_id: str) -> None:
             error="kb_build thread failed",
         )
 
+
+def pending_artifact_ids(project_id: str) -> list[str]:
+    """Artifact ids still waiting to parse (pending or empty status)."""
+    if not project_id:
+        return []
+    with session_scope() as session:
+        rows = session.scalars(
+            select(Artifact)
+            .where(Artifact.project_id == project_id)
+            .order_by(Artifact.created_at.asc())
+        ).all()
+        return [
+            row.id
+            for row in rows
+            if (row.parse_status or PARSE_PENDING).strip() == PARSE_PENDING
+        ]
+
+
+def _usable_markdown(parsed_json: str | None) -> bool:
+    if not parsed_json:
+        return False
+    import json
+
+    try:
+        data = json.loads(parsed_json)
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(data, dict):
+        return False
+    markdown = data.get("markdown")
+    return isinstance(markdown, str) and bool(markdown.strip())
+
+
+def stale_ok_artifact_ids(project_id: str) -> list[str]:
+    """parse_status=ok but missing SQL chunks or usable parsed_json.markdown — reparse."""
+    if not project_id:
+        return []
+    from shared.db.models import Chunk
+
+    with session_scope() as session:
+        rows = session.scalars(
+            select(Artifact)
+            .where(Artifact.project_id == project_id, Artifact.parse_status == PARSE_OK)
+            .order_by(Artifact.created_at.asc())
+        ).all()
+        stale: list[str] = []
+        for row in rows:
+            chunk_count = session.scalar(
+                select(func.count()).select_from(Chunk).where(Chunk.artifact_id == row.id)
+            ) or 0
+            if int(chunk_count) < 1 or not _usable_markdown(row.parsed_json):
+                stale.append(row.id)
+        return stale
+
+
+async def ensure_parsed_for_matrix(project_id: str) -> IngestReport:
+    """Parse pending uploads and reparse ok-but-empty corpus. Does not start kb_build."""
+    ids = pending_artifact_ids(project_id)
+    for aid in stale_ok_artifact_ids(project_id):
+        if aid not in ids:
+            ids.append(aid)
+    if not ids:
+        return IngestReport(project_id=project_id)
+    from shared.db.repos import artifacts as artifact_repo
+
+    for aid in ids:
+        try:
+            artifact_repo.save_parse_result(aid, parse_status=PARSE_PENDING, parse_error=None)
+        except Exception:
+            log.exception("reset parse_status pending failed artifact_id={}", aid)
+    return await ingest_project(project_id, ids)
 
 def enqueue_ingest(project_id: str, artifact_ids: Sequence[str]) -> threading.Thread:
     """Fire-and-forget background ingest. Must not block the HTTP handler."""

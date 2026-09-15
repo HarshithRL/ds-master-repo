@@ -27,6 +27,8 @@ THIN = Border(
     bottom=Side(style="thin", color="D0D0D0"),
 )
 MISSING_FILL = PatternFill("solid", fgColor="FFF2CC")
+NA_FILL = PatternFill("solid", fgColor="F2F2F2")
+NA_FONT = Font(color="808080")
 NOT_STATED_FILL = PatternFill("solid", fgColor="D9D9D9")
 NOT_OFFERED_FILL = PatternFill("solid", fgColor="F4CCCC")
 EXTRACTION_FAILED_FILL = PatternFill("solid", fgColor="F4B183")

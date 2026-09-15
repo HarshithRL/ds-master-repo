@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -43,6 +44,29 @@ def _app_port() -> int:
     return int(os.environ.get("DATABRICKS_APP_PORT", "8000"))
 
 
+def _port_open(host: str, port: int) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=1.0):
+            return True
+    except OSError:
+        return False
+
+
+def _wait_for_brain(proc: subprocess.Popen, host: str, port: int, timeout_s: float = 90.0) -> None:
+    """Fail the app if the brain never binds. Do not leave Flask serving a dead :8004."""
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        code = proc.poll()
+        if code is not None:
+            raise SystemExit(code or 1)
+        if _port_open(host, port):
+            return
+        time.sleep(0.5)
+    if proc.poll() is None:
+        proc.send_signal(signal.SIGTERM)
+    raise SystemExit(1)
+
+
 def _wait_or_exit(proc: subprocess.Popen, timeout_s: float = 12.0) -> None:
     try:
         proc.wait(timeout=timeout_s)
@@ -75,6 +99,7 @@ def main() -> int:
         cwd=str(REPO_ROOT),
         env=env,
     )
+    _wait_for_brain(brain, brain_host, int(brain_port))
     gunicorn = subprocess.Popen(
         [
             python,

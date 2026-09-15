@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, joinedload
 from shared.db.connection import session_scope
 from shared.db.models import Artifact, utc_now_iso
 from shared.db.paths import artifact_absolute_path, artifact_storage_relpath
+from shared.db.volume_fs import write_bytes
 from shared.db.repos.projects import ProjectNotFoundError, _get_for_owner
 from shared.db.seed import PROCUREMENT_MODULE_ID
 
@@ -54,11 +55,9 @@ def create_upload(
     artifact_id = str(uuid.uuid4())
     relpath = artifact_storage_relpath(project_id, artifact_id, original_name)
     absolute = artifact_absolute_path(relpath)
-    absolute.parent.mkdir(parents=True, exist_ok=True)
-
     upload.stream.seek(0)
     data = upload.stream.read()
-    absolute.write_bytes(data)
+    write_bytes(absolute, data)
     size_bytes = len(data)
     content_type = upload.content_type or mimetypes.guess_type(original_name)[0]
 
@@ -86,13 +85,17 @@ def create_upload(
         return artifact
 
 
+# Sentinel: omit parsed_json / parsed_relpath so callers do not wipe existing blobs.
+_UNSET = object()
+
+
 def save_parse_result(
     artifact_id: str,
     *,
     parse_status: str,
     parse_error: str | None = None,
-    parsed_json: str | None = None,
-    parsed_relpath: str | None = None,
+    parsed_json: str | None | object = _UNSET,
+    parsed_relpath: str | None | object = _UNSET,
 ) -> Artifact:
     with session_scope() as session:
         artifact = session.get(Artifact, artifact_id)
@@ -100,8 +103,10 @@ def save_parse_result(
             raise ArtifactNotFoundError(artifact_id)
         artifact.parse_status = parse_status
         artifact.parse_error = parse_error
-        artifact.parsed_json = parsed_json
-        artifact.parsed_relpath = parsed_relpath
+        if parsed_json is not _UNSET:
+            artifact.parsed_json = parsed_json  # type: ignore[assignment]
+        if parsed_relpath is not _UNSET:
+            artifact.parsed_relpath = parsed_relpath  # type: ignore[assignment]
         session.flush()
         session.expunge(artifact)
         return artifact

@@ -57,3 +57,42 @@ TEMPLATE_ROWS: tuple[dict[str, Any], ...] = (
 def row_applies(row: dict[str, Any], process_type: str) -> bool:
     allowed = row.get("applies_to") or ALL
     return bool(process_type) and process_type in allowed
+
+
+# Template Comparison (4).xlsx field_id → IndirectVendorFacts attribute.
+FIELD_TO_ATTR: dict[str, str] = {
+    "y1_solution_cost": "y1_solution",
+    "y1_service_cost": "y1_service",
+    "y1_etex_mandays": "y1_etex_mandays",
+    "tco_year_1": "y1_tco",
+    "y2_solution_cost": "y2_solution",
+    "y2_service_cost": "y2_service",
+    "y2_etex_mandays": "y2_etex_mandays",
+    "tco_year_2": "y2_tco",
+    "y3_solution_cost": "y3_solution",
+    "y3_service_cost": "y3_service",
+    "y3_etex_mandays": "y3_etex_mandays",
+    "tco_year_3": "y3_tco",
+    "tco_3_5_yrs": "tco_3_5",
+    "scorecard": "score_card",
+    "indexation": "indexation",
+    "blended_rate": "blended_rate",
+    "vendor_mandays": "vendor_mandays",
+    "etex_effort": "etex_mandays",
+    "timeline": "timeline",
+    "renewal_type": "renewal_type",
+    "ecovadis": "ecovadis",
+    "creditscore": "creditscore",
+    "architecture": "architecture",
+    "security": "security",
+    "supply_location": "supply_location",
+    "delivery_model": "delivery_model",
+    "assumptions": "assumptions",
+    "legal": "legal",
+    "etex_obligations": "obligations",
+    "risk_plan": "risk_plan",
+    "ref_names": "ref_names",
+    "ref_feedback": "ref_feedback",
+    "scope_completeness": "scope_completeness",
+    "missing_requirements": "missing_requirements",
+}

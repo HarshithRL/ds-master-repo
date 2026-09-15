@@ -45,6 +45,24 @@ def test_brain_request_headers_stream_and_identity():
     }
 
 
+def test_brain_request_headers_forwards_obo_from_flask():
+    from app import app
+    from services.brain_client import brain_request_headers
+
+    with app.test_request_context(
+        "/api/projects/p/chat",
+        headers={
+            "X-Forwarded-Access-Token": "visitor-obo",
+            "X-Forwarded-Email": "user@etexgroup.com",
+        },
+    ):
+        headers = brain_request_headers(stream=True, user_id="owner-9")
+    assert headers["x-forwarded-access-token"] == "visitor-obo"
+    assert headers["x-forwarded-email"] == "user@etexgroup.com"
+    assert headers["x-user-id"] == "owner-9"
+    assert headers["Accept"] == "text/event-stream"
+
+
 def test_invoke_body_forces_deepagent_off():
     body = invoke_body("hello", "proj-1")
     assert body["procurement"]["mainagent"] is True

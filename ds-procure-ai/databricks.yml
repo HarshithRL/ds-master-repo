@@ -29,14 +29,17 @@ variables:
   catalog:
     description: The Unity Catalog to use (contains bronze/silver/gold schemas)
   databricks_model:
-    description: Fallback DATABRICKS_MODEL (AI Gateway UC path)
-    default: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+    description: Fallback DATABRICKS_MODEL (system.ai Foundation Model API)
+    default: system.ai.claude-opus-4-5
   fast_model:
-    description: AI Gateway UC path for fast_model
-    default: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+    description: Fast chat model (system.ai Foundation Model API)
+    default: system.ai.claude-sonnet-4-5
   thinking_model:
-    description: AI Gateway UC path for thinking_model
-    default: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+    description: Thinking chat model (system.ai Foundation Model API)
+    default: system.ai.claude-opus-4-6
+  sql_warehouse_id:
+    description: SQL warehouse id for Mate UC (DATABRICKS_WAREHOUSE_ID). D/T use dau-automation-sqlwh-d-01; override on A/P.
+    default: "69ada62b2fb9b9e2"
 
 sync:
   include:
@@ -77,12 +80,13 @@ targets:
       host: https://adb-7181820732839861.1.azuredatabricks.net
       root_path: /Workspace/Users/${workspace.current_user.userName}/${bundle.name}/${bundle.target}
     variables:
+      sql_warehouse_id: "69ada62b2fb9b9e2"  # dau-automation-sqlwh-d-01
       catalog: automation_d
       lakebase_branch: projects/ds-vendor-agent/branches/production
       lakebase_database: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
-      databricks_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
-      fast_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
-      thinking_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+      databricks_model: system.ai.claude-opus-4-5
+      fast_model: system.ai.claude-sonnet-4-5
+      thinking_model: system.ai.claude-opus-4-6
     resources:
       apps:
         ds_procure_ai:
@@ -92,6 +96,46 @@ targets:
                 key: secret-key
                 permission: READ
                 scope: procure-ai
+            - name: azure-di-endpoint
+              secret:
+                key: azure-document-intelligence-endpoint
+                permission: READ
+                scope: procure-ai
+            - name: azure-di-key
+              secret:
+                key: azure-document-intelligence-key
+                permission: READ
+                scope: procure-ai
+          config:
+            env:
+              - name: DATABRICKS_MODEL
+                value: ${var.databricks_model}
+              - name: DATABRICKS_FAST_MODEL
+                value: ${var.fast_model}
+              - name: DATABRICKS_THINKING_MODEL
+                value: ${var.thinking_model}
+              - name: DATABRICKS_FAST_ENDPOINT
+                value: databricks-claude-sonnet-4-5
+              - name: DATABRICKS_THINKING_ENDPOINT
+                value: databricks-claude-opus-4-6
+              - name: FLASK_SECRET_KEY
+                value: ${bundle.name}-${bundle.target}
+              - name: MATE_DB_BACKEND
+                value: uc
+              - name: MATE_UC_AUTH
+                value: obo
+              - name: MATE_UC_CATALOG
+                value: ${var.catalog}
+              - name: MATE_UC_SCHEMA
+                value: bronze
+              - name: MATE_UC_VOLUME
+                value: bronze_volume
+              - name: DATABRICKS_WAREHOUSE_ID
+                value: ${var.sql_warehouse_id}
+              - name: AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT
+                valueFrom: azure-di-endpoint
+              - name: AZURE_DOCUMENT_INTELLIGENCE_KEY
+                valueFrom: azure-di-key
 
   T:
     mode: production
@@ -99,12 +143,13 @@ targets:
       host: https://adb-7181820732839861.1.azuredatabricks.net
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
+      sql_warehouse_id: "69ada62b2fb9b9e2"  # dau-automation-sqlwh-d-01
       catalog: automation_d
       lakebase_branch: projects/ds-vendor-agent/branches/production
       lakebase_database: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
-      databricks_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
-      fast_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
-      thinking_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+      databricks_model: system.ai.claude-opus-4-5
+      fast_model: system.ai.claude-sonnet-4-5
+      thinking_model: system.ai.claude-opus-4-6
     resources:
       apps:
         ds_procure_ai:
@@ -114,8 +159,52 @@ targets:
                 key: secret-key
                 permission: READ
                 scope: procure-ai
+            - name: azure-di-endpoint
+              secret:
+                key: azure-document-intelligence-endpoint
+                permission: READ
+                scope: procure-ai
+            - name: azure-di-key
+              secret:
+                key: azure-document-intelligence-key
+                permission: READ
+                scope: procure-ai
+          config:
+            env:
+              - name: DATABRICKS_MODEL
+                value: ${var.databricks_model}
+              - name: DATABRICKS_FAST_MODEL
+                value: ${var.fast_model}
+              - name: DATABRICKS_THINKING_MODEL
+                value: ${var.thinking_model}
+              - name: DATABRICKS_FAST_ENDPOINT
+                value: databricks-claude-sonnet-4-5
+              - name: DATABRICKS_THINKING_ENDPOINT
+                value: databricks-claude-opus-4-6
+              - name: FLASK_SECRET_KEY
+                value: ${bundle.name}-${bundle.target}
+              - name: MATE_DB_BACKEND
+                value: uc
+              - name: MATE_UC_AUTH
+                value: obo
+              - name: MATE_UC_CATALOG
+                value: ${var.catalog}
+              - name: MATE_UC_SCHEMA
+                value: bronze
+              - name: MATE_UC_VOLUME
+                value: bronze_volume
+              - name: DATABRICKS_WAREHOUSE_ID
+                value: ${var.sql_warehouse_id}
+              - name: AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT
+                valueFrom: azure-di-endpoint
+              - name: AZURE_DOCUMENT_INTELLIGENCE_KEY
+                valueFrom: azure-di-key
     permissions:
-      - service_principal_name: ${workspace.current_user.userName}
+      # Local CLI deploys as a user; CI deploys as this workspace SP.
+      # service_principal_name + current_user.userName 404s for a human identity.
+      - user_name: ${workspace.current_user.userName}
+        level: CAN_MANAGE
+      - service_principal_name: 1ff203aa-a0ad-475e-85aa-4eac5c23bdc7
         level: CAN_MANAGE
       - user_name: pierre.delaguiche@etexgroup.com
         level: CAN_MANAGE
@@ -130,10 +219,11 @@ targets:
       host: https://adb-4796304964978539.19.azuredatabricks.net
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
+      sql_warehouse_id: "0ef3e37fbbd5b772"  # dau-automation-sqlwh-a-01
       catalog: automation_a
-      databricks_model: automation_a.ai_models.gw_dev_claude-sonnet-4-6_aut
-      fast_model: automation_a.ai_models.gw_dev_claude-sonnet-4-6_aut
-      thinking_model: automation_a.ai_models.gw_dev_claude-sonnet-4-6_aut
+      databricks_model: system.ai.claude-opus-4-5
+      fast_model: system.ai.claude-sonnet-4-5
+      thinking_model: system.ai.claude-opus-4-6
       lakebase_branch: ${resources.postgres_projects.ds_vendor_agent.id}/branches/production
       lakebase_database: ${resources.postgres_projects.ds_vendor_agent.id}/branches/production/databases/databricks-postgres
     permissions:
@@ -173,8 +263,24 @@ targets:
                 value: ${var.fast_model}
               - name: DATABRICKS_THINKING_MODEL
                 value: ${var.thinking_model}
+              - name: DATABRICKS_FAST_ENDPOINT
+                value: databricks-claude-sonnet-4-5
+              - name: DATABRICKS_THINKING_ENDPOINT
+                value: databricks-claude-opus-4-6
               - name: FLASK_SECRET_KEY
                 value: ${bundle.name}-${bundle.target}
+              - name: MATE_DB_BACKEND
+                value: uc
+              - name: MATE_UC_AUTH
+                value: obo
+              - name: MATE_UC_CATALOG
+                value: ${var.catalog}
+              - name: MATE_UC_SCHEMA
+                value: bronze
+              - name: MATE_UC_VOLUME
+                value: bronze_volume
+              - name: DATABRICKS_WAREHOUSE_ID
+                value: ${var.sql_warehouse_id}
 
   P:
     mode: production
@@ -183,6 +289,9 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       catalog: automation_p
+      databricks_model: system.ai.claude-opus-4-5
+      fast_model: system.ai.claude-sonnet-4-5
+      thinking_model: system.ai.claude-opus-4-6
       # Confirm PRD Lakebase paths before merge to main (PRD pipeline deploys --target P).
       lakebase_branch: projects/ds-vendor-agent/branches/production
       lakebase_database: projects/ds-vendor-agent/branches/production/databases/databricks-postgres

@@ -15,9 +15,10 @@ from databricks.sdk import WorkspaceClient
 from databricks.sdk.core import Config
 
 from shared.databricks_runtime import (
+    bind_obo_from_headers,
     cli_profile,
     is_databricks_app,
-    obo_workspace_client,
+    request_workspace_client,
     workspace_client,
 )
 from shared.logger_global import get_logger
@@ -98,14 +99,12 @@ def user_workspace_client(request) -> WorkspaceClient:
     if not is_databricks_app():
         return app_workspace_client()
 
+    bind_obo_from_headers(request.headers)
     token = _header(request, "x-forwarded-access-token")
     if not token:
         log.warning("OBO token missing; using app service principal for user identity")
         return app_workspace_client()
-    host = _workspace_host(app_workspace_client()) or (os.getenv("DATABRICKS_HOST") or "").strip()
-    if not host:
-        raise IdentityError("DATABRICKS_HOST is required for on-behalf-of user identity.")
-    return obo_workspace_client(host=host, token=token)
+    return request_workspace_client()
 
 
 def resolve_identities(request) -> SessionIdentity:

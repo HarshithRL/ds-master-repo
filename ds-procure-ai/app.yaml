@@ -16,8 +16,18 @@ env:
     value: databricks
   - name: MLFLOW_EXPERIMENT_NAME
     value: /Shared/ds-procure-ai/ai_brain
+  # Pin Foundation Model API ids in the process env so a stale Apps
+  # config.env (automation_d.ai_models.gw_*) cannot 404 chat.
   - name: DATABRICKS_MODEL
-    value: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+    value: system.ai.claude-opus-4-5
+  - name: DATABRICKS_FAST_MODEL
+    value: system.ai.claude-sonnet-4-5
+  - name: DATABRICKS_THINKING_MODEL
+    value: system.ai.claude-opus-4-6
+  - name: DATABRICKS_FAST_ENDPOINT
+    value: databricks-claude-sonnet-4-5
+  - name: DATABRICKS_THINKING_ENDPOINT
+    value: databricks-claude-opus-4-6
   # Lakebase STM/LTM (ai_brain). YAML defaults: ai_brain/core/config/memory.yaml.
   # Password is OAuth via generate_database_credential(endpoint=LAKEBASE_ENDPOINT).token
   # — never put a native PG password here.
@@ -41,3 +51,12 @@ env:
     value: lakebase
   - name: DATABRICKS_EMBEDDING_ENDPOINT
     value: databricks-gte-large-en
+
+  # Azure Document Intelligence (form recogniser) for PDF/PPTX/DOCX parsing.
+  # Same endpoint+key used by ds-air-monitoring-app.
+  - name: AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT
+    value: "https://we-spoke-mdp-t-formrecogniser.cognitiveservices.azure.com/"
+  - name: AZURE_DOCUMENT_INTELLIGENCE_KEY
+    value: "1bdb532656d248bda3c6b58a9b75441f"
+  # Mate UC catalog/warehouse/DI secrets are target config.env in databricks.yml
+  # (D/T attach procure-ai secrets; A/P do not). Do not pin automation_d here.

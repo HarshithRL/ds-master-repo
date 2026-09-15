@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, joinedload
 from shared.db.connection import session_scope
 from shared.db.models import AppUser, Project, utc_now_iso
 from shared.db.paths import project_root
+from shared.db.volume_fs import ensure_dir
 from shared.db.seed import PROCUREMENT_MODULE_ID
 
 DEFAULT_PAGE_SIZE = 50
@@ -35,6 +36,29 @@ class ProjectValidationError(ValueError):
     pass
 
 
+
+def _ensure_owner_row(session: Session, owner_id: str) -> None:
+    """FK: project.owner_id -> app_user.workspace_id. Create a stub row if missing."""
+    oid = (owner_id or "").strip()
+    if not oid:
+        raise ProjectValidationError("owner_id is required")
+    existing = session.get(AppUser, oid)
+    if existing is not None:
+        return
+    now = utc_now_iso()
+    session.add(
+        AppUser(
+            workspace_id=oid,
+            user_name=None,
+            display_name=None,
+            email=None,
+            created_at=now,
+            updated_at=now,
+        )
+    )
+    session.flush()
+
+
 def peek_next_code() -> str:
     """Return the next project code without inserting a row."""
     with session_scope() as session:
@@ -52,6 +76,7 @@ def create(owner_id: str, payload: dict[str, Any], *, module_id: str = PROCUREME
         requirements_json = json.dumps(requirements)
 
     with session_scope() as session:
+        _ensure_owner_row(session, owner_id)
         requested_code = payload.get("projectId") or payload.get("code")
         code = _resolve_code(session, requested_code)
         now = utc_now_iso()
@@ -423,4 +448,4 @@ def _owner_display_name(owner: AppUser | None) -> str:
 def _ensure_project_dirs(project_id: str) -> None:
     root = project_root(project_id)
     for subdir in ("uploads", "generated", "parsed"):
-        (root / subdir).mkdir(parents=True, exist_ok=True)
+        ensure_dir(root / subdir)

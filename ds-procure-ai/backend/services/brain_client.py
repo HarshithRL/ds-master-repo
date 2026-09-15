@@ -11,6 +11,7 @@ from ai_brain.core.procurement_ai.capabilities import capability_from_request
 
 import httpx
 
+from shared.databricks_runtime import FORWARDED_IDENTITY_HEADERS
 from shared.logger_global import get_logger
 
 log = get_logger(__name__)
@@ -50,7 +51,24 @@ def brain_request_headers(*, stream: bool = False, user_id: str = "") -> dict[st
     uid = (user_id or "").strip()
     if uid:
         headers["x-user-id"] = uid
+    headers.update(_flask_forwarded_headers())
     return headers
+
+
+def _flask_forwarded_headers() -> dict[str, str]:
+    """Copy Apps visitor OBO headers from the current Flask request, if any."""
+    try:
+        from flask import has_request_context, request
+    except ImportError:
+        return {}
+    if not has_request_context():
+        return {}
+    found: dict[str, str] = {}
+    for name in FORWARDED_IDENTITY_HEADERS:
+        value = request.headers.get(name)
+        if value and str(value).strip():
+            found[name] = str(value).strip()
+    return found
 
 
 def invoke_body(

@@ -172,7 +172,31 @@ def map_brain_event(
 
     if text:
         acc.answer = text
-    done_text = acc.answer.strip()
+    # Prefer pack/compare assistant_reply from graph values over streamed essays.
+    values = custom.get("values") if isinstance(custom.get("values"), dict) else {}
+    proc = values.get("procurement") if isinstance(values.get("procurement"), dict) else {}
+    business = str(proc.get("assistant_reply") or "").strip()
+    href = str(
+        custom.get("xlsx_href")
+        or custom.get("ppt_href")
+        or proc.get("xlsx_href")
+        or proc.get("ppt_href")
+        or ""
+    ).strip()
+    if business:
+        done_text = business
+        if href and href not in done_text:
+            done_text = f"{done_text.rstrip()} Download: {href}"
+        acc.answer = done_text
+    else:
+        done_text = acc.answer.strip()
+        if href and href not in done_text:
+            done_text = (
+                f"{done_text.rstrip()} Download: {href}"
+                if done_text
+                else f"Comparison workbook is ready. Download: {href}"
+            )
+            acc.answer = done_text
     if not done_text or "(no matching chunks)" in done_text or done_text.startswith("(no "):
         done_text = "I could not find that in the uploaded files."
     payload: dict[str, Any] = {
@@ -180,6 +204,8 @@ def map_brain_event(
         "role": "ai",
         "text": done_text,
     }
+    if href:
+        payload["xlsx_href" if "xlsx" in href else "ppt_href"] = href
     if acc.thoughts:
         payload["thoughts"] = list(acc.thoughts)
     yield payload

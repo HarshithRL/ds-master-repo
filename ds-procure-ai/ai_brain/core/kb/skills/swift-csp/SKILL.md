@@ -38,3 +38,15 @@ unless the cited chunk says otherwise.
   language into a "met" mandatory cell.
 - Prior-year assessments (e.g. 2025) are not evidence that a 2026 control
   is met.
+
+## Comparison matrix overlay
+
+When process_type is `indirect_it_services` and the RFP is SWIFT CSP,
+the requirement spine is R01–R40 from the SWIFT CSP Vendor Comparison
+workbook. Do not paste that overlay onto Direct TG or IT software.
+
+BAFO software/licence rows are `N/A - advisory service, no software`
+unless the bid actually sells software. Etex mandays × 800 EUR/day
+only when the day-count is cited. Dual pricing (T&M **and** fixed) is
+mandatory when the RFP requires both; a missing offer is a gap, not a
+derived equivalent price.

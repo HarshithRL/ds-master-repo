@@ -8,9 +8,13 @@ from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 
+from ai_brain.core.procurement_ai.comparison_template import (
+    FIELD_TO_ATTR,
+    NA,
+    TEMPLATE_ROWS,
+    row_applies,
+)
 from ai_brain.core.procurement_ai.packs.matrix_layout import (
-    BAFO_ATTRS,
-    BAFO_ROWS,
     MISSING,
     NOT_STATED,
     REQUIREMENTS_LEGEND,
@@ -26,6 +30,8 @@ from ai_brain.core.procurement_ai.packs.matrix_schema import (
     blank_indirect_vendor,
 )
 from ai_brain.core.procurement_ai.packs.xlsx_style import (
+    NA_FILL,
+    NA_FONT,
     SECTION_FILL,
     SECTION_FONT,
     WRAP,
@@ -41,9 +47,11 @@ LEAD_HEADERS = ("ID", "Requirement", "Category", "Mandatory", "Target / Detail")
 
 def write_indirect(wb, insights: dict[str, Any], matrix: IndirectMatrix) -> None:
     vendors = _vendors(insights, matrix)
+    process = str(insights.get("process_type") or "").strip()
     _write_bafo(
         wb.create_sheet("Final BAFO Comparison"),
         vendors,
+        process_type=process,
         from_evidence=matrix.from_evidence,
     )
     _write_requirements(wb.create_sheet("Procurement Requirements"), insights, matrix, vendors)
@@ -85,6 +93,7 @@ def _write_bafo(
     ws: Worksheet,
     vendors: list[IndirectVendorFacts],
     *,
+    process_type: str = "",
     from_evidence: bool = False,
 ) -> None:
     ws.merge_cells("A1:A2")
@@ -99,18 +108,27 @@ def _write_bafo(
         ws.cell(2, col, f"Vendor {index + 1} - {legal}")
         ws.cell(2, col).alignment = Alignment(wrap_text=True, vertical="center")
     ws.row_dimensions[2].height = 36
-    for row_offset, ((label, typ), attr) in enumerate(zip(BAFO_ROWS, BAFO_ATTRS, strict=True), start=3):
-        ws.cell(row_offset, 1, label)
-        ws.cell(row_offset, 1).alignment = Alignment(wrap_text=True, vertical="center")
-        ws.cell(row_offset, 2, typ)
-        ws.cell(row_offset, 2).alignment = Alignment(wrap_text=True, vertical="center")
-        if not label:
-            continue
+    excel_row = 3
+    for row in TEMPLATE_ROWS:
+        if row["field_id"] == "scorecard":
+            excel_row += 1
+        label = row["label"]
+        attr = FIELD_TO_ATTR.get(row["field_id"])
+        applies = row_applies(row, process_type)
+        ws.cell(excel_row, 1, label).alignment = Alignment(wrap_text=True, vertical="center")
+        ws.cell(excel_row, 2, row.get("cadence") or "")
+        ws.cell(excel_row, 2).alignment = Alignment(wrap_text=True, vertical="center")
         for index, vendor in enumerate(vendors):
+            comment = (vendor.cell_comments or {}).get(attr or "") if attr else ""
+            if not applies:
+                cell = ws.cell(excel_row, 3 + index, NA)
+                cell.fill = NA_FILL
+                cell.font = NA_FONT
+                cell.alignment = WRAP
+                continue
             raw = getattr(vendor, attr, MISSING) if attr else ""
-            comment = (vendor.cell_comments or {}).get(attr or "")
             if label in SCORED_BY_ETEX and (not raw or raw == MISSING):
-                put(ws, row_offset, 3 + index, SCORED, comment=comment)
+                put(ws, excel_row, 3 + index, SCORED, comment=comment)
                 continue
             state = None
             if from_evidence and (not raw or raw == MISSING):
@@ -119,15 +137,16 @@ def _write_bafo(
             if from_evidence:
                 put_render(
                     ws,
-                    row_offset,
+                    excel_row,
                     3 + index,
                     raw or MISSING,
                     state=state,
                     comment=comment,
                 )
             else:
-                put(ws, row_offset, 3 + index, raw or MISSING, comment=comment)
-        ws.row_dimensions[row_offset].height = 32 if len(label) > 40 else 22
+                put(ws, excel_row, 3 + index, raw or MISSING, comment=comment)
+        ws.row_dimensions[excel_row].height = 32 if len(label) > 40 else 22
+        excel_row += 1
     ws.column_dimensions["A"].width = 52
     ws.column_dimensions["B"].width = 16
     for index in range(len(vendors)):
@@ -141,6 +160,9 @@ def _write_requirements(
     matrix: IndirectMatrix,
     vendors: list[IndirectVendorFacts],
 ) -> None:
+    from ai_brain.core.procurement_ai.process_type import DIRECT_TG, IT_SERVICES
+
+    process = str(insights.get("process_type") or "").strip()
     title = (
         f"Procurement Requirements Compliance Matrix - "
         f"{insights.get('project_name') or 'Etex'} "
@@ -148,6 +170,9 @@ def _write_requirements(
     )
     ws["A1"] = title
     ws["A1"].font = Font(bold=True, size=12)
+    if process == DIRECT_TG and not matrix.requirements:
+        ws["A2"] = "Direct TG — requirements come from this RFP, not the SWIFT CSP R01–R40 overlay."
+        return
     if matrix.from_evidence:
         ws["A2"] = REQUIREMENTS_LEGEND
         headers = [*LEAD_HEADERS, *[v.name for v in vendors]]
@@ -155,8 +180,14 @@ def _write_requirements(
         row = 5
         prev_category = None
         last_col = len(headers)
-        items = [item for item in matrix.requirements if item.label or item.vendor_states]
-        for item in items or _overlay_requirements(matrix):
+        extracted = [item for item in matrix.requirements if item.label or item.vendor_states]
+        if process == IT_SERVICES:
+            items = _overlay_requirements(matrix)
+        elif process == DIRECT_TG:
+            items = extracted
+        else:
+            items = extracted or _overlay_requirements(matrix)
+        for item in items:
             category = (item.category or "").strip()
             if category and category != prev_category:
                 _write_section_row(ws, row, last_col, category)
@@ -225,6 +256,7 @@ def _overlay_requirements(matrix: IndirectMatrix) -> list[RequirementCell]:
                     label=label,
                     category=category,
                     target=target,
+                    mandatory=True,
                 )
             )
         else:

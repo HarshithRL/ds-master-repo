@@ -139,9 +139,14 @@ def child_runnable_config(config: dict[str, Any] | None) -> dict[str, Any]:
     graphs invoked from a Python node. Passing this config nests LLM spans
     under the AgentServer / ``nexus_graph`` span.
 
-    Nested ``create_agent`` graphs are compiled with ``checkpointer=None``.
-    Dropping parent checkpoint keys prevents
+    Nested ``create_agent`` / ``create_deep_agent`` graphs are compiled with
+    ``checkpointer=None``. Dropping parent checkpoint keys prevents
     ``Synchronous calls to AsyncSqliteSaver are only allowed from a different thread``.
+
+    After stripping parent checkpoint state we still set ``checkpoint_ns`` so
+    LangGraph nested runs do not KeyError on a missing ns (deepagents + nested
+    checkpointer=None). Keep the same ``thread_id``; use ns ``nested`` rather
+    than resuming the parent checkpoint map/id.
     """
     merged: dict[str, Any] = dict(config or {})
     callbacks = _as_callback_list(merged.get("callbacks"))
@@ -152,8 +157,11 @@ def child_runnable_config(config: dict[str, Any] | None) -> dict[str, Any]:
     configurable = dict(merged.get("configurable") or {})
     for key in _CHECKPOINT_CONFIG_KEYS:
         configurable.pop(key, None)
+    # Parent ns/id/map stripped above; nested agents need the key present.
+    configurable["checkpoint_ns"] = "nested"
     merged["configurable"] = configurable
     return merged
+
 
 
 def bind_run_trace(*, thread_id: str, user_id: str = "anonymous") -> None:
