@@ -7,6 +7,11 @@ resources:
       compute_size: LARGE
       lifecycle:
         started: true
+      permissions:
+        - group_name: AUTOMATION.DSPROCUREAI.CONSUMER.READ
+          level: CAN_USE
+        - group_name: AUTOMATION.DSPROCUREAI.CONSUMER.WRITE
+          level: CAN_USE
       user_api_scopes:
         # Visitor OBO (X-Forwarded-Access-Token) for ChatDatabricks / system.ai.
         # iam.current-user:read is a platform default; sending it on create
