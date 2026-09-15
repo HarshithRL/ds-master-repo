@@ -440,16 +440,32 @@
           "members": [
             "alex.vonschledorn@etexgroup.com",
             "barbora.cintava@etexgroup.com",
+            "david.decoux@etexgroup.com",
             "harshith.raghunath@etexgroup.com",
             "leander.miele@etexgroup.com",
             "mustafaarda.bicakci@etexgroup.com",
+            "ricardo.velasquez@etexgroup.com",
             "satish.chadha@etexgroup.com",
-            "vijayata.abhishekdubey@etexgroup.com"
+            "vijayata.abhishekdubey@etexgroup.com",
+            "werner.spinnoy@etexgroup.com"
           ]
         },
         {
           "tier": "WRITE",
           "grants": [
+            {
+              "catalog": "automation",
+              "privileges": [
+                "USE_CATALOG"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
             {
               "catalog": "automation",
               "schema": "bronze",
@@ -638,11 +654,14 @@
           "members": [
             "alex.vonschledorn@etexgroup.com",
             "barbora.cintava@etexgroup.com",
+            "david.decoux@etexgroup.com",
             "harshith.raghunath@etexgroup.com",
             "leander.miele@etexgroup.com",
             "mustafaarda.bicakci@etexgroup.com",
+            "ricardo.velasquez@etexgroup.com",
             "satish.chadha@etexgroup.com",
-            "vijayata.abhishekdubey@etexgroup.com"
+            "vijayata.abhishekdubey@etexgroup.com",
+            "werner.spinnoy@etexgroup.com"
           ]
         }
       ]
