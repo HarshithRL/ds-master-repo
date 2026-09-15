@@ -79,7 +79,7 @@
           ],
           "members": [
             "mustafaarda.bicakci@etexgroup.com",
-            "pierre.delaguiche@etexgroup.com",
+            "pierre.delaguiche@etexgroup.com"
           ]
         }
       ]
@@ -160,6 +160,19 @@
           "grants": [
             {
               "catalog": "automation",
+              "privileges": [
+                "USE_CATALOG"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
               "schema": "bronze",
               "table": "air_monitoring_output",
               "privileges": [
@@ -221,7 +234,7 @@
     },
     {
       "data_product": "ds-procure-ai",
-      "warehouse": false,
+      "warehouse": true,
       "consumer_groups": [
         {
           "tier": "READ",
@@ -251,146 +264,187 @@
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_hub_module",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_app_user",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_user_module",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_project",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_artifact",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_chunk",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_chunk_embedding",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_vendor",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_requirement",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_evidence",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_pricing_line",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_bid_profile",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_kb_node",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_kb_edge",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_chat_session",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_chat_message",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_ontology_requirement",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_ontology_offering",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_tco_line",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_ontology_flag",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_pack",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_quality_flag",
-              "privileges": ["SELECT"]
+              "privileges": [
+                "SELECT"
+              ]
             }
           ],
           "members": [
             "alex.vonschledorn@etexgroup.com",
             "barbora.cintava@etexgroup.com",
-            "david.decoux@etexgroup.com",
             "harshith.raghunath@etexgroup.com",
             "leander.miele@etexgroup.com",
             "mustafaarda.bicakci@etexgroup.com",
-            "ricardo.velasquez@etexgroup.com",
             "satish.chadha@etexgroup.com",
-            "vijayata.abhishekdubey@etexgroup.com",
-            "werner.spinnoy@etexgroup.com"
+            "vijayata.abhishekdubey@etexgroup.com"
           ]
         },
         {
@@ -408,146 +462,187 @@
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_hub_module",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_app_user",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_user_module",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_project",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_artifact",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_chunk",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_chunk_embedding",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_vendor",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_requirement",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_evidence",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_pricing_line",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_bid_profile",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_kb_node",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_kb_edge",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_chat_session",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_chat_message",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_ontology_requirement",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_ontology_offering",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_tco_line",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_ontology_flag",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_pack",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_quality_flag",
-              "privileges": ["MODIFY"]
+              "privileges": [
+                "MODIFY"
+              ]
             }
           ],
           "members": [
             "alex.vonschledorn@etexgroup.com",
             "barbora.cintava@etexgroup.com",
-            "david.decoux@etexgroup.com",
             "harshith.raghunath@etexgroup.com",
             "leander.miele@etexgroup.com",
             "mustafaarda.bicakci@etexgroup.com",
-            "ricardo.velasquez@etexgroup.com",
             "satish.chadha@etexgroup.com",
-            "vijayata.abhishekdubey@etexgroup.com",
-            "werner.spinnoy@etexgroup.com"
+            "vijayata.abhishekdubey@etexgroup.com"
           ]
         }
       ]
