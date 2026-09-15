@@ -20,12 +20,17 @@
 
 # COMMAND ----------
 
+# DBTITLE 1,Cell 2
 dbutils.widgets.text("catalog", "automation_d", "Unity Catalog name")
+dbutils.widgets.text("app_sp_client_id", "", "App SP client ID (optional – grants UC perms)")
 catalog = dbutils.widgets.get("catalog").strip()
+app_sp_client_id = dbutils.widgets.get("app_sp_client_id").strip()
 schema = "bronze"
 volume = "bronze_volume"
 
 print(f"Target: {catalog}.{schema}")
+if app_sp_client_id:
+    print(f"App SP: {app_sp_client_id}")
 
 # COMMAND ----------
 
@@ -192,6 +197,37 @@ for m in modules:
         VALUES ('{mid}', '{name}', '{desc}', '{icon}', '{mpath}', '{cat}', {sort_order}, {enabled})
     """)
 print(f"Seeded {len(modules)} hub modules into {hub_table}")
+
+# COMMAND ----------
+
+# DBTITLE 1,Grant App Service Principal (m2m)
+# MAGIC %md
+# MAGIC ## Grant App Service Principal (m2m)
+# MAGIC The ai_brain process uses **m2m auth** (App SP credentials) for background
+# MAGIC queries (project loading, insights). The SP needs `USE CATALOG`, `USE SCHEMA`,
+# MAGIC `SELECT`, and Volume access. Skipped when `app_sp_client_id` is empty.
+
+# COMMAND ----------
+
+# DBTITLE 1,Grant UC permissions to App SP
+# Grant UC permissions to the App Service Principal (m2m auth for ai_brain).
+# Skip if no SP client ID was provided — grants are optional for local dev.
+if app_sp_client_id:
+    sp = f"`{app_sp_client_id}`"
+    grants = [
+        f"GRANT USE CATALOG ON CATALOG {catalog} TO {sp}",
+        f"GRANT USE SCHEMA ON SCHEMA {catalog}.{schema} TO {sp}",
+        f"GRANT SELECT ON SCHEMA {catalog}.{schema} TO {sp}",
+        f"GRANT MODIFY ON SCHEMA {catalog}.{schema} TO {sp}",
+        f"GRANT READ VOLUME ON VOLUME {catalog}.{schema}.{volume} TO {sp}",
+        f"GRANT WRITE VOLUME ON VOLUME {catalog}.{schema}.{volume} TO {sp}",
+    ]
+    for g in grants:
+        spark.sql(g)
+        print(f"✓ {g}")
+    print(f"\nApp SP {app_sp_client_id} granted full access to {catalog}.{schema}")
+else:
+    print("⚠ No app_sp_client_id provided — skipping App SP grants")
 
 # COMMAND ----------
 
