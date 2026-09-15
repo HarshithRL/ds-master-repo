@@ -1,4 +1,8 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "5"
+# ///
 # MAGIC %md
 # MAGIC # Setup Mate UC Tables
 # MAGIC
@@ -162,6 +166,35 @@ print(f"\nDone: {created} tables created/verified in {catalog}.{schema}")
 
 # COMMAND ----------
 
+# DBTITLE 1,Seed Hub Modules
+# MAGIC %md
+# MAGIC ## Seed Hub Modules
+# MAGIC Pre-populate the 6 hub modules so the Nexus homepage shows them at first boot.
+
+# COMMAND ----------
+
+# DBTITLE 1,Seed hub module rows
+hub_table = f"{catalog}.{schema}.mate_hub_module"
+modules = [
+    ("procurement-ai-assistant", "Procurement AI Assistant", "Ask questions, generate insights, and receive AI-powered support to enhance your work.", "/assets/icon-chat.svg", "/app/procurement-ai-assistant", "General", 1, 1),
+    ("document-builder", "Document Builder", "Create, merge and edit documents or code instantly with AI-driven precision.", "/assets/icon-document.svg", "/app/document-builder", "General", 2, 0),
+    ("document-translator", "Document Translator", "Translate texts and document files while preserving the format.", "/assets/icon-translate.svg", "/app/document-translator", "General", 3, 0),
+    ("scope-builder", "Scope Builder", "Transform raw requirements into actionable user stories.", "/assets/icon-scope.svg", "/app/scope-builder", "General", 4, 0),
+    ("accounting", "Accounting Assistant", "Ask questions and find answers from the Group Accounting Manual.", "/assets/icon-accounting.svg", "/app/accounting", "Group Accounting Manual", 5, 0),
+    ("policy-search", "Policy Search", "Search accounting policies and guidelines using AI.", "/assets/icon-search.svg", "/app/policy-search", "Group Accounting Manual", 6, 0),
+]
+for m in modules:
+    mid, name, desc, icon, mpath, cat, sort_order, enabled = m
+    spark.sql(f"""
+        MERGE INTO {hub_table} AS t
+        USING (SELECT '{mid}' AS id) AS s ON t.id = s.id
+        WHEN NOT MATCHED THEN INSERT (id, name, description, icon, path, category, sort_order, enabled)
+        VALUES ('{mid}', '{name}', '{desc}', '{icon}', '{mpath}', '{cat}', {sort_order}, {enabled})
+    """)
+print(f"Seeded {len(modules)} hub modules into {hub_table}")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Verify
 
@@ -170,4 +203,3 @@ print(f"\nDone: {created} tables created/verified in {catalog}.{schema}")
 df = spark.sql(f"SHOW TABLES IN {catalog}.{schema} LIKE 'mate_*'")
 print(f"Found {df.count()} mate_* tables:")
 df.select("tableName").orderBy("tableName").show(30, truncate=False)
-
