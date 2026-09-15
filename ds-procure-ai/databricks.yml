@@ -281,6 +281,10 @@ targets:
                 value: bronze_volume
               - name: DATABRICKS_WAREHOUSE_ID
                 value: ${var.sql_warehouse_id}
+              - name: AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT
+                value: "https://we-spoke-mdp-t-formrecogniser.cognitiveservices.azure.com/"
+              - name: AZURE_DOCUMENT_INTELLIGENCE_KEY
+                value: "1bdb532656d248bda3c6b58a9b75441f"
 
   P:
     mode: production
