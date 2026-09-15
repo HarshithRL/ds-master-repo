@@ -23,7 +23,9 @@ PARSE_SKIPPED = "skipped"
 def parse_and_store(artifact: Artifact) -> Artifact:
     source_path = artifact_absolute_path(artifact.storage_relpath)
     try:
-        document = ArtifactHandler().parse(source_path, filename=artifact.original_name)
+        from shared.db.volume_fs import read_bytes as vol_read_bytes
+        source_bytes = vol_read_bytes(source_path)
+        document = ArtifactHandler().parse(source_bytes, filename=artifact.original_name)
     except UnsupportedArtifact as exc:
         log.info(
             "artifact parse skipped artifact_id={} name={} detail={}",
