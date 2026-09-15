@@ -7,7 +7,7 @@ from typing import Any
 
 import httpx
 
-from services.brain_client import brain_base_url
+from services.brain_client import brain_base_url, brain_request_headers
 from shared.db.repos import artifacts as artifact_repo
 from shared.db.repos import chunks as chunk_repo
 from shared.db.repos import projects as project_repo
@@ -112,7 +112,7 @@ def _local_pack(project_id: str, owner_id: str, capability: str, thread_id: str)
 def _brain_get(path: str) -> dict[str, Any]:
     url = f"{brain_base_url()}{path}"
     with httpx.Client(timeout=5.0) as client:
-        response = client.get(url)
+        response = client.get(url, headers=brain_request_headers())
         if response.status_code == 404:
             raise LookupError(f"brain {path} not found")
         response.raise_for_status()
@@ -125,7 +125,7 @@ def _brain_get(path: str) -> dict[str, Any]:
 def _brain_post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
     url = f"{brain_base_url()}{path}"
     with httpx.Client(timeout=180.0) as client:
-        response = client.post(url, json=payload)
+        response = client.post(url, json=payload, headers=brain_request_headers())
         response.raise_for_status()
         body = response.json()
         if not isinstance(body, dict):
