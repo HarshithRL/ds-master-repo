@@ -40,6 +40,9 @@ variables:
   sql_warehouse_id:
     description: SQL warehouse id for Mate UC (DATABRICKS_WAREHOUSE_ID). D/T use dau-automation-sqlwh-d-01; override on A/P.
     default: "69ada62b2fb9b9e2"
+  app_sp_client_id:
+    description: App Service Principal client ID — granted USE CATALOG/SCHEMA + SELECT on mate tables by setup job
+    default: ""
 
 sync:
   include:
@@ -224,6 +227,7 @@ targets:
       databricks_model: system.ai.claude-opus-4-5
       fast_model: system.ai.claude-sonnet-4-5
       thinking_model: system.ai.claude-opus-4-6
+      app_sp_client_id: "8e7535ad-24ff-4f68-b6ee-eac9ee389dd4"
       lakebase_branch: ${resources.postgres_projects.ds_vendor_agent.id}/branches/production
       lakebase_database: ${resources.postgres_projects.ds_vendor_agent.id}/branches/production/databases/databricks-postgres
     permissions:

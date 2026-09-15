@@ -23,5 +23,6 @@ resources:
             notebook_path: ../setup_mate_uc_tables.py
             base_parameters:
               catalog: ${var.catalog}
+              app_sp_client_id: ${var.app_sp_client_id}
       # No schedule — this is an on-demand job.
       # No cluster — uses serverless by default.
