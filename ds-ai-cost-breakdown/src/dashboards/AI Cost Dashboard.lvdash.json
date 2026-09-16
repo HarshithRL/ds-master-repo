@@ -956,8 +956,7 @@
                   "fields": []
                 },
                 "description": {
-                  "value": "Full granularity — date × capability × model × meter.",
-                  "fields": []
+                  "value": "Full granularity \u2014 date \u00d7 capability \u00d7 model \u00d7 meter.",                  "fields": []
                 }
               },
               "version": 2,
@@ -1577,8 +1576,7 @@
                   "value": "Copilot Cost Detail",
                   "fields": []
                 },
-                "description": "Date × Copilot product × application. Costs reflect SaaS seat charges and consumption-based API metering."
-              },
+                "description": "Date \u00d7 Copilot product \u00d7 application. Costs reflect SaaS seat charges and consumption-based API metering."              },
               "version": 2,
               "widgetType": "table",
               "encodings": {
@@ -2777,7 +2775,7 @@
             "spec": {
               "frame": {
                 "showTitle": true,
-                "title": "Difference by Product (Azure − Databricks)"
+                "title": "Difference by Product (Azure \u2212 Databricks)"
               },
               "version": 3,
               "widgetType": "bar",
