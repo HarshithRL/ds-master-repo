@@ -5,10 +5,13 @@ GRANT USE CATALOG ON CATALOG automation_d TO `a65ce6d4-0267-43b3-a6c4-b24c39a35d
 GRANT USE SCHEMA ON SCHEMA automation_d.bronze TO `a65ce6d4-0267-43b3-a6c4-b24c39a35d05`;
 GRANT READ VOLUME, WRITE VOLUME ON VOLUME automation_d.bronze.bronze_volume TO `a65ce6d4-0267-43b3-a6c4-b24c39a35d05`;
 
--- ACC (when ready):
--- GRANT USE CATALOG ON CATALOG automation_a TO `<acc-app-sp>`;
--- GRANT USE SCHEMA ON SCHEMA automation_a.bronze TO `<acc-app-sp>`;
--- GRANT READ VOLUME, WRITE VOLUME ON VOLUME automation_a.bronze.bronze_volume TO `<acc-app-sp>`;
+-- ACC: intentionally NOT granted. Policy: the app SP must not hold direct
+-- catalog/schema/volume access — UC/Volume/SQL-warehouse access goes through
+-- visitor OBO (MATE_UC_AUTH=obo) only. Real users get access via their
+-- AUTOMATION.DSPROCUREAI.CONSUMER.READ/WRITE group grants instead (already
+-- applied in ACC). If OBO isn't bound for some call, it is expected to fail
+-- closed (PERMISSION_DENIED) rather than silently succeed as the app SP.
+-- ACC app SP for reference only: 8e7535ad-24ff-4f68-b6ee-eac9ee389dd4
 
 -- Warehouse (CAN_USE) — requires SQL warehouse MANAGE (not UC SQL):
 --   App SP: a65ce6d4-0267-43b3-a6c4-b24c39a35d05
