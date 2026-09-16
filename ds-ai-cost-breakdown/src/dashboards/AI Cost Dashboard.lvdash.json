@@ -5,7 +5,8 @@
       "displayName": "AI Usage Costs (Enriched)",
       "config": {
         "version": "1.1",
-        "source": "SELECT\n  cost_date,\n  subscriptionname,\n  resourcegroupname,\n  resourceid,\n  metername,\n  productname,\n  api_access,\n  COALESCE(spoke, 'Unassigned') AS spoke,\n  COALESCE(application, 'Untagged') AS application,\n  COALESCE(service, 'Unknown') AS service,\n  COALESCE(model, 'Not specified') AS model,\n  COALESCE(ai_capability, CASE WHEN api_access = 'Non-AI or unclassified' THEN 'Non-AI' ELSE 'Other AI' END) AS ai_capability,\n  CASE\n    WHEN UPPER(COALESCE(environment, '')) IN ('P', 'PRD', 'PROD', 'PRODUCTION') THEN 'Prod'\n    WHEN UPPER(COALESCE(environment, '')) IN ('D', 'DEV', 'DEVELOPMENT') THEN 'Dev'\n    WHEN UPPER(COALESCE(environment, '')) IN ('T', 'TST', 'TEST', 'QA', 'UAT', 'ACC', 'ACCEPTANCE') THEN 'Test'\n    WHEN environment IS NULL OR TRIM(environment) = '' THEN 'Unknown'\n    ELSE environment\n  END AS environment,\n  (api_access <> 'Non-AI or unclassified') AS is_ai,\n  application_inferred,\n  spoke_inferred,\n  model_inferred,\n  cost_eur,\n  cost_usd,\n  quantity\nFROM ai_foundry_costs_enriched\nWHERE api_access <> 'Non-AI or unclassified'\n  AND COALESCE(ai_capability, '') <> 'Copilot Studio'\n",        "dimensions": [
+        "source": "SELECT\n  cost_date,\n  subscriptionname,\n  resourcegroupname,\n  resourceid,\n  metername,\n  productname,\n  api_access,\n  COALESCE(spoke, 'Unassigned') AS spoke,\n  COALESCE(application, 'Untagged') AS application,\n  COALESCE(service, 'Unknown') AS service,\n  COALESCE(model, 'Not specified') AS model,\n  COALESCE(ai_capability, CASE WHEN api_access = 'Non-AI or unclassified' THEN 'Non-AI' ELSE 'Other AI' END) AS ai_capability,\n  CASE\n    WHEN UPPER(COALESCE(environment, '')) IN ('P', 'PRD', 'PROD', 'PRODUCTION') THEN 'Prod'\n    WHEN UPPER(COALESCE(environment, '')) IN ('D', 'DEV', 'DEVELOPMENT') THEN 'Dev'\n    WHEN UPPER(COALESCE(environment, '')) IN ('T', 'TST', 'TEST', 'QA', 'UAT', 'ACC', 'ACCEPTANCE') THEN 'Test'\n    WHEN environment IS NULL OR TRIM(environment) = '' THEN 'Unknown'\n    ELSE environment\n  END AS environment,\n  (api_access <> 'Non-AI or unclassified') AS is_ai,\n  application_inferred,\n  spoke_inferred,\n  model_inferred,\n  cost_eur,\n  cost_usd,\n  quantity\nFROM ai_foundry_costs_enriched\nWHERE api_access <> 'Non-AI or unclassified'\n  AND ai_capability <> 'Copilot Studio'\n",
+        "dimensions": [
           {
             "name": "cost_date",
             "expr": "cost_date"
@@ -178,7 +179,8 @@
       "displayName": "Copilot GitHub Costs",
       "config": {
         "version": "1.1",
-        "source": "SELECT\n  cost_date, subscriptionname, resourcegroupname, metername, productname,\n  api_access,\n  COALESCE(spoke, 'Unassigned') AS spoke,\n  COALESCE(application, 'Untagged') AS application,\n  COALESCE(service, 'Unknown') AS service,\n  COALESCE(model, 'Not specified') AS model,\n  COALESCE(ai_capability, 'Other AI') AS ai_capability,\n  CASE\n    WHEN UPPER(COALESCE(environment, '')) IN ('P','PRD','PROD','PRODUCTION') THEN 'Prod'\n    WHEN UPPER(COALESCE(environment, '')) IN ('D','DEV','DEVELOPMENT') THEN 'Dev'\n    WHEN UPPER(COALESCE(environment, '')) IN ('T','TST','TEST','QA','UAT','ACC','ACCEPTANCE') THEN 'Test'\n    WHEN environment IS NULL OR TRIM(environment) = '' THEN 'Unknown'\n    ELSE environment\n  END AS environment,\n  application_inferred, spoke_inferred, model_inferred,\n  cost_eur, cost_usd, quantity\nFROM ai_foundry_costs_enriched\nWHERE api_access = 'Copilot'\n  AND COALESCE(ai_capability, '') <> 'Copilot Studio'\n",        "dimensions": [
+        "source": "SELECT\n  cost_date, subscriptionname, resourcegroupname, metername, productname,\n  api_access,\n  COALESCE(spoke, 'Unassigned') AS spoke,\n  COALESCE(application, 'Untagged') AS application,\n  COALESCE(service, 'Unknown') AS service,\n  COALESCE(model, 'Not specified') AS model,\n  COALESCE(ai_capability, 'Other AI') AS ai_capability,\n  CASE\n    WHEN UPPER(COALESCE(environment, '')) IN ('P','PRD','PROD','PRODUCTION') THEN 'Prod'\n    WHEN UPPER(COALESCE(environment, '')) IN ('D','DEV','DEVELOPMENT') THEN 'Dev'\n    WHEN UPPER(COALESCE(environment, '')) IN ('T','TST','TEST','QA','UAT','ACC','ACCEPTANCE') THEN 'Test'\n    WHEN environment IS NULL OR TRIM(environment) = '' THEN 'Unknown'\n    ELSE environment\n  END AS environment,\n  application_inferred, spoke_inferred, model_inferred,\n  cost_eur, cost_usd, quantity\nFROM ai_foundry_costs_enriched\nWHERE api_access = 'Copilot'\n  AND ai_capability <> 'Copilot Studio'\n",
+        "dimensions": [
           {
             "name": "cost_date",
             "expr": "cost_date"
@@ -291,6 +293,33 @@
             "name": "cost_per_seat_day",
             "expr": "SUM(cost_eur) / NULLIF(SUM(quantity), 0)",
             "comment": "Average EUR cost per seat per day"
+          },
+          {
+            "displayName": "Copilot Seats",
+            "format": {
+              "type": "number",
+              "decimalPlaces": {
+                "type": "exact",
+                "places": 0.0
+              }
+            },
+            "name": "copilot_seats",
+            "expr": "MAX(CASE WHEN metername = 'Business User' THEN ROUND(quantity * DAY(LAST_DAY(cost_date))) END)",
+            "comment": "Number of GitHub Copilot Business seats (derived from prorated daily quantity)"
+          },
+          {
+            "displayName": "Monthly Cost per Seat (EUR)",
+            "format": {
+              "type": "currency",
+              "currencyCode": "EUR",
+              "decimalPlaces": {
+                "type": "exact",
+                "places": 2.0
+              }
+            },
+            "name": "monthly_cost_per_seat",
+            "expr": "SUM(CASE WHEN metername = 'Business User' THEN cost_eur ELSE 0 END) / NULLIF(MAX(CASE WHEN metername = 'Business User' THEN ROUND(quantity * DAY(LAST_DAY(cost_date))) END), 0)",
+            "comment": "Average monthly seat license cost in EUR (Business User meter total / seat count)"
           }
         ]
       }
@@ -300,7 +329,8 @@
       "displayName": "Azure AI Foundry & Other AI Costs",
       "config": {
         "version": "1.1",
-        "source": "SELECT\n  cost_date, subscriptionname, resourcegroupname, resourceid, metername, productname,\n  api_access,\n  COALESCE(spoke, 'Unassigned') AS spoke,\n  COALESCE(application, 'Untagged') AS application,\n  COALESCE(service, 'Unknown') AS service,\n  COALESCE(model, 'Not specified') AS model,\n  COALESCE(ai_capability, 'Other AI') AS ai_capability,\n  CASE\n    WHEN UPPER(COALESCE(environment, '')) IN ('P','PRD','PROD','PRODUCTION') THEN 'Prod'\n    WHEN UPPER(COALESCE(environment, '')) IN ('D','DEV','DEVELOPMENT') THEN 'Dev'\n    WHEN UPPER(COALESCE(environment, '')) IN ('T','TST','TEST','QA','UAT','ACC','ACCEPTANCE') THEN 'Test'\n    WHEN environment IS NULL OR TRIM(environment) = '' THEN 'Unknown'\n    ELSE environment\n  END AS environment,\n  application_inferred, spoke_inferred, model_inferred,\n  cost_eur, cost_usd, quantity\nFROM ai_foundry_costs_enriched\nWHERE api_access IN ('AI Foundry / Azure AI', 'Other model access')\n  AND COALESCE(ai_capability, '') <> 'Copilot Studio'\n",        "dimensions": [
+        "source": "SELECT\n  cost_date, subscriptionname, resourcegroupname, resourceid, metername, productname,\n  api_access,\n  COALESCE(spoke, 'Unassigned') AS spoke,\n  COALESCE(application, 'Untagged') AS application,\n  COALESCE(service, 'Unknown') AS service,\n  COALESCE(model, 'Not specified') AS model,\n  COALESCE(ai_capability, 'Other AI') AS ai_capability,\n  CASE\n    WHEN UPPER(COALESCE(environment, '')) IN ('P','PRD','PROD','PRODUCTION') THEN 'Prod'\n    WHEN UPPER(COALESCE(environment, '')) IN ('D','DEV','DEVELOPMENT') THEN 'Dev'\n    WHEN UPPER(COALESCE(environment, '')) IN ('T','TST','TEST','QA','UAT','ACC','ACCEPTANCE') THEN 'Test'\n    WHEN environment IS NULL OR TRIM(environment) = '' THEN 'Unknown'\n    ELSE environment\n  END AS environment,\n  application_inferred, spoke_inferred, model_inferred,\n  cost_eur, cost_usd, quantity\nFROM ai_foundry_costs_enriched\nWHERE api_access IN ('AI Foundry / Azure AI', 'Other model access')\n  AND ai_capability <> 'Copilot Studio'\n",
+        "dimensions": [
           {
             "name": "cost_date",
             "expr": "cost_date"
@@ -956,7 +986,8 @@
                   "fields": []
                 },
                 "description": {
-                  "value": "Full granularity \u2014 date \u00d7 capability \u00d7 model \u00d7 meter.",                  "fields": []
+                  "value": "Full granularity — date × capability × model × meter.",
+                  "fields": []
                 }
               },
               "version": 2,
@@ -1573,10 +1604,14 @@
                 "showTitle": true,
                 "showDescription": true,
                 "title": {
-                  "value": "Copilot Cost Detail",
+                  "value": "Copilot Github Cost Detail",
                   "fields": []
                 },
-                "description": "Date \u00d7 Copilot product \u00d7 application. Costs reflect SaaS seat charges and consumption-based API metering."              },
+                "description": {
+                  "value": "Date × Copilot product × application. Costs reflect SaaS seat charges and consumption-based API metering.",
+                  "fields": []
+                }
+              },
               "version": 2,
               "widgetType": "table",
               "encodings": {
@@ -1754,6 +1789,92 @@
             "y": 3,
             "width": 6,
             "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "cp_seats",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "copilot",
+                  "fields": [
+                    {
+                      "name": "measure(copilot_seats)",
+                      "expression": "MEASURE(`copilot_seats`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Copilot Seats"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(copilot_seats)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 1,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "cp_cost_per_seat",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "copilot",
+                  "fields": [
+                    {
+                      "name": "measure(monthly_cost_per_seat)",
+                      "expression": "MEASURE(`monthly_cost_per_seat`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Monthly Cost per Seat"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(monthly_cost_per_seat)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 1,
+            "width": 3,
+            "height": 2
           }
         }
       ],
@@ -2775,7 +2896,7 @@
             "spec": {
               "frame": {
                 "showTitle": true,
-                "title": "Difference by Product (Azure \u2212 Databricks)"
+                "title": "Difference by Product (Azure − Databricks)"
               },
               "version": 3,
               "widgetType": "bar",
