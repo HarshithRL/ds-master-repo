@@ -6,7 +6,7 @@
 # MAGIC %md
 # MAGIC # RG Tag Mapping & Enriched AI Cost View
 # MAGIC
-# MAGIC Views only, no data copies: a bronze view over the prod source, the RG mapping view, and the enriched gold view read by the dashboard.
+# MAGIC Views and tables, for quick loading of the dash: a bronze view over the prod source, the RG mapping view, and the enriched gold table read by the dashboard.
 
 # COMMAND ----------
 
@@ -17,7 +17,7 @@ CATALOG = dbutils.widgets.get("CATALOG")
 SOURCE_TABLE = "ingestion_azure_p.costs.azure_actual_cost"
 BRONZE_VIEW = f"{CATALOG}.bronze.azure_actual_cost"
 MAPPING_VIEW = f"{CATALOG}.gold.rg_tag_mapping_v"
-GOLD_VIEW = f"{CATALOG}.gold.ai_foundry_costs_enriched"
+GOLD_TABLE = f"{CATALOG}.gold.ai_foundry_costs_enriched"
 
 # COMMAND ----------
 
@@ -30,6 +30,13 @@ def drop_if_table(full_name):
   if spark.sql(f"SHOW TABLES IN {CATALOG}.{schema} LIKE '{name}'").collect():
     if spark.sql(f"DESCRIBE TABLE EXTENDED {full_name}").filter("col_name = 'Type'").collect()[0]["data_type"] != "VIEW":
       spark.sql(f"DROP TABLE {full_name}")
+
+def drop_if_view(full_name):
+  """Gold used to be a view; CREATE OR REPLACE TABLE fails on an existing view."""
+  _, schema, name = full_name.split(".")
+  if spark.sql(f"SHOW TABLES IN {CATALOG}.{schema} LIKE '{name}'").collect():
+    if spark.sql(f"DESCRIBE TABLE EXTENDED {full_name}").filter("col_name = 'Type'").collect()[0]["data_type"] == "VIEW":
+      spark.sql(f"DROP VIEW {full_name}")
 
 # The former intermediate (silver) view is folded into the gold view below.
 spark.sql(f"DROP VIEW IF EXISTS {CATALOG}.gold.ai_costs_silver_v")
@@ -79,10 +86,10 @@ spark.sql(f"CREATE OR REPLACE VIEW {BRONZE_VIEW} AS SELECT * FROM {SOURCE_TABLE}
 
 # COMMAND ----------
 
-drop_if_table(GOLD_VIEW)
+drop_if_view(GOLD_TABLE)
 
 spark.sql(f"""
-CREATE OR REPLACE VIEW {GOLD_VIEW} AS
+CREATE OR REPLACE TABLE {GOLD_TABLE} AS
 WITH tagged AS (
   SELECT
     a.*,
