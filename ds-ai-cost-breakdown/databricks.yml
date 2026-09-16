@@ -8,6 +8,7 @@ bundle:
 include:
   - resources/*.yml
   - resources/jobs/*.yml
+  - resources/dashboards/*.yml
 
 variables:
   policy_id:
