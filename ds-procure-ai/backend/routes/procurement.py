@@ -208,7 +208,10 @@ def upload_project_files(project_id):
     except ProjectNotFoundError:
         return jsonify({"error": "not_found"}), 404
 
-    log.info("files queued project_id={} count={} parse=next_graph_run", project_id, len(created))
+    if created:
+        enqueue_ingest(project_id, [item["id"] for item in created])
+
+    log.info("files queued project_id={} count={} parse=enqueued", project_id, len(created))
     return jsonify({"uploaded": created}), 202
 
 
