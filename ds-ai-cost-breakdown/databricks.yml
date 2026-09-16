@@ -1,15 +1,21 @@
 # Databricks asset bundle for AI cost enrichment and reporting.
+# Data flow per environment: ingestion_azure_{env}.costs.azure_actual_cost
+#   -> automation_{env}.bronze.azure_actual_cost (table)
+#   -> automation_{env}.gold.ai_foundry_costs_enriched (view, read by the dashboard)
 bundle:
   name: ds-ai-cost-breakdown
 
 include:
   - resources/*.yml
+  - resources/jobs/*.yml
 
 variables:
   policy_id:
     description: Cluster policy ID to use
   catalog:
-    description: Unity Catalog for this environment
+    description: Unity Catalog for this environment (bronze + gold schemas)
+  source_table:
+    description: Azure actual-cost source table of the same environment
   warehouse_id:
     description: SQL warehouse ID for the AI cost dashboard
 
@@ -23,6 +29,7 @@ targets:
     variables:
       policy_id: 306312B9730019AB
       catalog: automation_d
+      source_table: ingestion_azure_d.costs.azure_actual_cost
       warehouse_id: 69ada62b2fb9b9e2
 
   T:
@@ -33,6 +40,7 @@ targets:
     variables:
       policy_id: 306312B9730019AB
       catalog: automation_d
+      source_table: ingestion_azure_d.costs.azure_actual_cost
       warehouse_id: 69ada62b2fb9b9e2
     permissions:
       - service_principal_name: ${workspace.current_user.userName}
@@ -52,6 +60,7 @@ targets:
     variables:
       policy_id: 306312B973005677
       catalog: automation_a
+      source_table: ingestion_azure_a.costs.azure_actual_cost
       warehouse_id: f68599b38752394a
     permissions:
       - service_principal_name: ${workspace.current_user.userName}
@@ -71,6 +80,7 @@ targets:
     variables:
       policy_id: 306312B973005150
       catalog: automation_p
+      source_table: ingestion_azure_p.costs.azure_actual_cost
       warehouse_id: efc56ffbe4189cdf
     permissions:
       - service_principal_name: ${workspace.current_user.userName}
