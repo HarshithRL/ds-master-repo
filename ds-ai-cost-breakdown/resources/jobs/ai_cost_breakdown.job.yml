@@ -16,6 +16,18 @@ resources:
               CATALOG: ${var.catalog}
           job_cluster_key: ai_cost_breakdown_cluster
 
+        - task_key: patch_dashboard_catalog
+          depends_on:
+            - task_key: enrich_ai_costs
+          run_if: ALL_DONE
+          notebook_task:
+            notebook_path: ../../src/notebooks/patch_dashboard_catalog.py
+            base_parameters:
+              catalog: ${var.catalog}
+              dashboard_id: ${resources.dashboards.ai_cost_dashboard.id}
+              warehouse_id: ${var.warehouse_id}
+          job_cluster_key: ai_cost_breakdown_cluster
+
       job_clusters:
         - job_cluster_key: ai_cost_breakdown_cluster
           new_cluster:
