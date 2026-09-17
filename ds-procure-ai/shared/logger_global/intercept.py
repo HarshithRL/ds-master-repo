@@ -10,6 +10,9 @@ _INTERCEPTED = (
     "uvicorn",
     "uvicorn.error",
     "uvicorn.access",
+    "gunicorn",
+    "gunicorn.error",
+    "gunicorn.access",
     "werkzeug",
     "langchain",
     "langchain_core",
@@ -30,9 +33,9 @@ class InterceptHandler(logging.Handler):
             frame = frame.f_back
             depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).log(
-            level, record.getMessage()
-        )
+        logger.bind(module=record.name or "-").opt(
+            depth=depth, exception=record.exc_info
+        ).log(level, record.getMessage())
 
 
 def setup_stdlib_intercept(*, level: int = logging.WARNING) -> None:

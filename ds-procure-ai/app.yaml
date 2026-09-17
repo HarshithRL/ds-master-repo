@@ -6,6 +6,10 @@ env:
   # secret-key here: ACC/PRD have no procure-ai/secret-key scope.
   - name: MATE_ENV
     value: prod
+  - name: MATE_LOG_FORMAT
+    value: json
+  - name: MATE_LOG_LEVEL
+    value: INFO
   - name: BRAIN_BASE_URL
     value: http://127.0.0.1:8004
   - name: BRAIN_HOST
