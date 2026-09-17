@@ -454,6 +454,69 @@ def project_workspace_chat_stream(project_id):
 
 
 @procurement_bp.route(
+    "/api/procurement/projects/<project_id>/workspace/responses",
+    methods=["POST"],
+)
+def create_workspace_response(project_id):
+    """Authenticated OpenResponses proxy for the loopback AI Brain."""
+    body = request.get_json(silent=True) or {}
+    message = str(body.get("message") or "").strip()
+    session_id = str(body.get("session_id") or "").strip()
+    if not message or not session_id:
+        return jsonify({"error": "bad_request", "detail": "message and session_id are required"}), 400
+    try:
+        owner_id = require_workspace_id()
+    except AuthRequiredError as exc:
+        return auth_error_response(exc)
+    if project_repo.get_for_owner_or_none(project_id, owner_id) is None:
+        return jsonify({"error": "not_found"}), 404
+    session = chat_sessions.ensure_session(project_id, session_id)
+    if session is None:
+        return jsonify({"error": "not_found"}), 404
+    try:
+        from services import brain_client
+
+        chat_sessions.append_message(project_id, session["id"], "user", message)
+        response = brain_client.post_response(
+            message, thread_id=session["id"], project_id=project_id, user_id=owner_id
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.exception("workspace response create failed project_id={}", project_id)
+        return jsonify({"error": "agent_failed", "detail": str(exc)[:300]}), 502
+    return jsonify({**response, "session_id": session["id"]}), 202
+
+
+@procurement_bp.route(
+    "/api/procurement/projects/<project_id>/workspace/responses/<response_id>/events",
+    methods=["GET"],
+)
+def stream_workspace_response(project_id, response_id):
+    """Stream the native OpenResponses event shape through the Apps origin."""
+    try:
+        owner_id = require_workspace_id()
+    except AuthRequiredError as exc:
+        return auth_error_response(exc)
+    if project_repo.get_for_owner_or_none(project_id, owner_id) is None:
+        return jsonify({"error": "not_found"}), 404
+    try:
+        starting_after = max(0, int(request.args.get("starting_after", "0")))
+    except ValueError:
+        return jsonify({"error": "bad_request", "detail": "starting_after must be an integer"}), 400
+
+    @stream_with_context
+    def generate():
+        from services import brain_client
+        import json
+
+        for event in brain_client.iter_response_events(
+            response_id, starting_after=starting_after, user_id=owner_id
+        ):
+            yield f"data: {json.dumps(event)}\n\n"
+
+    return Response(generate(), mimetype="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@procurement_bp.route(
     "/api/procurement/projects/<project_id>/workspace/chat/resume",
     methods=["POST"],
 )

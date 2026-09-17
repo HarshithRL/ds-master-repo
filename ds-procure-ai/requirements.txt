@@ -70,6 +70,9 @@ faiss-cpu>=1.8.0
 # Logging & Observability
 loguru>=0.7.2
 mlflow>=3,<4
+# Durable OpenResponses background execution for the AI Brain.  The
+# agent-server extra provides the Lakebase/SQLAlchemy persistence layer.
+databricks-ai-bridge[agent-server]==0.20.0
 
 # SQLAlchemy for ORM (existing web_app)
 sqlalchemy>=2.0.52
