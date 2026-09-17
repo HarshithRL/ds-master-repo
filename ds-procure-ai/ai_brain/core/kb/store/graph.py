@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, text
 
 from ai_brain.core.kb.api.schemas import EntityMention
-from shared.db.connection import session_scope
+from shared.db.connection import mate_table_name, session_scope
 from shared.db.models import KB_EDGE_TYPES, KB_NODE_TYPES, KbEdge, KbNode, QualityFlag, Vendor, utc_now_iso
 from shared.logger_global import get_logger
 
@@ -290,17 +290,19 @@ def upsert_edges(
     return written
 
 
-INDEPENDENCE_CTE = """
+def independence_cte() -> str:
+    edge = mate_table_name("kb_edge")
+    return f"""
 WITH RECURSIVE chain AS (
-  SELECT src, dst, type, 1 AS hop FROM kb_edge
+  SELECT src, dst, type, 1 AS hop FROM {edge}
    WHERE project_id = :pid AND type IN ('MEMBER_OF_CONSORTIUM','SUBCONTRACTS_TO')
   UNION ALL
   SELECT e.src, e.dst, e.type, c.hop + 1
-    FROM kb_edge e JOIN chain c ON e.src = c.dst
+    FROM {edge} e JOIN chain c ON e.src = c.dst
    WHERE c.hop < 4 AND e.project_id = :pid
 )
 SELECT src, dst, type, hop FROM chain
- WHERE dst IN (SELECT dst FROM kb_edge WHERE type = 'BIDS_ON' AND project_id = :pid)
+ WHERE dst IN (SELECT dst FROM {edge} WHERE type = 'BIDS_ON' AND project_id = :pid)
 """
 
 
@@ -309,14 +311,14 @@ def detect_independence_conflicts(project_id: str) -> tuple[list[dict[str, Any]]
     with session_scope() as session:
         chain_rows = [
             dict(row)
-            for row in session.execute(text(INDEPENDENCE_CTE), {"pid": project_id}).mappings()
+            for row in session.execute(text(independence_cte()), {"pid": project_id}).mappings()
         ]
         edges = [
             dict(row)
             for row in session.execute(
                 text(
                     "SELECT id, src, dst, type, source_artifact_id, source_page "
-                    "FROM kb_edge WHERE project_id = :pid"
+                    f"FROM {mate_table_name('kb_edge')} WHERE project_id = :pid"
                 ),
                 {"pid": project_id},
             ).mappings()

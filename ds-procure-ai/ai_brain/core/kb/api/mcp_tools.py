@@ -20,13 +20,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncIterator
 
-from sqlalchemy import text
+from sqlalchemy import Select, func, select
 
 from ai_brain.core.kb.build.coverage import record_chunk_ids, record_path
 from ai_brain.core.kb.store.materialize import project_files
 from ai_brain.core.kb.api.schemas import load_chunk_text
 from ai_brain.core.kb.store.search import search_kb as _search_kb
 from shared.db.connection import session_scope
+from shared.db.models import Artifact, Chunk
 from shared.logger_global import get_logger
 
 log = get_logger(__name__, service="ai_brain")
@@ -215,6 +216,20 @@ def list_bid_chunk_ids(project_id: str, bid_id: str) -> list[str]:
     return [row["chunk_id"] for row in list_bid_chunk_rows(project_id, bid_id)]
 
 
+def _bid_chunk_stmt(project_id: str, bid_id: str) -> Select[tuple[Chunk, Artifact]]:
+    """ORM join so UC `mate_*` prefix applies; sqlite keeps `chunk` / `artifact`."""
+    stmt = (
+        select(Chunk, Artifact)
+        .join(Artifact, Artifact.id == Chunk.artifact_id)
+        .where(Chunk.project_id == project_id)
+        .order_by(Artifact.original_name, Chunk.ordinal)
+    )
+    # bid_id=rfp is a virtual bid for RFP corpus (doc_role), not artifact.vendor_id.
+    if bid_id.lower() == "rfp":
+        return stmt.where(func.lower(func.coalesce(Artifact.doc_role, "")) == "rfp")
+    return stmt.where(Artifact.vendor_id == bid_id)
+
+
 def list_bid_chunk_rows(project_id: str | None, bid_id: str) -> list[dict[str, Any]]:
     pid = (project_id or "").strip() or _current_project_id()
     bid = (bid_id or "").strip()
@@ -222,44 +237,23 @@ def list_bid_chunk_rows(project_id: str | None, bid_id: str) -> list[dict[str, A
         return []
     from ai_brain.core.kb.store.search import _heading_from_json, _locator_from_location
 
-    # bid_id=rfp is a virtual bid for RFP corpus (doc_role), not artifact.vendor_id.
-    if bid.lower() == "rfp":
-        sql = """
-            SELECT c.id AS chunk_id, c.artifact_id, c.ordinal, c.token_count,
-                   c.heading_path_json, c.location_json, a.original_name, a.vendor_id
-              FROM chunk c
-              JOIN artifact a ON a.id = c.artifact_id
-             WHERE c.project_id = :pid AND lower(coalesce(a.doc_role, '')) = 'rfp'
-             ORDER BY a.original_name, c.ordinal
-        """
-        params = {"pid": pid}
-    else:
-        sql = """
-            SELECT c.id AS chunk_id, c.artifact_id, c.ordinal, c.token_count,
-                   c.heading_path_json, c.location_json, a.original_name, a.vendor_id
-              FROM chunk c
-              JOIN artifact a ON a.id = c.artifact_id
-             WHERE c.project_id = :pid AND a.vendor_id = :bid
-             ORDER BY a.original_name, c.ordinal
-        """
-        params = {"pid": pid, "bid": bid}
-    with session_scope() as session:
-        rows = session.execute(text(sql), params).mappings().all()
     out: list[dict[str, Any]] = []
-    for row in rows:
-        locator = _locator_from_location(row["location_json"])
-        out.append(
-            {
-                "chunk_id": row["chunk_id"],
-                "artifact_id": row["artifact_id"],
-                "original_name": row["original_name"] or "",
-                "ordinal": int(row["ordinal"] or 0),
-                "token_count": int(row["token_count"] or 0),
-                "locator": locator,
-                "heading": _heading_from_json(row["heading_path_json"]),
-                "path": _virtual_path(pid, bid, row["original_name"] or ""),
-            }
-        )
+    with session_scope() as session:
+        pairs = session.execute(_bid_chunk_stmt(pid, bid)).all()
+        for chunk, artifact in pairs:
+            locator = _locator_from_location(chunk.location_json)
+            out.append(
+                {
+                    "chunk_id": chunk.id,
+                    "artifact_id": chunk.artifact_id,
+                    "original_name": artifact.original_name or "",
+                    "ordinal": int(chunk.ordinal or 0),
+                    "token_count": int(chunk.token_count or 0),
+                    "locator": locator,
+                    "heading": _heading_from_json(chunk.heading_path_json),
+                    "path": _virtual_path(pid, bid, artifact.original_name or ""),
+                }
+            )
     return out
 
 

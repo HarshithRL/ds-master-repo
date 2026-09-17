@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from shared.db import connection as db_connection
-from shared.db.connection import init_db, qualified_table
+from shared.db.connection import init_db, mate_table_name, qualified_table
 from shared.db.paths import db_backend, projects_data_root, uc_volume_root
 from shared.databricks_runtime import bind_obo_from_headers, clear_obo
 
@@ -39,6 +39,8 @@ def test_sqlite_backend_still_initializes(tmp_path, monkeypatch, reset_db_engine
     engine = db_connection.get_engine()
     assert engine.dialect.name == "sqlite"
     assert qualified_table("artifact") == "artifact"
+    assert mate_table_name("chunk") == "chunk"
+    assert mate_table_name("artifact") == "artifact"
 
 
 def test_uc_qualified_table_and_volume_paths(monkeypatch, reset_db_engine):
@@ -50,6 +52,10 @@ def test_uc_qualified_table_and_volume_paths(monkeypatch, reset_db_engine):
     assert db_backend() == "uc"
     assert qualified_table("artifact") == "automation_d.bronze.mate_artifact"
     assert qualified_table("mate_hub_module") == "automation_d.bronze.mate_hub_module"
+    assert mate_table_name("chunk") == "mate_chunk"
+    assert mate_table_name("artifact") == "mate_artifact"
+    assert mate_table_name("kb_edge") == "mate_kb_edge"
+    assert mate_table_name("chunk_embedding") == "mate_chunk_embedding"
     assert projects_data_root() == Path("/Volumes/automation_d/bronze/bronze_volume/mate")
     assert uc_volume_root() == Path("/Volumes/automation_d/bronze/bronze_volume/mate")
 
@@ -266,3 +272,152 @@ def test_reset_engine_state_disposes_uc_cache(monkeypatch, reset_db_engine):
         assert db_connection._engine is None
     finally:
         clear_obo()
+
+
+def test_uc_raw_sql_helpers_use_mate_prefix(monkeypatch, reset_db_engine):
+    monkeypatch.setenv("MATE_DB_BACKEND", "uc")
+    monkeypatch.setenv("MATE_UC_CATALOG", "automation_a")
+    from ai_brain.core.kb.store.embed import _pending_chunks_sql
+    from ai_brain.core.kb.store.graph import independence_cte
+    from ai_brain.core.kb.store.search import _chunk_artifact_join_sql
+
+    join_sql = _chunk_artifact_join_sql()
+    assert "FROM mate_chunk c" in join_sql
+    assert "JOIN mate_artifact a" in join_sql
+    assert "FROM chunk " not in join_sql
+
+    pending = _pending_chunks_sql()
+    assert "FROM mate_chunk c" in pending
+    assert "FROM mate_chunk_embedding" in pending
+    assert "FROM chunk " not in pending
+    assert "FROM chunk_embedding" not in pending
+
+    cte = independence_cte()
+    assert "FROM mate_kb_edge" in cte
+    assert "FROM kb_edge" not in cte
+
+
+def test_bid_chunk_stmt_is_orm_join_not_raw_chunk_sql(monkeypatch, reset_db_engine):
+    monkeypatch.setenv("MATE_DB_BACKEND", "uc")
+    monkeypatch.setenv("MATE_UC_CATALOG", "automation_a")
+    from ai_brain.core.kb.api.mcp_tools import _bid_chunk_stmt
+
+    stmt = _bid_chunk_stmt("7af69e4b-ee3c-4138-85ef-6b51cb215d34", "bdo")
+
+    def _from_names(obj) -> set[str]:
+        names: set[str] = set()
+        stack = [obj]
+        while stack:
+            cur = stack.pop()
+            name = getattr(cur, "name", None)
+            if isinstance(name, str):
+                names.add(name)
+            left = getattr(cur, "left", None)
+            right = getattr(cur, "right", None)
+            if left is not None:
+                stack.append(left)
+            if right is not None:
+                stack.append(right)
+        return names
+
+    froms: set[str] = set()
+    for item in stmt.get_final_froms():
+        froms |= _from_names(item)
+    assert froms == {"chunk", "artifact"}
+    compiled = str(stmt.compile())
+    assert "FROM chunk c JOIN artifact a" not in " ".join(compiled.split())
+    assert "vendor_id" in str(stmt.whereclause.compile())
+    rfp_stmt = _bid_chunk_stmt("pid", "rfp")
+    rfp_where = str(rfp_stmt.whereclause.compile()).lower()
+    assert "doc_role" in rfp_where
+    assert "vendor_id" not in rfp_where
+
+
+def test_list_bid_chunk_rows_sqlite_vendor_and_rfp(tmp_path, monkeypatch, reset_db_engine):
+    monkeypatch.delenv("MATE_DB_BACKEND", raising=False)
+    monkeypatch.setenv("MATE_SQLITE_PATH", str(tmp_path / "mate-chunks.sqlite"))
+    init_db()
+    from shared.db.connection import session_scope
+    from shared.db.models import AppUser, Artifact, Chunk, Project, utc_now_iso
+    from ai_brain.core.kb.api.mcp_tools import list_bid_chunk_rows
+
+    now = utc_now_iso()
+    with session_scope() as session:
+        session.add(AppUser(workspace_id="u1", created_at=now, updated_at=now))
+        session.add(
+            Project(
+                id="p1",
+                code="PRJ-TEST",
+                owner_id="u1",
+                module_id="procurement-ai-assistant",
+                name="SWIFT",
+                status="Active",
+                priority="Medium",
+                progress=0,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        session.add(
+            Artifact(
+                id="art-bdo",
+                project_id="p1",
+                uploaded_by="u1",
+                kind="upload",
+                original_name="BDO_Offer.pdf",
+                storage_relpath="rel/bdo",
+                created_at=now,
+                parse_status="ok",
+                vendor_id="bdo",
+                doc_role="proposal",
+            )
+        )
+        session.add(
+            Artifact(
+                id="art-rfp",
+                project_id="p1",
+                uploaded_by="u1",
+                kind="upload",
+                original_name="RFP.docx",
+                storage_relpath="rel/rfp",
+                created_at=now,
+                parse_status="ok",
+                vendor_id=None,
+                doc_role="rfp",
+            )
+        )
+        session.add(
+            Chunk(
+                id="c-bdo",
+                project_id="p1",
+                artifact_id="art-bdo",
+                ordinal=0,
+                chunk_type="text",
+                text="BDO pricing",
+                token_count=2,
+                heading_path_json='["Pricing"]',
+                location_json='{"page":3}',
+                created_at=now,
+            )
+        )
+        session.add(
+            Chunk(
+                id="c-rfp",
+                project_id="p1",
+                artifact_id="art-rfp",
+                ordinal=0,
+                chunk_type="text",
+                text="requirement one",
+                token_count=2,
+                heading_path_json='["Scope"]',
+                location_json='{"page":1}',
+                created_at=now,
+            )
+        )
+
+    vendor_rows = list_bid_chunk_rows("p1", "bdo")
+    assert [row["chunk_id"] for row in vendor_rows] == ["c-bdo"]
+    assert vendor_rows[0]["locator"] == "p.3"
+    rfp_rows = list_bid_chunk_rows("p1", "rfp")
+    assert [row["chunk_id"] for row in rfp_rows] == ["c-rfp"]
+
