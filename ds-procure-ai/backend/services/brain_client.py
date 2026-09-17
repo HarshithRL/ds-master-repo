@@ -233,6 +233,42 @@ def iter_invocations_sse(
             yield from _iter_sse_response(response)
 
 
+def post_response(
+    request_text: str,
+    thread_id: str,
+    *,
+    project_id: str = "",
+    user_id: str = "",
+) -> dict[str, Any]:
+    """Create a durable OpenResponses run and return its response metadata."""
+    url = f"{brain_base_url()}/responses"
+    body = invocations_body(request_text, thread_id, project_id=project_id, user_id=user_id)
+    body["background"] = True
+    body["stream"] = False
+    with httpx.Client(timeout=httpx.Timeout(10.0, connect=10.0)) as client:
+        response = client.post(url, json=body, headers=brain_request_headers(user_id=user_id))
+        response.raise_for_status()
+        payload = response.json()
+        if not isinstance(payload, dict) or not payload.get("id"):
+            raise ValueError("brain /responses did not return a response id")
+        return payload
+
+
+def iter_response_events(response_id: str, *, starting_after: int = 0, user_id: str = "") -> Iterator[dict[str, Any]]:
+    """Retrieve a durable response stream, resuming after an event cursor."""
+    url = f"{brain_base_url()}/responses/{response_id}"
+    params = {"stream": "true", "starting_after": max(0, int(starting_after))}
+    # Read timeout is intentionally unlimited: the server heartbeats and emits
+    # persisted events for up to the configured durable-run deadline.
+    timeout = httpx.Timeout(connect=10.0, read=None, write=30.0, pool=30.0)
+    with httpx.Client(timeout=timeout) as client:
+        with client.stream(
+            "GET", url, params=params, headers=brain_request_headers(stream=True, user_id=user_id)
+        ) as response:
+            response.raise_for_status()
+            yield from _iter_sse_response(response)
+
+
 def iter_resume_sse(
     thread_id: str,
     resume: Any,
