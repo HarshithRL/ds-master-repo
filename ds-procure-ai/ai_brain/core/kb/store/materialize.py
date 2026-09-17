@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy import select
 
@@ -68,14 +70,20 @@ def project_files(project_id: str) -> dict[str, str]:
     return files
 
 
-def list_bid_ids(project_id: str) -> list[str]:
+def list_bid_ids(
+    project_id: str,
+    artifacts: Sequence[Any] | None = None,
+) -> list[str]:
     """Distinct bid ids from `artifact.vendor_id`, never `vendor.id`."""
-    project = load_project(project_id)
-    if project is None:
-        return []
+    rows = artifacts
+    if rows is None:
+        project = load_project(project_id)
+        if project is None:
+            return []
+        rows = load_artifacts(project.id)
     bids: set[str] = set()
-    for artifact in load_artifacts(project.id):
-        bid = (artifact.vendor_id or "").strip()
+    for artifact in rows:
+        bid = (getattr(artifact, "vendor_id", None) or "").strip()
         if bid:
             bids.add(bid)
     return sorted(bids)

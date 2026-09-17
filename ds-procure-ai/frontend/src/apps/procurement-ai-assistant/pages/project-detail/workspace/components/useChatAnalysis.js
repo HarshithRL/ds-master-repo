@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { apiGet, apiPost } from "../../../../../../services/api";
+import { shouldContinueInsightsPoll } from "../kbStatus";
+
+export const INSIGHTS_POLL_MS = 4000;
 
 export function analysisRoutes(projectId) {
   const base = `/api/procurement/projects/${projectId}`;
@@ -12,22 +15,30 @@ export function analysisRoutes(projectId) {
   };
 }
 
-export function useChatAnalysis(projectId, { refreshToken = 0, onInsights } = {}) {
+export function useChatAnalysis(
+  projectId,
+  { refreshToken = 0, onInsights, uploading = false } = {},
+) {
   const [insights, setInsights] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState("");
   const [skippedGaps, setSkippedGaps] = useState(false);
 
+  const applyPayload = useCallback(
+    (payload) => {
+      setInsights(payload);
+      setError(null);
+      onInsights?.(payload);
+    },
+    [onInsights],
+  );
+
   const refresh = useCallback(() => {
-    if (!projectId) return undefined;
+    if (!projectId) return Promise.resolve();
     return apiGet(analysisRoutes(projectId).insights)
-      .then((payload) => {
-        setInsights(payload);
-        setError(null);
-        onInsights?.(payload);
-      })
+      .then(applyPayload)
       .catch(() => setError("Unable to load analysis."));
-  }, [projectId, onInsights]);
+  }, [projectId, applyPayload]);
 
   useEffect(() => {
     setInsights(null);
@@ -37,16 +48,30 @@ export function useChatAnalysis(projectId, { refreshToken = 0, onInsights } = {}
   }, [projectId]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh, refreshToken]);
-
-  useEffect(() => {
     if (!projectId) return undefined;
-    const id = window.setInterval(() => {
-      refresh();
-    }, 4000);
-    return () => window.clearInterval(id);
-  }, [projectId, refresh]);
+    let cancelled = false;
+    let timer = 0;
+
+    function load() {
+      apiGet(analysisRoutes(projectId).insights)
+        .then((payload) => {
+          if (cancelled) return;
+          applyPayload(payload);
+          if (shouldContinueInsightsPoll(payload?.kb_status, uploading)) {
+            timer = window.setTimeout(load, INSIGHTS_POLL_MS);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setError("Unable to load analysis.");
+        });
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [projectId, refreshToken, uploading, applyPayload]);
 
   async function buildPack(kind) {
     if (!projectId) return;

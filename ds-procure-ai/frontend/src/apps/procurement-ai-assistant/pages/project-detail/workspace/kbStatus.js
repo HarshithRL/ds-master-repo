@@ -9,6 +9,10 @@ export function kbIsBuilding(status) {
   return KB_BUILDING_STATUSES.has(status);
 }
 
+export function shouldContinueInsightsPoll(kbStatus, uploading = false) {
+  return kbIsBuilding(kbStatus) || Boolean(uploading);
+}
+
 export function kbStatusCopy(status, message) {
   const trimmed = (message || "").trim();
   if (trimmed) {

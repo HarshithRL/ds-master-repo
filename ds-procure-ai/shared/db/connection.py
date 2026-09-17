@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import threading
+from collections import OrderedDict
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
@@ -10,7 +12,7 @@ from typing import Generator
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import NullPool
+from sqlalchemy.pool import QueuePool
 
 from shared.bootstrap import ensure_repo_root_on_path
 from shared.db.paths import (
@@ -32,6 +34,12 @@ _DEFAULT_DB_PATH = _REPO_ROOT / "mate.sqlite"
 _engine: Engine | None = None
 _SessionLocal: sessionmaker[Session] | None = None
 _uc_table_prefix_applied = False
+_uc_engines: OrderedDict[str, tuple[Engine, sessionmaker[Session]]] = OrderedDict()
+_uc_engines_lock = threading.Lock()
+_UC_ENGINE_CACHE_MAX = 8
+_UC_POOL_SIZE = 2
+_UC_POOL_OVERFLOW = 2
+_UC_POOL_RECYCLE_SEC = 2700
 
 
 def sqlite_path() -> Path:
@@ -176,15 +184,75 @@ def _uc_connect_args() -> dict:
 
         args["credentials_provider"] = _credentials_provider
         auth = "m2m"
-    log.info("uc connect auth={} scopes={}", auth, ",".join(obo_scopes) or "-")
+    log.debug("uc connect auth={} scopes={}", auth, ",".join(obo_scopes) or "-")
     return args
 
 
 def _uc_dbapi_connect():
-    """Open a fresh DBSQL connection with current OBO/M2M connect args (NullPool creator)."""
+    """Open a DBSQL connection with current OBO/M2M connect args (per-token pool creator)."""
     import databricks.sql as sql
 
     return sql.connect(**_uc_connect_args())
+
+
+def _uc_pool_key() -> str:
+    """Stable engine cache key: visitor OBO token hash, or shared m2m."""
+    try:
+        from shared.databricks_runtime import obo_bind_key, obo_is_bound, obo_token_scopes
+
+        uc_auth = (os.getenv("MATE_UC_AUTH", "sp") or "sp").strip().lower()
+        if uc_auth in {"obo", "user", "visitor"} and obo_is_bound():
+            if _SQL_SCOPE in obo_token_scopes():
+                key = obo_bind_key()
+                if key:
+                    return f"obo:{key}"
+    except Exception:
+        pass
+    return "m2m"
+
+
+def _ensure_uc_dialect() -> None:
+    try:
+        import databricks.sql  # noqa: F401
+        # Dialect lives in separate package since connector 4.x.
+        import databricks.sqlalchemy  # noqa: F401
+    except ImportError as exc:  # pragma: no cover - depends on deploy extras
+        raise ImportError(
+            "MATE_DB_BACKEND=uc requires databricks-sql-connector and databricks-sqlalchemy. "
+            "Install them or set MATE_DB_BACKEND=sqlite."
+        ) from exc
+
+
+def _make_uc_engine() -> tuple[Engine, sessionmaker[Session]]:
+    _ensure_uc_dialect()
+    _apply_uc_mate_table_prefix()
+    engine = create_engine(
+        database_url(),
+        creator=_uc_dbapi_connect,
+        poolclass=QueuePool,
+        pool_size=_UC_POOL_SIZE,
+        max_overflow=_UC_POOL_OVERFLOW,
+        pool_pre_ping=True,
+        pool_recycle=_UC_POOL_RECYCLE_SEC,
+    )
+    maker = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    return engine, maker
+
+
+def _uc_engine_and_maker() -> tuple[Engine, sessionmaker[Session]]:
+    """Return a QueuePool engine for the current OBO/M2M identity (LRU-capped)."""
+    key = _uc_pool_key()
+    with _uc_engines_lock:
+        cached = _uc_engines.get(key)
+        if cached is not None:
+            _uc_engines.move_to_end(key)
+            return cached
+        engine, maker = _make_uc_engine()
+        while len(_uc_engines) >= _UC_ENGINE_CACHE_MAX:
+            _old_key, (old_engine, _old_maker) = _uc_engines.popitem(last=False)
+            old_engine.dispose()
+        _uc_engines[key] = (engine, maker)
+        return engine, maker
 
 
 def _apply_uc_mate_table_prefix() -> None:
@@ -229,6 +297,10 @@ def _apply_uc_mate_table_prefix() -> None:
 def reset_engine_state() -> None:
     """Test helper: drop cached engine/session (does not un-prefix UC table names)."""
     global _engine, _SessionLocal
+    with _uc_engines_lock:
+        for engine, _maker in list(_uc_engines.values()):
+            engine.dispose()
+        _uc_engines.clear()
     if _engine is not None:
         _engine.dispose()
     _engine = None
@@ -237,43 +309,33 @@ def reset_engine_state() -> None:
 
 def get_engine() -> Engine:
     global _engine, _SessionLocal
+    if db_backend() == "uc":
+        # Per-token QueuePool: reuse DBSQL sessions for the current visitor OBO
+        # (or shared M2M). Never checkout a connection authenticated as another user.
+        engine, maker = _uc_engine_and_maker()
+        _engine = engine
+        _SessionLocal = maker
+        return engine
+
     if _engine is not None:
         return _engine
 
-    if db_backend() == "uc":
-        try:
-            import databricks.sql  # noqa: F401
-            # Dialect lives in separate package since connector 4.x.
-            import databricks.sqlalchemy  # noqa: F401
-        except ImportError as exc:  # pragma: no cover - depends on deploy extras
-            raise ImportError(
-                "MATE_DB_BACKEND=uc requires databricks-sql-connector and databricks-sqlalchemy. "
-                "Install them or set MATE_DB_BACKEND=sqlite."
-            ) from exc
-        _apply_uc_mate_table_prefix()
-        # NullPool + creator: each checkout rebuilds connect args so visitor OBO is current.
-        # Do not pin a single SP token for the process lifetime.
-        _engine = create_engine(
-            database_url(),
-            creator=_uc_dbapi_connect,
-            poolclass=NullPool,
-            pool_pre_ping=True,
-        )
-    else:
-        db_path = sqlite_path()
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-        _engine = create_engine(
-            database_url(),
-            connect_args={"check_same_thread": False},
-            pool_pre_ping=True,
-        )
-        event.listen(_engine, "connect", _enable_wal)
-
+    db_path = sqlite_path()
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    _engine = create_engine(
+        database_url(),
+        connect_args={"check_same_thread": False},
+        pool_pre_ping=True,
+    )
+    event.listen(_engine, "connect", _enable_wal)
     _SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False)
     return _engine
 
 
 def get_session() -> Session:
+    if db_backend() == "uc":
+        _, maker = _uc_engine_and_maker()
+        return maker()
     if _SessionLocal is None:
         get_engine()
     assert _SessionLocal is not None
@@ -343,7 +405,7 @@ def init_db() -> None:
     from shared.db.seed import seed_hub_modules
 
     if db_backend() == "uc":
-        # Apply mate_* prefix and build NullPool engine without opening a warehouse
+        # Apply mate_* prefix and build the M2M engine without opening a warehouse
         # connection at gunicorn import (boot has no visitor OBO).
         get_engine()
         try:
