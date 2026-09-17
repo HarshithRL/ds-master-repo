@@ -13,7 +13,7 @@ from typing import Any
 from loguru import logger
 
 from shared.logger_global.context import bind_context, get_context_dict, reset_context
-from shared.logger_global.formatters import PRETTY_FORMAT
+from shared.logger_global.formatters import PRETTY_FORMAT, json_format
 from shared.logger_global.intercept import setup_stdlib_intercept
 
 _configured = False
@@ -27,6 +27,14 @@ _REDACT_KEY = re.compile(
 
 def _env(name: str, default: str) -> str:
     return os.getenv(name, default).strip() or default
+
+
+def _explicit_env(name: str) -> str | None:
+    raw = os.getenv(name)
+    if raw is None:
+        return None
+    stripped = raw.strip()
+    return stripped or None
 
 
 def _redact_value(key: str, value: Any) -> Any:
@@ -60,20 +68,34 @@ def _patch_record(record: dict[str, Any]) -> None:
         record["message"] = _redact_value("message", message)
 
 
+def reset_logging() -> None:
+    """Undo setup_logging. Used by tests."""
+    global _configured, _service
+    logger.remove()
+    _configured = False
+    _service = "unknown"
+
+
 def setup_logging(*, service: str) -> None:
     global _configured, _service
     if _configured:
         return
 
-    _service = service
-    log_level = _env("MATE_LOG_LEVEL", "DEBUG").upper()
-    log_format = _env("MATE_LOG_FORMAT", "pretty").lower()
-    log_dir = Path(_env("MATE_LOG_DIR", "logs"))
-    mate_env = _env("MATE_ENV", "dev").lower()
-    diagnose = mate_env != "prod"
+    from shared.databricks_runtime import is_databricks_app
 
-    log_dir.mkdir(parents=True, exist_ok=True)
-    retention = "30 days" if mate_env == "prod" else "7 days"
+    _service = service
+    mate_env = (_explicit_env("MATE_ENV") or "dev").lower()
+    apps_runtime = is_databricks_app()
+    prod_like = apps_runtime or mate_env == "prod"
+
+    default_format = "json" if prod_like else "pretty"
+    default_level = "INFO" if prod_like else "DEBUG"
+    log_level = (_explicit_env("MATE_LOG_LEVEL") or default_level).upper()
+    log_format = (_explicit_env("MATE_LOG_FORMAT") or default_format).lower()
+    diagnose = not prod_like
+    colorize = log_format == "pretty" and not prod_like
+    enqueue = "pytest" not in sys.modules
+    skip_files = prod_like
 
     logger.remove()
     logger.configure(patcher=_patch_record)
@@ -82,38 +104,44 @@ def setup_logging(*, service: str) -> None:
         logger.add(
             sys.stderr,
             level=log_level,
-            serialize=True,
+            format=json_format,
+            colorize=False,
             diagnose=diagnose,
-            enqueue=True,
+            enqueue=enqueue,
+            backtrace=not prod_like,
         )
     else:
         logger.add(
             sys.stderr,
             level=log_level,
             format=PRETTY_FORMAT,
-            colorize=True,
+            colorize=colorize,
             diagnose=diagnose,
-            enqueue=True,
+            enqueue=enqueue,
         )
 
-    logger.add(
-        log_dir / f"{service}.log",
-        level=log_level,
-        rotation="10 MB",
-        retention=retention,
-        serialize=True,
-        diagnose=diagnose,
-        enqueue=True,
-    )
-    logger.add(
-        log_dir / f"{service}.error.log",
-        level="ERROR",
-        rotation="10 MB",
-        retention=retention,
-        serialize=True,
-        diagnose=diagnose,
-        enqueue=True,
-    )
+    if not skip_files:
+        log_dir = Path(_explicit_env("MATE_LOG_DIR") or "logs")
+        log_dir.mkdir(parents=True, exist_ok=True)
+        retention = "30 days" if mate_env == "prod" else "7 days"
+        logger.add(
+            log_dir / f"{service}.log",
+            level=log_level,
+            rotation="10 MB",
+            retention=retention,
+            format=json_format,
+            diagnose=diagnose,
+            enqueue=enqueue,
+        )
+        logger.add(
+            log_dir / f"{service}.error.log",
+            level="ERROR",
+            rotation="10 MB",
+            retention=retention,
+            format=json_format,
+            diagnose=diagnose,
+            enqueue=enqueue,
+        )
 
     stdlib_level_name = _env("MATE_STDLIB_LOG_LEVEL", "WARNING").upper()
     stdlib_level = getattr(logging, stdlib_level_name, logging.WARNING)
@@ -174,5 +202,6 @@ __all__ = [
     "log_client_event",
     "logger",
     "reset_context",
+    "reset_logging",
     "setup_logging",
 ]

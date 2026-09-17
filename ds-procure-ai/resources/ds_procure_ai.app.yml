@@ -37,6 +37,10 @@ resources:
             value: ${var.thinking_model}
           - name: FLASK_SECRET_KEY
             value: ${bundle.name}-${bundle.target}
+          - name: MATE_LOG_FORMAT
+            value: json
+          - name: MATE_LOG_LEVEL
+            value: INFO
           # Mate UC app-data (default sqlite until cutover). Catalog from var.catalog per target.
           - name: MATE_DB_BACKEND
             value: uc
