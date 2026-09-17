@@ -17,7 +17,7 @@ from typing import Any
 
 from sqlalchemy import bindparam, text
 
-from shared.db.connection import session_scope
+from shared.db.connection import mate_table_name, session_scope
 from shared.logger_global import get_logger
 
 log = get_logger(__name__)
@@ -122,7 +122,10 @@ async def embed_pending_chunks(
 
 def load_embeddings(project_id: str, chunk_ids: Sequence[str] | None = None) -> dict[str, list[float]]:
     ensure_embedding_table()
-    sql = "SELECT chunk_id, embedding FROM chunk_embedding WHERE project_id = :pid"
+    sql = (
+        f"SELECT chunk_id, embedding FROM {mate_table_name('chunk_embedding')} "
+        "WHERE project_id = :pid"
+    )
     params: dict[str, Any] = {"pid": project_id}
     stmt = text(sql)
     if chunk_ids:
@@ -140,17 +143,24 @@ def load_embeddings(project_id: str, chunk_ids: Sequence[str] | None = None) -> 
     return out
 
 
-def _pending_chunks(project_id: str) -> list[dict[str, Any]]:
-    ensure_embedding_table()
-    sql = """
+def _pending_chunks_sql() -> str:
+    chunk = mate_table_name("chunk")
+    artifact = mate_table_name("artifact")
+    embedding = mate_table_name("chunk_embedding")
+    return f"""
         SELECT c.id AS chunk_id, c.project_id, c.chunk_type, c.text,
                a.vendor_id, a.doc_role
-          FROM chunk c
-          JOIN artifact a ON a.id = c.artifact_id
+          FROM {chunk} c
+          JOIN {artifact} a ON a.id = c.artifact_id
          WHERE c.project_id = :pid
-           AND c.id NOT IN (SELECT chunk_id FROM chunk_embedding WHERE project_id = :pid)
+           AND c.id NOT IN (SELECT chunk_id FROM {embedding} WHERE project_id = :pid)
          ORDER BY c.artifact_id, c.ordinal
     """
+
+
+def _pending_chunks(project_id: str) -> list[dict[str, Any]]:
+    ensure_embedding_table()
+    sql = _pending_chunks_sql()
     with session_scope() as session:
         return [dict(row) for row in session.execute(text(sql), {"pid": project_id}).mappings().all()]
 
@@ -164,8 +174,8 @@ def _upsert_embeddings(
         for row, vec in zip(rows, vectors, strict=True):
             session.execute(
                 text(
-                    """
-                    INSERT INTO chunk_embedding
+                    f"""
+                    INSERT INTO {mate_table_name("chunk_embedding")}
                       (chunk_id, project_id, vendor_id, doc_role, chunk_type, embedding, model_version)
                     VALUES
                       (:chunk_id, :project_id, :vendor_id, :doc_role, :chunk_type, :embedding, :model_version)
