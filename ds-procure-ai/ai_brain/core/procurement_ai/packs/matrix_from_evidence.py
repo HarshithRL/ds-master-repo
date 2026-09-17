@@ -105,7 +105,6 @@ def load_matrix_source(project_id: str) -> MatrixSource:
 def _load_matrix_source(project_id: str) -> MatrixSource:
     from ai_brain.core.kb.store.materialize import list_bid_ids
 
-    sql_bids = list(list_bid_ids(project_id))
     with session_scope() as session:
         vendors = list(
             session.scalars(select(Vendor).where(Vendor.project_id == project_id)).all()
@@ -149,6 +148,7 @@ def _load_matrix_source(project_id: str) -> MatrixSource:
         ):
             session.expunge(row)
 
+    sql_bids = list(list_bid_ids(project_id, artifacts=artifacts))
     extra_bids = sorted(
         {
             (row.vendor_id or "").strip()
