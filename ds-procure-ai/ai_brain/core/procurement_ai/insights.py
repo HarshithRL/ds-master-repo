@@ -120,8 +120,8 @@ def build_insight_payload(project: Any, artifacts: list[Any], chunks: list[Any] 
         source = load_matrix_source(getattr(project, "id", ""))
         if source.warm:
             payload = insights_from_source(payload, source)
-    except Exception:
-        pass
+    except Exception as exc:
+        log.warning("insights_from_source failed project_id={}: {}", getattr(project, "id", ""), exc)
     return payload
 
 
@@ -137,7 +137,8 @@ def _kb_status(project_id: str, file_count: int, packs: dict[str, Any]) -> tuple
         from ai_brain.core.kb.store.persist import kb_counts
 
         counts = kb_counts(project_id) if project_id else {}
-    except Exception:
+    except Exception as exc:
+        log.warning("kb_counts failed project_id={}: {}", project_id, exc)
         counts = {}
     evidence = int(counts.get("evidence") or 0)
     classified = int(counts.get("classified") or 0)
