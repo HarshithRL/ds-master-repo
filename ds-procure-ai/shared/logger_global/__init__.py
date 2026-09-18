@@ -8,6 +8,7 @@ from shared.logger_global.controller import (
     log_client_event,
     logger,
     reset_context,
+    reset_logging,
     setup_logging,
 )
 
@@ -17,5 +18,6 @@ __all__ = [
     "log_client_event",
     "logger",
     "reset_context",
+    "reset_logging",
     "setup_logging",
 ]

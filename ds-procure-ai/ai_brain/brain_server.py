@@ -55,8 +55,7 @@ from ai_brain.server.middleware import install_middleware
 from ai_brain.server.routes import register_routes
 from ai_brain.server.runtime import runtime
 from fastapi import FastAPI
-from mlflow.genai.agent_server import AgentServer
-from mlflow.genai.agent_server.validator import ResponsesAgentValidator
+from databricks_ai_bridge.long_running import LongRunningAgentServer
 import mlflow
 
 DEFAULT_HOST = "127.0.0.1"
@@ -76,19 +75,43 @@ async def lifespan(_app: Any):
             pass
 
 
-class NexusAgentServer(AgentServer):
-    """AgentServer on a FastAPI app we construct (Starlette 1.6 dropped on_startup)."""
+class NexusAgentServer(LongRunningAgentServer):
+    """Durable ResponsesAgent server backed by the app's existing Lakebase."""
 
     def __init__(self) -> None:
-        self.agent_type = "ResponsesAgent"
-        self.validator = ResponsesAgentValidator()
-        self.app = FastAPI(
-            title="AI Brain Agent Server",
-            description="MLflow AgentServer wrapping the Nexus LangGraph",
-            lifespan=lifespan,
+        # Apps already provide LAKEBASE_ENDPOINT for the LangGraph checkpointer.
+        # AI Bridge expects the autoscaling spelling, so expose the same attached
+        # resource before its route setup decides whether durability is enabled.
+        endpoint = os.getenv("LAKEBASE_ENDPOINT", "").strip()
+        if endpoint:
+            os.environ.setdefault("LAKEBASE_AUTOSCALING_ENDPOINT", endpoint)
+        super().__init__(
+            "ResponsesAgent",
+            db_autoscaling_endpoint=endpoint or None,
+            task_timeout_seconds=float(os.getenv("BRAIN_RUN_TIMEOUT", "3600")),
         )
+        self.app.title = "AI Brain Agent Server"
+        self.app.description = "Durable MLflow ResponsesAgent wrapping the Nexus LangGraph"
         self.app.max_body_size = None
-        self._setup_routes()
+
+        # LongRunningAgentServer installs its Lakebase lifecycle. Compose it
+        # with the graph/checkpointer lifecycle rather than replacing either.
+        durable_lifespan = self.app.router.lifespan_context
+
+        @asynccontextmanager
+        async def combined_lifespan(app: Any):
+            await runtime.start()
+            try:
+                async with durable_lifespan(app):
+                    yield
+            finally:
+                await runtime.stop()
+                try:
+                    mlflow.flush_trace_async_logging()
+                except Exception:
+                    pass
+
+        self.app.router.lifespan_context = combined_lifespan
 
 
 agent_server = NexusAgentServer()

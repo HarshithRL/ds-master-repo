@@ -51,7 +51,11 @@ def write_bytes(path: Path, data: bytes) -> None:
         return
     ensure_dir(path.parent)
     posix = path.as_posix()
-    _files_client().files.upload(posix, BytesIO(data), overwrite=True)
+    try:
+        _files_client().files.upload(posix, BytesIO(data), overwrite=True)
+    except Exception as exc:
+        log.warning("uc volume write failed path={} exc_type={}: {}", posix, type(exc).__name__, exc)
+        raise
     log.debug("uc volume wrote path={}", posix)
 
 
@@ -64,8 +68,12 @@ def read_bytes(path: Path) -> bytes:
     if db_backend() != "uc":
         return path.read_bytes()
     posix = path.as_posix()
-    resp = _files_client().files.download(posix)
-    return resp.contents.read()
+    try:
+        resp = _files_client().files.download(posix)
+        return resp.contents.read()
+    except Exception as exc:
+        log.warning("uc volume read failed path={} exc_type={}: {}", posix, type(exc).__name__, exc)
+        raise
 
 
 def read_text(path: Path, *, encoding: str = "utf-8") -> str:
@@ -79,9 +87,10 @@ def exists(path: Path) -> bool:
         return path.exists()
     posix = path.as_posix()
     try:
-        _files_client().files.get_status(posix)
+        _files_client().files.get_metadata(posix)
         return True
-    except Exception:
+    except Exception as exc:
+        log.debug("uc volume not found path={} exc_type={}: {}", posix, type(exc).__name__, exc)
         return False
 
 

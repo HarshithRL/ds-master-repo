@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+from threading import Event, RLock
+from time import monotonic
 from typing import Any
 
 import httpx
@@ -15,21 +17,89 @@ from shared.logger_global import get_logger
 
 log = get_logger(__name__)
 
+_INSIGHT_TTL_S = 30.0
+_INSIGHT_LOCK = RLock()
+_INSIGHT_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
+_INSIGHT_IN_FLIGHT: dict[str, Event] = {}
+
 
 def insights_for_owner(project_id: str, owner_id: str) -> dict[str, Any] | None:
     project = project_repo.get_for_owner_or_none(project_id, owner_id)
     if project is None:
         return None
+    cache_key = f"{owner_id}:{project_id}"
+    now = monotonic()
+    with _INSIGHT_LOCK:
+        cached = _INSIGHT_CACHE.get(cache_key)
+        if cached and now - cached[0] < _INSIGHT_TTL_S:
+            return cached[1]
+        pending = _INSIGHT_IN_FLIGHT.get(cache_key)
+        if pending is None:
+            pending = Event()
+            _INSIGHT_IN_FLIGHT[cache_key] = pending
+            is_leader = True
+        else:
+            is_leader = False
+
+    if not is_leader:
+        # A concurrent poll is already doing the expensive work. Wait briefly
+        # for its result, then serve the last known payload rather than fan out
+        # another AI Brain request.
+        pending.wait(timeout=2.0)
+        with _INSIGHT_LOCK:
+            cached = _INSIGHT_CACHE.get(cache_key)
+            if cached:
+                return cached[1]
+        return _build_local_insights(project_id, project, owner_id)
+
     try:
         payload = _brain_get(f"/v1/projects/{project_id}/insights")
         if payload.get("project_id"):
-            return payload
+            result = payload
+        else:
+            result = _build_local_insights(project_id, project, owner_id)
     except Exception as exc:  # noqa: BLE001
         log.warning("brain insights fallback: {}", exc)
+        try:
+            result = _build_local_insights(project_id, project, owner_id)
+        except Exception:
+            # Fallback itself failed — release waiters and surface the real
+            # error instead of masking it with an unbound `result` in finally.
+            with _INSIGHT_LOCK:
+                waiter = _INSIGHT_IN_FLIGHT.pop(cache_key, None)
+                if waiter:
+                    waiter.set()
+            raise
+    with _INSIGHT_LOCK:
+        _INSIGHT_CACHE[cache_key] = (monotonic(), result)
+        waiter = _INSIGHT_IN_FLIGHT.pop(cache_key, None)
+        if waiter:
+            waiter.set()
+    return result
+
+
+def _build_local_insights(project_id: str, project: Any, owner_id: str) -> dict[str, Any]:
+    import contextvars
+    from concurrent.futures import ThreadPoolExecutor
+
     from ai_brain.core.procurement_ai.insights import build_insight_payload
 
-    artifacts = artifact_repo.list_for_project(project_id, owner_id)
-    chunks = chunk_repo.list_for_project(project_id)
+    # Each call opens its own NullPool DBSQL connection (OBO-scoped, not
+    # pooled/reusable) — run them concurrently instead of two round trips.
+    # ThreadPoolExecutor workers do not inherit contextvars, so the visitor
+    # OBO token must be copied in explicitly or these silently run as the
+    # app service principal instead (which lacks the visitor's UC grants).
+    # Each thread needs its OWN Context — the same Context cannot be
+    # entered concurrently from two threads (raises RuntimeError).
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        artifacts_future = pool.submit(
+            contextvars.copy_context().run, artifact_repo.list_for_project, project_id, owner_id
+        )
+        chunks_future = pool.submit(
+            contextvars.copy_context().run, chunk_repo.list_for_project, project_id
+        )
+        artifacts = artifacts_future.result()
+        chunks = chunks_future.result()
     return build_insight_payload(project, artifacts, chunks)
 
 
@@ -111,7 +181,9 @@ def _local_pack(project_id: str, owner_id: str, capability: str, thread_id: str)
 
 def _brain_get(path: str) -> dict[str, Any]:
     url = f"{brain_base_url()}{path}"
-    with httpx.Client(timeout=15.0) as client:
+    # Insights are a read model. A slow brain must not make every active
+    # workspace poll wait 15 seconds before the local/cache fallback responds.
+    with httpx.Client(timeout=httpx.Timeout(2.0, connect=1.0)) as client:
         response = client.get(url, headers=brain_request_headers())
         if response.status_code == 404:
             raise LookupError(f"brain {path} not found")

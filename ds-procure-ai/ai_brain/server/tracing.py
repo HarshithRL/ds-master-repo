@@ -42,8 +42,8 @@ def configure_tracing() -> None:
         experiment_name = os.getenv("MLFLOW_EXPERIMENT_NAME", "").strip() or "ai_brain"
         try:
             _bind_experiment(experiment_name)
-        except Exception:
-            log.warning("mlflow experiment bind skipped name={}", experiment_name)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("mlflow experiment bind skipped name={}: {}", experiment_name, exc)
 
     async_flag = os.getenv("MLFLOW_ENABLE_ASYNC_LOGGING", "true").strip().lower()
     if async_flag not in {"0", "false", "no", "off"}:

@@ -16,7 +16,7 @@ from typing import Any, Iterable, Sequence
 from sqlalchemy import bindparam, text
 
 from ai_brain.core.kb.store.embed import embed_query, load_embeddings
-from shared.db.connection import session_scope
+from shared.db.connection import mate_table_name, session_scope
 from shared.logger_global import get_logger
 
 log = get_logger(__name__)
@@ -110,13 +110,15 @@ def graph_expand_entities(project_id: str, query: str) -> list[str]:
 
     Empty match → no artifact pre-filter (search the whole project).
     """
+    kb_node = mate_table_name("kb_node")
+    kb_edge = mate_table_name("kb_edge")
     with session_scope() as session:
         nodes = [
             dict(row)
             for row in session.execute(
                 text(
                     "SELECT id, type, label, props, source_artifact_id "
-                    "FROM kb_node WHERE project_id = :pid"
+                    f"FROM {kb_node} WHERE project_id = :pid"
                 ),
                 {"pid": project_id},
             ).mappings()
@@ -125,7 +127,7 @@ def graph_expand_entities(project_id: str, query: str) -> list[str]:
             dict(row)
             for row in session.execute(
                 text(
-                    "SELECT src, dst, type FROM kb_edge "
+                    f"SELECT src, dst, type FROM {kb_edge} "
                     "WHERE project_id = :pid AND type IN ('MEMBER_OF_CONSORTIUM','PARENT_OF')"
                 ),
                 {"pid": project_id},
@@ -172,7 +174,7 @@ def graph_expand_entities(project_id: str, query: str) -> list[str]:
 
     if bid_keys:
         stmt = text(
-            "SELECT id FROM artifact WHERE project_id = :pid AND vendor_id IN :bids"
+            f"SELECT id FROM {mate_table_name('artifact')} WHERE project_id = :pid AND vendor_id IN :bids"
         ).bindparams(bindparam("bids", expanding=True))
         with session_scope() as session:
             rows = session.execute(stmt, {"pid": project_id, "bids": list(bid_keys)}).all()
@@ -374,8 +376,8 @@ def _load_filtered_chunks(
     sql = f"""
         SELECT c.id AS chunk_id, c.artifact_id, c.ordinal, c.text,
                c.heading_path_json, c.location_json, a.original_name
-          FROM chunk c
-          JOIN artifact a ON a.id = c.artifact_id
+          FROM {mate_table_name("chunk")} c
+          JOIN {mate_table_name("artifact")} a ON a.id = c.artifact_id
          WHERE {" AND ".join(clauses)}
          ORDER BY c.artifact_id, c.ordinal
     """
@@ -392,11 +394,11 @@ def _chunks_for_artifacts(artifact_ids: Iterable[str]) -> dict[str, list[ChunkHi
     if not ids:
         return {}
     stmt = text(
-        """
+        f"""
         SELECT c.id AS chunk_id, c.artifact_id, c.ordinal, c.text,
                c.heading_path_json, c.location_json, a.original_name
-          FROM chunk c
-          JOIN artifact a ON a.id = c.artifact_id
+          FROM {mate_table_name("chunk")} c
+          JOIN {mate_table_name("artifact")} a ON a.id = c.artifact_id
          WHERE c.artifact_id IN :ids
          ORDER BY c.artifact_id, c.ordinal
         """

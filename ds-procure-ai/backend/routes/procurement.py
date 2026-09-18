@@ -453,6 +453,9 @@ def project_workspace_chat_stream(project_id):
     )
 
 
+# No `/workspace/responses` route here by design: the old durable-response
+# proxy (`post_response`) used a 10s brain timeout and caused chat 502s.
+# Use `/workspace/chat` (sync) or `/workspace/chat/stream` (SSE) instead.
 @procurement_bp.route(
     "/api/procurement/projects/<project_id>/workspace/chat/resume",
     methods=["POST"],

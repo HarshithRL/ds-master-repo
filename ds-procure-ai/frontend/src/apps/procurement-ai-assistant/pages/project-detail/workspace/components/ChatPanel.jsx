@@ -316,6 +316,7 @@ function ChatPanel({
   const analysis = useChatAnalysis(projectId, {
     refreshToken: analysisRefresh,
     onInsights,
+    uploading,
   });
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const sending = ui.status === "sending";

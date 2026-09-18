@@ -26,7 +26,7 @@ from ai_brain.core.kb.build.coverage import record_chunk_ids, record_path
 from ai_brain.core.kb.store.materialize import project_files
 from ai_brain.core.kb.api.schemas import load_chunk_text
 from ai_brain.core.kb.store.search import search_kb as _search_kb
-from shared.db.connection import session_scope
+from shared.db.connection import mate_table_name, session_scope
 from shared.logger_global import get_logger
 
 log = get_logger(__name__, service="ai_brain")
@@ -222,23 +222,25 @@ def list_bid_chunk_rows(project_id: str | None, bid_id: str) -> list[dict[str, A
         return []
     from ai_brain.core.kb.store.search import _heading_from_json, _locator_from_location
 
+    chunk = mate_table_name("chunk")
+    artifact = mate_table_name("artifact")
     # bid_id=rfp is a virtual bid for RFP corpus (doc_role), not artifact.vendor_id.
     if bid.lower() == "rfp":
-        sql = """
+        sql = f"""
             SELECT c.id AS chunk_id, c.artifact_id, c.ordinal, c.token_count,
                    c.heading_path_json, c.location_json, a.original_name, a.vendor_id
-              FROM chunk c
-              JOIN artifact a ON a.id = c.artifact_id
+              FROM {chunk} c
+              JOIN {artifact} a ON a.id = c.artifact_id
              WHERE c.project_id = :pid AND lower(coalesce(a.doc_role, '')) = 'rfp'
              ORDER BY a.original_name, c.ordinal
         """
         params = {"pid": pid}
     else:
-        sql = """
+        sql = f"""
             SELECT c.id AS chunk_id, c.artifact_id, c.ordinal, c.token_count,
                    c.heading_path_json, c.location_json, a.original_name, a.vendor_id
-              FROM chunk c
-              JOIN artifact a ON a.id = c.artifact_id
+              FROM {chunk} c
+              JOIN {artifact} a ON a.id = c.artifact_id
              WHERE c.project_id = :pid AND a.vendor_id = :bid
              ORDER BY a.original_name, c.ordinal
         """

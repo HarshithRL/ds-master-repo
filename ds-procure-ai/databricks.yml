@@ -120,6 +120,10 @@ targets:
                 value: databricks-claude-opus-4-6
               - name: FLASK_SECRET_KEY
                 value: ${bundle.name}-${bundle.target}
+              - name: MATE_LOG_FORMAT
+                value: json
+              - name: MATE_LOG_LEVEL
+                value: INFO
               - name: MATE_DB_BACKEND
                 value: uc
               - name: MATE_UC_AUTH
@@ -183,6 +187,10 @@ targets:
                 value: databricks-claude-opus-4-6
               - name: FLASK_SECRET_KEY
                 value: ${bundle.name}-${bundle.target}
+              - name: MATE_LOG_FORMAT
+                value: json
+              - name: MATE_LOG_LEVEL
+                value: INFO
               - name: MATE_DB_BACKEND
                 value: uc
               - name: MATE_UC_AUTH
@@ -269,6 +277,10 @@ targets:
                 value: databricks-claude-opus-4-6
               - name: FLASK_SECRET_KEY
                 value: ${bundle.name}-${bundle.target}
+              - name: MATE_LOG_FORMAT
+                value: json
+              - name: MATE_LOG_LEVEL
+                value: INFO
               - name: MATE_DB_BACKEND
                 value: uc
               - name: MATE_UC_AUTH

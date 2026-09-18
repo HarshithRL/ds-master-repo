@@ -1,4 +1,4 @@
-# Air Monitoring — Sites Update
+# Air Monitoring — Sites Update 
 # Run manually when site config changes (new sites, updated allowed_users, etc.)
 # Reads from: /Volumes/{catalog}/bronze/bronze_volume/air_monitoring/sites/
 # OVERWRITES sites table (config/dimension — not user data, safe to replace).
