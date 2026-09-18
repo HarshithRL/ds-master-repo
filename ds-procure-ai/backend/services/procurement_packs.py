@@ -71,15 +71,20 @@ def insights_for_owner(project_id: str, owner_id: str) -> dict[str, Any] | None:
 
 
 def _build_local_insights(project_id: str, project: Any, owner_id: str) -> dict[str, Any]:
+    import contextvars
     from concurrent.futures import ThreadPoolExecutor
 
     from ai_brain.core.procurement_ai.insights import build_insight_payload
 
     # Each call opens its own NullPool DBSQL connection (OBO-scoped, not
     # pooled/reusable) — run them concurrently instead of two round trips.
+    # ThreadPoolExecutor workers do not inherit contextvars, so the visitor
+    # OBO token must be copied in explicitly or these silently run as the
+    # app service principal instead (which lacks the visitor's UC grants).
+    ctx = contextvars.copy_context()
     with ThreadPoolExecutor(max_workers=2) as pool:
-        artifacts_future = pool.submit(artifact_repo.list_for_project, project_id, owner_id)
-        chunks_future = pool.submit(chunk_repo.list_for_project, project_id)
+        artifacts_future = pool.submit(ctx.run, artifact_repo.list_for_project, project_id, owner_id)
+        chunks_future = pool.submit(ctx.run, chunk_repo.list_for_project, project_id)
         artifacts = artifacts_future.result()
         chunks = chunks_future.result()
     return build_insight_payload(project, artifacts, chunks)
