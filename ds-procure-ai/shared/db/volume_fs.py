@@ -28,18 +28,11 @@ log = get_logger(__name__)
 def _files_client():
     from shared.databricks_runtime import (
         obo_is_bound,
-        obo_token_scopes,
         request_workspace_client,
         workspace_client,
     )
 
-    # Visitor OBO owns this data (per-user WRITE VOLUME) — the app SP is not
-    # a fallback identity for volume access; it has no grants here by design.
-    # scopes is logged only for diagnosis of *why* OBO fails, not to gate it.
-    bound = obo_is_bound()
-    scopes = obo_token_scopes() if bound else []
-    log.warning("TRACE_TMP files_client bound={} scopes={}", bound, scopes)
-    if bound:
+    if obo_is_bound():
         return request_workspace_client()
     return workspace_client()
 
@@ -60,10 +53,10 @@ def write_bytes(path: Path, data: bytes) -> None:
     posix = path.as_posix()
     try:
         _files_client().files.upload(posix, BytesIO(data), overwrite=True)
-        log.warning("TRACE_TMP write_bytes() ok path={} bytes={}", posix, len(data))
     except Exception as exc:
-        log.warning("TRACE_TMP write_bytes() FAILED path={} exc_type={} exc={}", posix, type(exc).__name__, exc)
+        log.warning("uc volume write failed path={} exc_type={}: {}", posix, type(exc).__name__, exc)
         raise
+    log.debug("uc volume wrote path={}", posix)
 
 
 def write_text(path: Path, text: str, *, encoding: str = "utf-8") -> None:
@@ -77,11 +70,9 @@ def read_bytes(path: Path) -> bytes:
     posix = path.as_posix()
     try:
         resp = _files_client().files.download(posix)
-        data = resp.contents.read()
-        log.warning("TRACE_TMP read_bytes() ok path={} bytes={}", posix, len(data))
-        return data
+        return resp.contents.read()
     except Exception as exc:
-        log.warning("TRACE_TMP read_bytes() FAILED path={} exc_type={} exc={}", posix, type(exc).__name__, exc)
+        log.warning("uc volume read failed path={} exc_type={}: {}", posix, type(exc).__name__, exc)
         raise
 
 
@@ -92,16 +83,14 @@ def read_text(path: Path, *, encoding: str = "utf-8") -> str:
 
 def exists(path: Path) -> bool:
     """Check whether a file or directory exists on UC Volume (Files API) or local FS."""
-    log.warning("TRACE_TMP exists() db_backend={} path={}", db_backend(), path)
     if db_backend() != "uc":
         return path.exists()
     posix = path.as_posix()
     try:
-        _files_client().files.get_status(posix)
-        log.warning("TRACE_TMP exists() -> True path={}", posix)
+        _files_client().files.get_metadata(posix)
         return True
     except Exception as exc:
-        log.warning("TRACE_TMP exists() -> False path={} exc_type={} exc={}", posix, type(exc).__name__, exc)
+        log.debug("uc volume not found path={} exc_type={}: {}", posix, type(exc).__name__, exc)
         return False
 
 
