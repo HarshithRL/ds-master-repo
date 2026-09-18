@@ -84,12 +84,36 @@ class AzurePdfParser(AzureDocIntelligenceParser):
     kind = ArtifactType.PDF
 
 
-class AzurePptxParser(AzureDocIntelligenceParser):
-    kind = ArtifactType.PPT
-
-
 class AzureDocxParser(AzureDocIntelligenceParser):
-    kind = ArtifactType.WORD
+    kind: ArtifactType = ArtifactType.WORD
+
+    def parse(self, path: Path, options: ParseOptions) -> ArtifactDocument:
+        # Document Intelligence rejects Office uploads with InvalidContent; the
+        # bundled python-docx parser still yields usable text.
+        try:
+            return super().parse(path, options)
+        except ArtifactParseError as exc:
+            from .docx_parser import DocxParser
+
+            log.warning(
+                "docx falling back to local parser file={} detail={}", path.name, exc
+            )
+            return DocxParser().parse(path, options)
+
+
+class AzurePptxParser(AzureDocIntelligenceParser):
+    kind: ArtifactType = ArtifactType.PPT
+
+    def parse(self, path: Path, options: ParseOptions) -> ArtifactDocument:
+        try:
+            return super().parse(path, options)
+        except ArtifactParseError as exc:
+            from .pptx_parser import PptxParser
+
+            log.warning(
+                "pptx falling back to local parser file={} detail={}", path.name, exc
+            )
+            return PptxParser().parse(path, options)
 
 
 def document_from_layout(path: Path, kind: ArtifactType, result, options: ParseOptions) -> ArtifactDocument:

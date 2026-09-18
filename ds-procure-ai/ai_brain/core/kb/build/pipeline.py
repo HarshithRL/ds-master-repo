@@ -484,11 +484,13 @@ async def invoke_vendor_analyst(
         pricing_from_result(pricing_result, bid_id)
         or pricing_from_result(result, bid_id)
         or pricing_from_result(research, bid_id)
+        or await _optional_structured(PricingExtraction, emit_messages, bid_id)
     )
     profile = (
         profile_from_result(profile_result, bid_id)
         or profile_from_result(result, bid_id)
         or profile_from_result(research, bid_id)
+        or await _optional_structured(BidProfile, emit_messages, bid_id)
     )
     return bundle, pricing, file_count, profile
 
@@ -592,6 +594,20 @@ def profile_from_result(result: Any, bid_id: str) -> BidProfile | None:
         except Exception:  # noqa: BLE001
             return None
     return None
+
+
+async def _optional_structured(schema: type, messages: list[Any], bid_id: str) -> Any:
+    """Last-resort structured call. The emit agents raise at their model-call
+    limit, which used to drop pricing and BAFO facts silently."""
+    try:
+        return await _structured_fallback(schema, messages, bid_id)
+    except Exception as exc:  # noqa: BLE001
+        if is_checkpoint_sync_error(exc):
+            raise
+        log.warning(
+            "{} fallback failed bid_id={}: {}", schema.__name__, bid_id, exc
+        )
+        return None
 
 
 async def _structured_fallback(schema: type, messages: list[Any], bid_id: str) -> Any:

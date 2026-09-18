@@ -36,7 +36,7 @@ def seed_swift_requirements(project_id: str) -> int:
     written = 0
     with session_scope() as session:
         for ordinal, (rid, text, category, target) in enumerate(SWIFT_REQUIREMENTS, start=1):
-            row = session.get(Requirement, rid)
+            row = session.get(Requirement, {"id": rid, "project_id": project_id})
             if row is None:
                 session.add(
                     Requirement(
@@ -51,14 +51,11 @@ def seed_swift_requirements(project_id: str) -> int:
                     )
                 )
                 written += 1
-            elif row.project_id == project_id:
+            else:
                 row.ordinal = ordinal
                 row.section = target
                 row.text = text
                 row.category = category
-            else:
-                # Another project owns this R-id in this sqlite file; skip clash.
-                continue
         session.flush()
     return written
 
@@ -92,6 +89,7 @@ def upsert_evidence_bundle(
         for item in gated:
             existing = session.scalars(
                 select(Evidence).where(
+                    Evidence.project_id == project_id,
                     Evidence.requirement_id == item.requirement_id,
                     Evidence.vendor_id == bundle.bid_id,
                     Evidence.model_version == model_version,
@@ -228,6 +226,7 @@ def fill_extraction_failed(
         for rid in ids:
             existing = session.scalars(
                 select(Evidence).where(
+                    Evidence.project_id == project_id,
                     Evidence.requirement_id == rid,
                     Evidence.vendor_id == bid_id,
                     Evidence.model_version == model_version,
