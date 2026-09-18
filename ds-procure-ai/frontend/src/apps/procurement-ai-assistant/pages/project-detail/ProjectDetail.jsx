@@ -138,11 +138,9 @@ function ProjectDetail() {
               <span className="project-status-badge">{project.status}</span>
               <span>{project.code}</span>
               <span>•</span>
-              <span>Owner: {project.owner}</span>
+              <span>Creator: {project.owner}</span>
               <span>•</span>
               <span>Created {project.created}</span>
-              <span>•</span>
-              <span>Deadline {project.deadline}</span>
             </div>
           </div>
 
@@ -197,11 +195,6 @@ function ProjectDetail() {
           )}
           {activeTab === "vendors" && (
             <VendorsTab projectId={projectId} />
-          )}
-          {activeTab === "activity" && (
-            <section className="project-tab-placeholder">
-              <p>Recent project activity will appear here.</p>
-            </section>
           )}
         </div>
       </div>

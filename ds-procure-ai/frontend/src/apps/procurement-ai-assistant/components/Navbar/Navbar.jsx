@@ -76,21 +76,6 @@ function Navbar() {
           </Link>
         </div>
 
-        <div className="navbar-search">
-          <span className="navbar-search-icon">
-            ⌕
-          </span>
-
-          <input
-            type="text"
-            placeholder="Search"
-            aria-label="Search"
-          />
-
-          <span className="navbar-search-shortcut">
-            /
-          </span>
-        </div>
 
         <div className="navbar-section">
 
@@ -137,36 +122,6 @@ function Navbar() {
           </span>
 
           <ThemeToggle className="theme-toggle--navbar" />
-
-          <NavLink
-            to="/app/settings"
-            className={({ isActive }) =>
-              `navbar-link ${isActive ? "active" : ""}`
-            }
-          >
-            <span className="navbar-link-icon">
-              ⚙
-            </span>
-
-            <span>
-              Settings
-            </span>
-          </NavLink>
-
-          <NavLink
-            to="/app/help"
-            className={({ isActive }) =>
-              `navbar-link ${isActive ? "active" : ""}`
-            }
-          >
-            <span className="navbar-link-icon">
-              ?
-            </span>
-
-            <span>
-              Help
-            </span>
-          </NavLink>
 
         </div>
 

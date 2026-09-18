@@ -45,7 +45,6 @@ function OverviewTab({ projectId }) {
   const milestones = data.milestones || [];
   const insights = data.insights || [];
   const approvals = data.approvals || [];
-  const quickActions = data.quickActions || [];
   const documents = data.documents || { pdf: 0, docx: 0, xlsx: 0, recent: [] };
   const requirements = data.requirements || { total: 0, approved: 0, pending: 0, rejected: 0 };
   const vendors = data.vendors || { invited: 0, responded: 0, shortlisted: 0 };
@@ -219,19 +218,6 @@ function OverviewTab({ projectId }) {
           </ul>
         </section>
       </div>
-
-      <section className="overview-quick-actions">
-        <div className="overview-card-head">
-          <h2>Quick Actions</h2>
-        </div>
-        <div className="quick-action-row">
-            {quickActions.map((action) => (
-            <button key={action} type="button" className="quick-action-btn">
-              {action}
-            </button>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }

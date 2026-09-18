@@ -47,9 +47,6 @@ function DocumentsTab({ projectId }) {
           <h2>Project Files</h2>
           <p>Documents associated with this procurement project.</p>
         </div>
-        <button type="button" className="primary-button">
-          ✦ New AI Task
-        </button>
       </div>
 
       <div className="file-search">
