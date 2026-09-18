@@ -106,10 +106,8 @@ function Projects() {
             <div className="project-row project-row-header">
               <span>Project</span>
               <span>Category</span>
-              <span>Owner</span>
+              <span>Creator</span>
               <span>Status</span>
-              <span>Priority</span>
-              <span>Budget</span>
               <span>Progress</span>
             </div>
 
@@ -137,16 +135,6 @@ function Projects() {
                   />
                   {project.status}
                 </span>
-
-                <span>
-                  <span
-                    className={`priority-badge ${project.priority.toLowerCase()}`}
-                  >
-                    {project.priority}
-                  </span>
-                </span>
-
-                <span>{project.budget}</span>
 
                 <span className="progress-cell">
                   <span>{project.progress}%</span>

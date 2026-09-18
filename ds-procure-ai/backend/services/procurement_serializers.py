@@ -61,24 +61,6 @@ def dashboard_payload(projects: list[Project]) -> dict[str, Any]:
                 "change": "—",
                 "positive": True,
             },
-            {
-                "label": "Avg. Cycle Time",
-                "value": "—",
-                "change": "—",
-                "positive": True,
-            },
-            {
-                "label": "Vendors Onboarded",
-                "value": "0",
-                "change": "—",
-                "positive": True,
-            },
-            {
-                "label": "SLA Compliance",
-                "value": "—",
-                "change": "—",
-                "positive": True,
-            },
         ],
         "projectStatus": {
             "total": total,
@@ -86,7 +68,7 @@ def dashboard_payload(projects: list[Project]) -> dict[str, Any]:
         },
         "spendByCategory": [],
         "topVendors": [],
-        "recentActivity": _recent_activity(projects),
+        "recentActivity": [],
     }
 
 
@@ -110,10 +92,7 @@ def projects_page_payload(
         "summary": [
             {"label": "Total Projects", "value": str(total), "trend": "—"},
             {"label": "Active Projects", "value": str(status_counts.get("active", 0)), "trend": "—"},
-            {"label": "In Progress", "value": str(total), "trend": "—"},
-            {"label": "Pending Decision", "value": str(status_counts.get("decision pending", 0)), "trend": "—"},
             {"label": "Completed", "value": str(status_counts.get("completed", 0)), "trend": "—"},
-            {"label": "On Hold", "value": "0", "trend": "—"},
         ],
         "filters": {
             "status": STATUS_FILTERS,
@@ -254,20 +233,6 @@ def _status_items(status_counts: Counter) -> list[dict[str, Any]]:
         if count:
             items.append({"label": label, "count": count, "dot": key})
     return items
-
-
-def _recent_activity(projects: list[Project]) -> list[dict[str, Any]]:
-    activity = []
-    for project in projects[:4]:
-        activity.append(
-            {
-                "icon": "▤",
-                "title": f"Project created: {project.name}",
-                "subtitle": project.code,
-                "timeAgo": "recent",
-            }
-        )
-    return activity
 
 
 def _category_filters(projects: list[Project]) -> list[dict[str, str]]:
