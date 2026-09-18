@@ -17,7 +17,10 @@ from shared.logger_global import get_logger
 log = get_logger(__name__)
 
 DEFAULT_BRAIN_BASE_URL = "http://127.0.0.1:8004"
-DEFAULT_TIMEOUT_S = 120.0
+# Concurrent background ingest (multi-file classification/parsing) can starve
+# the single ai_brain process long enough to blow a 120s read timeout on an
+# interactive chat stream — give it more headroom.
+DEFAULT_TIMEOUT_S = 240.0
 
 WORKSPACE_PROCUREMENT = {"mainagent": True, "deepagent": False}
 
