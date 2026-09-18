@@ -14,6 +14,7 @@ import sys
 import contextvars
 import threading
 import time
+import traceback
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -355,13 +356,18 @@ def _run_kb_build_thread(project_id: str) -> None:
         from ai_brain.core.kb.extract.runner import run_kb_build
 
         run_kb_build(project_id)
-    except Exception:
+    except Exception as exc:
         log.exception("kb_build thread failed project_id={}", project_id)
+        # Persist the real exception: app logs rotate within minutes, so this
+        # status file is the only durable record of why a build failed.
+        detail = "".join(
+            traceback.format_exception(type(exc), exc, exc.__traceback__)
+        )[-4000:]
         _set_kb_job(
             project_id,
             status="failed",
-            message="Knowledge base build failed.",
-            error="kb_build thread failed",
+            message=f"Knowledge base build failed: {type(exc).__name__}: {exc}"[:500],
+            error=detail,
         )
 
 

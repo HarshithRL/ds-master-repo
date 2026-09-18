@@ -27,6 +27,11 @@ log = get_logger(__name__, service="ai_brain")
 
 # 240s was too tight for the multi-turn vendor_analyst + pricing/profile passes on larger bids.
 ANALYZE_BID_TIMEOUT_S = 480.0
+# Self-guard must fire before LangGraph's Send timeout. LangGraph enforces that
+# one by cancelling the task (CancelledError is a BaseException), which this
+# node cannot catch — one slow bid would fail the whole build with no record of
+# which bid stalled. Timing out ourselves keeps the failure scoped to one bid.
+ANALYZE_BID_SOFT_TIMEOUT_S = ANALYZE_BID_TIMEOUT_S - 60.0
 
 
 def classify_unpinned_artifacts(project_id: str) -> int:
@@ -132,8 +137,9 @@ async def analyze_bid(
     bid_id = str(task.get("bid_id") or "").strip()
     set_current_project_id(project_id)
     try:
-        bundle, pricing, file_count, profile = await invoke_vendor_analyst(
-            project_id, bid_id, config=config
+        bundle, pricing, file_count, profile = await asyncio.wait_for(
+            invoke_vendor_analyst(project_id, bid_id, config=config),
+            timeout=ANALYZE_BID_SOFT_TIMEOUT_S,
         )
         counts = upsert_evidence_bundle(project_id, bundle)
         try:
@@ -153,9 +159,21 @@ async def analyze_bid(
     except Exception as exc:  # noqa: BLE001
         if is_checkpoint_sync_error(exc):
             raise
-        log.exception("vendor_analyst failed project_id={} bid_id={}", project_id, bid_id)
-        fill_extraction_failed(project_id, bid_id, detail=str(exc))
-        counts = {"error": str(exc)}
+        if isinstance(exc, asyncio.TimeoutError):
+            detail = (
+                f"vendor_analyst exceeded {ANALYZE_BID_SOFT_TIMEOUT_S:.0f}s for bid {bid_id}"
+            )
+            log.error(
+                "vendor_analyst timed out project_id={} bid_id={} limit_s={}",
+                project_id,
+                bid_id,
+                ANALYZE_BID_SOFT_TIMEOUT_S,
+            )
+        else:
+            detail = str(exc)
+            log.exception("vendor_analyst failed project_id={} bid_id={}", project_id, bid_id)
+        fill_extraction_failed(project_id, bid_id, detail=detail)
+        counts = {"error": detail}
         pricing_n = 0
         file_count = 0
         profile_n = 0
