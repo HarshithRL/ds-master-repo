@@ -62,6 +62,40 @@ export async function apiPost(path, body) {
   return response.json();
 }
 
+async function apiWrite(method, path, body) {
+  const init = {
+    method,
+    credentials: "include",
+  };
+  if (body !== undefined) {
+    init.headers = { "Content-Type": "application/json" };
+    init.body = JSON.stringify(body ?? {});
+  }
+  const response = await fetch(`${API_BASE}${path}`, init).then(captureRequestId);
+
+  if (!response.ok) {
+    let detail = `Request failed: ${response.status}`;
+    try {
+      const errBody = await response.json();
+      detail = errBody?.detail || errBody?.error || detail;
+    } catch {
+      /* ignore parse errors */
+    }
+    logRequestFailure(method, path, response.status, detail);
+    throw new Error(detail);
+  }
+
+  return response.json();
+}
+
+export async function apiPatch(path, body) {
+  return apiWrite("PATCH", path, body);
+}
+
+export async function apiDelete(path) {
+  return apiWrite("DELETE", path);
+}
+
 /**
  * POST multipart form data.
  */
@@ -200,38 +234,4 @@ export async function apiPostSse(
     }
     throw err;
   }
-}
-
-/** Consume an SSE stream exposed by a GET retrieval endpoint. */
-export async function apiGetSse(path, onEvent, { base = API_BASE, signal } = {}) {
-  const response = await fetch(`${base}${path}`, {
-    credentials: "include",
-    headers: { Accept: "text/event-stream" },
-    signal,
-  }).then(captureRequestId);
-  if (!response.ok) {
-    logRequestFailure("GET", path, response.status);
-    throw new Error(`Request failed: ${response.status}`);
-  }
-  if (!response.body) throw new Error("Streaming not supported by this browser.");
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  const drain = () => {
-    buffer = buffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-    let separator;
-    while ((separator = buffer.indexOf("\n\n")) !== -1) {
-      const frame = buffer.slice(0, separator);
-      buffer = buffer.slice(separator + 2);
-      if (!signal?.aborted) dispatchSseFrame(frame, onEvent);
-    }
-  };
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    drain();
-  }
-  buffer += decoder.decode();
-  drain();
 }

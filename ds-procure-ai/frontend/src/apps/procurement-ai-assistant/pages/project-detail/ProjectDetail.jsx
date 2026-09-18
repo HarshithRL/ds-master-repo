@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
-import { apiGet } from "../../../../services/api";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { apiGet, apiPatch, apiDelete } from "../../../../services/api";
 import OverviewTab from "./overview/OverviewTab";
 import WorkspaceTab from "./workspace/WorkspaceTab";
 import DocumentsTab from "./documents/DocumentsTab";
@@ -10,11 +10,13 @@ import "./project-detail.css";
 
 function ProjectDetail() {
   const { projectId } = useParams();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get("tab") || "overview";
   const [activeTab, setActiveTab] = useState(tabFromUrl);
   const [shell, setShell] = useState(null);
   const [error, setError] = useState(null);
+  const [busy, setBusy] = useState("");
   const loadedRef = useRef(false);
 
   useEffect(() => {
@@ -52,6 +54,43 @@ function ProjectDetail() {
       return;
     }
     setSearchParams({ tab: tabId }, { replace: true });
+  }
+
+  async function handleRename(currentName) {
+    const next = window.prompt("Rename project", currentName || "");
+    if (next === null) {
+      return;
+    }
+    const name = next.trim();
+    if (!name || name === currentName) {
+      return;
+    }
+    setBusy("rename");
+    try {
+      await apiPatch(`/api/procurement/projects/${projectId}`, { name });
+      refreshShell();
+    } catch (err) {
+      window.alert(err?.message || "Rename failed.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function handleDelete(currentName) {
+    const ok = window.confirm(
+      `Delete "${currentName}"? This permanently removes the project, its files and all extracted data.`,
+    );
+    if (!ok) {
+      return;
+    }
+    setBusy("delete");
+    try {
+      await apiDelete(`/api/procurement/projects/${projectId}`);
+      navigate("/app/procurement-ai-assistant/projects", { replace: true });
+    } catch (err) {
+      window.alert(err?.message || "Delete failed.");
+      setBusy("");
+    }
   }
 
   if (!shell && !error) {
@@ -108,18 +147,21 @@ function ProjectDetail() {
           </div>
 
           <div className="project-header-actions">
-            <button type="button" className="secondary-button">
-              Export
-            </button>
             <button
               type="button"
               className="secondary-button"
-              onClick={() => selectTab("workspace")}
+              disabled={busy !== ""}
+              onClick={() => handleRename(project.name)}
             >
-              Open Workspace
+              {busy === "rename" ? "Renaming…" : "Rename"}
             </button>
-            <button type="button" className="primary-button">
-              + Upload Files
+            <button
+              type="button"
+              className="secondary-button is-danger"
+              disabled={busy !== ""}
+              onClick={() => handleDelete(project.name)}
+            >
+              {busy === "delete" ? "Deleting…" : "Delete"}
             </button>
           </div>
         </header>

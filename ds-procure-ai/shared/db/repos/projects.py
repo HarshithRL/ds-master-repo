@@ -16,6 +16,9 @@ from shared.db.models import AppUser, Project, utc_now_iso
 from shared.db.paths import project_root
 from shared.db.volume_fs import ensure_dir
 from shared.db.seed import PROCUREMENT_MODULE_ID
+from shared.logger_global import get_logger
+
+log = get_logger(__name__)
 
 DEFAULT_PAGE_SIZE = 50
 UNTITLED = "untitled"
@@ -275,16 +278,87 @@ def delete_for_owner(
     *,
     module_id: str = PROCUREMENT_MODULE_ID,
 ) -> None:
+    from sqlalchemy import delete as sa_delete
+
+    from shared.db.models import (
+        Artifact,
+        BidProfileRow,
+        ChatMessage,
+        ChatSession,
+        Chunk,
+        Evidence,
+        KbBuildJob,
+        KbEdge,
+        KbNode,
+        OntologyFlag,
+        OntologyOffering,
+        OntologyRequirement,
+        Pack,
+        PricingLine,
+        QualityFlag,
+        Requirement,
+        TcoLine,
+        Vendor,
+    )
+
+    # Only `artifacts` cascades on the ORM relationship, and UC/Delta has no
+    # real FK enforcement — every other child table must be cleared explicitly
+    # or its rows outlive the project.
+    project_scoped = (
+        Evidence,
+        PricingLine,
+        BidProfileRow,
+        KbNode,
+        KbEdge,
+        Requirement,
+        Vendor,
+        Chunk,
+        OntologyRequirement,
+        OntologyOffering,
+        TcoLine,
+        OntologyFlag,
+        Pack,
+        QualityFlag,
+        KbBuildJob,
+        Artifact,
+    )
+
     with session_scope() as session:
         project = _get_for_owner(session, project_id, owner_id, module_id=module_id)
         if project is None:
             raise ProjectNotFoundError(project_id)
+
+        session_ids = list(
+            session.scalars(
+                select(ChatSession.id).where(ChatSession.project_id == project_id)
+            ).all()
+        )
+        if session_ids:
+            session.execute(
+                sa_delete(ChatMessage).where(ChatMessage.session_id.in_(session_ids))
+            )
+        session.execute(sa_delete(ChatSession).where(ChatSession.project_id == project_id))
+
+        for model in project_scoped:
+            try:
+                session.execute(sa_delete(model).where(model.project_id == project_id))
+            except Exception as exc:  # noqa: BLE001
+                log.warning(
+                    "project delete: clearing {} failed project_id={}: {}",
+                    getattr(model, "__tablename__", model),
+                    project_id,
+                    exc,
+                )
+
         session.delete(project)
         session.flush()
 
-    root = project_root(project_id)
-    if root.exists():
-        shutil.rmtree(root, ignore_errors=True)
+    from shared.db.volume_fs import delete_dir
+
+    try:
+        delete_dir(project_root(project_id))
+    except Exception as exc:  # noqa: BLE001
+        log.warning("project delete: volume cleanup failed project_id={}: {}", project_id, exc)
 
 
 def project_to_dict(project: Project) -> dict[str, Any]:
