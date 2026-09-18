@@ -19,7 +19,7 @@ from services.procurement_data import (
 STATUS_FILTERS = [
     {"value": "all", "label": "All Projects"},
     {"value": "active", "label": "Active"},
-    {"value": "evaluation", "label": "Evaluation"},
+    {"value": "on-hold", "label": "On Hold"},
     {"value": "completed", "label": "Completed"},
 ]
 
@@ -55,12 +55,6 @@ def dashboard_payload(projects: list[Project]) -> dict[str, Any]:
                 "change": "—",
                 "positive": True,
             },
-            {
-                "label": "Total Spend",
-                "value": _format_currency(total_budget) if total_budget else "—",
-                "change": "—",
-                "positive": True,
-            },
         ],
         "projectStatus": {
             "total": total,
@@ -92,6 +86,7 @@ def projects_page_payload(
         "summary": [
             {"label": "Total Projects", "value": str(total), "trend": "—"},
             {"label": "Active Projects", "value": str(status_counts.get("active", 0)), "trend": "—"},
+            {"label": "On Hold", "value": str(status_counts.get("on hold", 0)), "trend": "—"},
             {"label": "Completed", "value": str(status_counts.get("completed", 0)), "trend": "—"},
         ],
         "filters": {

@@ -8,6 +8,7 @@ resources/ds_procure_ai_kb_build.job.yml with --project-id / --kb-job-id.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import traceback
 from pathlib import Path
@@ -24,6 +25,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run kb_build for one project")
     parser.add_argument("--project-id", required=True)
     parser.add_argument("--kb-job-id", default="")
+    parser.add_argument("--extract-model-kind", default="")
     parser.add_argument("--write-xlsx", action="store_true")
     args = parser.parse_args()
 
@@ -32,6 +34,12 @@ def main() -> int:
     if not project_id:
         log.error("kb_build job called without --project-id")
         return 2
+
+    # Serverless does not inherit the app's env; mirror the tier the app chose.
+    model_kind = args.extract_model_kind.strip().lower()
+    if model_kind in ("fast", "thinking"):
+        os.environ["MATE_EXTRACT_MODEL_KIND"] = model_kind
+        log.info("kb_build job extract model kind={}", model_kind)
 
     from ai_brain.core.kb.extract import dispatch, job_store
     from ai_brain.core.kb.extract.runner import run_kb_build

@@ -54,9 +54,8 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
     { id: "kb", label: "Knowledge base" },
     { id: "gaps", label: "Missing docs" },
     { id: "xlsx", label: "Comparison Excel" },
-    { id: "ppt", label: "SteerCo PPT" },
   ];
-  const currentIndex = ["upload", "kb", "gaps", "xlsx", "ppt", "done"].indexOf(step);
+  const currentIndex = ["upload", "kb", "gaps", "xlsx", "done"].indexOf(step);
 
   return (
     <div className="ws-hitl">
@@ -158,25 +157,6 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
         </article>
       )}
 
-      {xlsxReady && !pptReady && (
-        <article className="ws-insight-card pack">
-          <header>
-            <span>Permission</span>
-            <strong>SteerCo</strong>
-          </header>
-          <p>Review the Excel first. PPT numbers come only from named Excel fields.</p>
-          <div className="ws-pack-actions">
-            {xlsxHref ? (
-              <a className="ws-pack-link" href={xlsxHref}>
-                Review Excel
-              </a>
-            ) : null}
-            <button type="button" className="ws-pack-btn" disabled={busy === "ppt"} onClick={() => onBuild("ppt")}>
-              {busy === "ppt" ? "Building..." : "Yes, build SteerCo"}
-            </button>
-          </div>
-        </article>
-      )}
 
       {pptReady && pptHref && (
         <article className="ws-insight-card pack">
@@ -229,8 +209,6 @@ function AnalysisRail({
             {insights?.owner_entity || "Owner unset"}
             {" · "}
             {insights?.file_count || 0} files
-            {" · "}
-            {insights?.knowledge_pct ?? 0}% coverage
           </p>
         </article>
         <HitlRail

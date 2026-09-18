@@ -489,6 +489,27 @@ class QualityFlag(Base):
     created_at: Mapped[str] = mapped_column(String, nullable=False, default=utc_now_iso)
 
 
+class Note(Base):
+    """Analyst decision log: human judgment the documents cannot supply.
+
+    `bid_id` scopes a note to one vendor; NULL means project-level. `source`
+    records where it came from so a captured chat answer stays distinguishable
+    from something the analyst asserted directly.
+    """
+
+    __tablename__ = "note"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    project_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    bid_id: Mapped[str | None] = mapped_column(String)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    kind: Mapped[str] = mapped_column(String, nullable=False, default="note")
+    source: Mapped[str] = mapped_column(String, nullable=False, default="manual")
+    author: Mapped[str | None] = mapped_column(String)
+    created_at: Mapped[str] = mapped_column(String, nullable=False, default=utc_now_iso)
+    updated_at: Mapped[str] = mapped_column(String, nullable=False, default=utc_now_iso)
+
+
 class KbBuildJob(Base):
     """Durable kb_build run record.
 

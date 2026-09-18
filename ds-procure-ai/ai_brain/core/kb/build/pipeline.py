@@ -596,10 +596,10 @@ def profile_from_result(result: Any, bid_id: str) -> BidProfile | None:
 
 async def _structured_fallback(schema: type, messages: list[Any], bid_id: str) -> Any:
     """ChatDatabricks.with_structured_output when the agent skipped ToolStrategy."""
-    from ai_brain.core.config.llm import get_llm
+    from ai_brain.core.config.llm import get_extract_model_kind, get_llm
     from ai_brain.core.procurement_ai.packs.matrix_layout import EXTRACT_MAX_TOKENS
 
-    llm = get_llm("thinking", max_tokens=EXTRACT_MAX_TOKENS)
+    llm = get_llm(get_extract_model_kind(), max_tokens=EXTRACT_MAX_TOKENS)
     out = await llm.with_structured_output(schema).ainvoke(
         _databricks_safe_messages(messages)
     )

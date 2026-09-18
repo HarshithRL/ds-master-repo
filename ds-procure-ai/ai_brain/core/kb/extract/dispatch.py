@@ -59,9 +59,17 @@ def submit_databricks_job(project_id: str, job_id: str) -> str:
         )
     from shared.databricks_runtime import workspace_client
 
+    # Serverless tasks do not inherit the app's env, so the model tier travels
+    # as a parameter — otherwise the job would silently use a different model.
+    from ai_brain.core.config.llm import get_extract_model_kind
+
     run = workspace_client().jobs.run_now(
         job_id=int(databricks_job_id),
-        job_parameters={"project_id": project_id, "kb_job_id": job_id},
+        job_parameters={
+            "project_id": project_id,
+            "kb_job_id": job_id,
+            "extract_model_kind": get_extract_model_kind(),
+        },
     )
     run_id = str(getattr(run, "run_id", "") or "")
     log.info(

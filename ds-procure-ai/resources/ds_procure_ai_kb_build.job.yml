@@ -27,6 +27,8 @@ resources:
           default: ""
         - name: kb_job_id
           default: ""
+        - name: extract_model_kind
+          default: ""
       # One retry covers transient LLM/warehouse blips; beyond that the failure
       # is real and must surface instead of looping.
       max_concurrent_runs: 4
@@ -53,5 +55,7 @@ resources:
               - "{{job.parameters.project_id}}"
               - "--kb-job-id"
               - "{{job.parameters.kb_job_id}}"
+              - "--extract-model-kind"
+              - "{{job.parameters.extract_model_kind}}"
       # No schedule — triggered on demand by the app after ingest.
       # No cluster — uses serverless by default.

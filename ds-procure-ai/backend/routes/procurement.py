@@ -282,6 +282,107 @@ def project_vendors(project_id):
 
 
 @procurement_bp.route(
+    "/api/procurement/projects/<project_id>/notes",
+    methods=["GET"],
+)
+def project_notes(project_id):
+    try:
+        owner_id = require_workspace_id()
+    except AuthRequiredError as exc:
+        return auth_error_response(exc)
+
+    if not _load_project_or_404(project_id, owner_id):
+        return jsonify({"error": "not_found"}), 404
+
+    from shared.db.repos import notes as note_repo
+
+    bid_id = (request.args.get("bid_id") or "").strip() or None
+    return jsonify({"notes": note_repo.list_for_project(project_id, bid_id=bid_id)})
+
+
+@procurement_bp.route(
+    "/api/procurement/projects/<project_id>/notes",
+    methods=["POST"],
+)
+def create_project_note(project_id):
+    try:
+        owner_id = require_workspace_id()
+    except AuthRequiredError as exc:
+        return auth_error_response(exc)
+
+    if not _load_project_or_404(project_id, owner_id):
+        return jsonify({"error": "not_found"}), 404
+
+    from shared.db.repos import notes as note_repo
+
+    body = request.get_json(silent=True) or {}
+    try:
+        note = note_repo.create(
+            project_id,
+            str(body.get("body") or ""),
+            bid_id=(str(body.get("bid_id") or "").strip() or None),
+            kind=str(body.get("kind") or "note"),
+            source=str(body.get("source") or "manual"),
+            author=str(body.get("author") or "") or None,
+        )
+    except ValueError as exc:
+        return jsonify({"error": "bad_request", "detail": str(exc)}), 400
+    return jsonify(note), 201
+
+
+@procurement_bp.route(
+    "/api/procurement/projects/<project_id>/notes/<note_id>",
+    methods=["PATCH", "DELETE"],
+)
+def modify_project_note(project_id, note_id):
+    try:
+        owner_id = require_workspace_id()
+    except AuthRequiredError as exc:
+        return auth_error_response(exc)
+
+    if not _load_project_or_404(project_id, owner_id):
+        return jsonify({"error": "not_found"}), 404
+
+    from shared.db.repos import notes as note_repo
+
+    try:
+        if request.method == "DELETE":
+            note_repo.delete(project_id, note_id)
+            return jsonify({"deleted": True, "id": note_id})
+        body = request.get_json(silent=True) or {}
+        return jsonify(note_repo.update(project_id, note_id, str(body.get("body") or "")))
+    except note_repo.NoteNotFoundError:
+        return jsonify({"error": "not_found"}), 404
+    except ValueError as exc:
+        return jsonify({"error": "bad_request", "detail": str(exc)}), 400
+
+
+@procurement_bp.route(
+    "/api/procurement/projects/<project_id>/vendors/<bid_id>",
+    methods=["PATCH"],
+)
+def update_project_vendor(project_id, bid_id):
+    try:
+        owner_id = require_workspace_id()
+    except AuthRequiredError as exc:
+        return auth_error_response(exc)
+
+    project = _load_project_or_404(project_id, owner_id)
+    if not project:
+        return jsonify({"error": "not_found"}), 404
+
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict) or "shortlisted" not in body:
+        return jsonify({"error": "bad_request", "detail": "shortlisted required"}), 400
+
+    from shared.db.repos import vendors as vendor_repo
+
+    shortlisted = bool(body.get("shortlisted"))
+    vendor_repo.set_shortlisted(project_id, bid_id, shortlisted)
+    return jsonify({"bid_id": bid_id, "shortlisted": shortlisted})
+
+
+@procurement_bp.route(
     "/api/procurement/projects/<project_id>/documents",
     methods=["GET"],
 )

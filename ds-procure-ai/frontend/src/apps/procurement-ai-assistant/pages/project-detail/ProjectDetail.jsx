@@ -6,7 +6,10 @@ import WorkspaceTab from "./workspace/WorkspaceTab";
 import DocumentsTab from "./documents/DocumentsTab";
 import RequirementsTab from "./requirements/RequirementsTab";
 import VendorsTab from "./vendors/VendorsTab";
+import NotesTab from "./notes/NotesTab";
 import "./project-detail.css";
+
+const PROJECT_STATUSES = ["Active", "On Hold", "Completed"];
 
 function ProjectDetail() {
   const { projectId } = useParams();
@@ -54,6 +57,18 @@ function ProjectDetail() {
       return;
     }
     setSearchParams({ tab: tabId }, { replace: true });
+  }
+
+  async function handleStatusChange(nextStatus) {
+    setBusy("status");
+    try {
+      await apiPatch(`/api/procurement/projects/${projectId}`, { status: nextStatus });
+      refreshShell();
+    } catch (err) {
+      window.alert(err?.message || "Status update failed.");
+    } finally {
+      setBusy("");
+    }
   }
 
   async function handleRename(currentName) {
@@ -135,7 +150,21 @@ function ProjectDetail() {
             <h1>{project.name}</h1>
 
             <div className="project-meta">
-              <span className="project-status-badge">{project.status}</span>
+              <select
+                className={`project-status-select ${project.status
+                  .toLowerCase()
+                  .replaceAll(" ", "-")}`}
+                value={project.status}
+                disabled={busy !== ""}
+                onChange={(event) => handleStatusChange(event.target.value)}
+                aria-label="Project status"
+              >
+                {PROJECT_STATUSES.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
               <span>{project.code}</span>
               <span>•</span>
               <span>Creator: {project.owner}</span>
@@ -195,6 +224,9 @@ function ProjectDetail() {
           )}
           {activeTab === "vendors" && (
             <VendorsTab projectId={projectId} />
+          )}
+          {activeTab === "notes" && (
+            <NotesTab projectId={projectId} />
           )}
         </div>
       </div>
