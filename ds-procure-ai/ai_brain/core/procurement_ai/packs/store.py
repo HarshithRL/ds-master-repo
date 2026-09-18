@@ -9,6 +9,9 @@ from typing import Any
 
 from shared.db.paths import project_root, projects_data_root
 from shared.db.volume_fs import ensure_dir, exists as vol_exists, read_text as vol_read_text, write_text as vol_write_text
+from shared.logger_global import get_logger
+
+log = get_logger(__name__)
 
 KINDS = ("xlsx", "ppt")
 VIEW_KINDS = ("overview", "requirements", "vendors")
@@ -63,7 +66,8 @@ def read_status(project_id: str) -> dict[str, Any]:
         return {"xlsx": dict(_IDLE_PACK), "ppt": dict(_IDLE_PACK), "kb": dict(_IDLE_KB)}
     try:
         data = json.loads(vol_read_text(path))
-    except (json.JSONDecodeError, Exception):
+    except Exception as exc:
+        log.warning("pack status read/parse failed project_id={} path={}: {}", project_id, path, exc)
         data = {}
     return {
         "xlsx": _pack_row(data.get("xlsx") if isinstance(data.get("xlsx"), dict) else None),
