@@ -1,12 +1,5 @@
-export const WORKFLOW_ENTRY_POINTS = [
-  "Sourcing",
-  "Vendor Comparison",
-  "Contract Negotiation",
-];
-
 export const EMPTY_BRIEF = {
   name: "",
-  workflowEntryPoint: "",
   businessProcess: "",
   requester: "",
   dept: "",
@@ -31,7 +24,6 @@ export function createProjectPayload(projectId, brief, requirements = []) {
   };
   const fields = [
     "name",
-    "workflowEntryPoint",
     "businessProcess",
     "requester",
     "dept",

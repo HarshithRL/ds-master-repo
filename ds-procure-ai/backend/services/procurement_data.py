@@ -8,7 +8,6 @@ TABS = [
     {"id": "documents", "label": "Documents"},
     {"id": "requirements", "label": "Requirements"},
     {"id": "vendors", "label": "Vendors"},
-    {"id": "activity", "label": "Activity"},
 ]
 
 EMPTY_OVERVIEW_SECTIONS = {
