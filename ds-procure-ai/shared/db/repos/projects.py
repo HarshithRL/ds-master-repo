@@ -29,6 +29,7 @@ WORKFLOW_ENTRY_POINTS = (
     "Contract Negotiation",
 )
 BUSINESS_PROCESSES = ("Indirect", "Direct")
+PROJECT_STATUSES = ("Active", "On Hold", "Completed")
 
 
 class ProjectNotFoundError(LookupError):
@@ -249,6 +250,11 @@ def update_for_owner(
                 if isinstance(value, list) and value:
                     project.requirements_json = json.dumps(value)
                 continue
+            if attr == "status":
+                if not _is_real_value(value):
+                    continue
+                project.status = _validate_status(value)
+                continue
             if attr == "budget":
                 if not _is_real_value(value):
                     continue
@@ -290,6 +296,7 @@ def delete_for_owner(
         KbBuildJob,
         KbEdge,
         KbNode,
+        Note,
         OntologyFlag,
         OntologyOffering,
         OntologyRequirement,
@@ -320,6 +327,7 @@ def delete_for_owner(
         Pack,
         QualityFlag,
         KbBuildJob,
+        Note,
         Artifact,
     )
 
@@ -476,6 +484,16 @@ def _validate_workflow_entry_point(value: object) -> str:
             f"workflowEntryPoint must be one of: {', '.join(WORKFLOW_ENTRY_POINTS)}"
         )
     return text
+
+
+def _validate_status(value: object) -> str:
+    text = str(value or "").strip()
+    match = {s.lower(): s for s in PROJECT_STATUSES}.get(text.lower())
+    if match is None:
+        raise ProjectValidationError(
+            f"status must be one of: {', '.join(PROJECT_STATUSES)}"
+        )
+    return match
 
 
 def _validate_business_process(value: object) -> str:

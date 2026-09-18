@@ -219,12 +219,12 @@ def build_vendor_analyst(
     from ai_brain.core.kb.api.mcp_tools import langchain_kb_tools
 
     del store
-    thinking = model or _llm("thinking")
+    primary = model or _llm(get_extract_model_kind())
     fast = fallback_model if fallback_model is not None else _llm("fast")
     agent_tools = tools if tools is not None else langchain_kb_tools()
     backend = StateBackend()
     return create_deep_agent(
-        model=thinking,
+        model=primary,
         tools=agent_tools,
         system_prompt=VENDOR_ANALYST_PROMPT,
         backend=backend,
@@ -250,10 +250,10 @@ def build_vendor_emit(
     from langchain.agents import create_agent
     from langchain.agents.structured_output import ToolStrategy
 
-    thinking = model or _llm("thinking")
+    primary = model or _llm(get_extract_model_kind())
     fast = fallback_model if fallback_model is not None else _llm("fast")
     return create_agent(
-        model=thinking,
+        model=primary,
         tools=[],
         system_prompt=VENDOR_EMIT_PROMPT,
         response_format=ToolStrategy(VendorEvidenceBundle, handle_errors=True),
@@ -274,10 +274,10 @@ def build_pricing_extractor(
     from langchain.agents.structured_output import ToolStrategy
 
     del tools
-    thinking = model or _llm("thinking")
+    primary = model or _llm(get_extract_model_kind())
     fast = fallback_model if fallback_model is not None else _llm("fast")
     return create_agent(
-        model=thinking,
+        model=primary,
         tools=[],
         system_prompt=PRICING_PROMPT,
         response_format=ToolStrategy(PricingExtraction, handle_errors=True),
@@ -296,10 +296,10 @@ def build_profile_extractor(
     from langchain.agents import create_agent
     from langchain.agents.structured_output import ToolStrategy
 
-    thinking = model or _llm("thinking")
+    primary = model or _llm(get_extract_model_kind())
     fast = fallback_model if fallback_model is not None else _llm("fast")
     return create_agent(
-        model=thinking,
+        model=primary,
         tools=[],
         system_prompt=PROFILE_PROMPT,
         response_format=ToolStrategy(BidProfile, handle_errors=True),
@@ -322,10 +322,10 @@ def build_requirement_extractor(
     from ai_brain.core.kb.api.mcp_tools import langchain_kb_tools
 
     del store
-    thinking = model or _llm("thinking")
+    primary = model or _llm(get_extract_model_kind())
     fast = fallback_model if fallback_model is not None else _llm("fast")
     return create_agent(
-        model=thinking,
+        model=primary,
         tools=tools if tools is not None else langchain_kb_tools(),
         system_prompt=(
             "Extract procurement requirements from /project/*/rfp/ only. "
@@ -336,6 +336,12 @@ def build_requirement_extractor(
         checkpointer=None,
         name="requirement_extractor",
     )
+
+
+def get_extract_model_kind() -> str:
+    from ai_brain.core.config.llm import get_extract_model_kind as _kind
+
+    return _kind()
 
 
 def _llm(kind: str):

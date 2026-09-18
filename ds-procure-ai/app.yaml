@@ -14,6 +14,10 @@ env:
   # which also needs MATE_KB_BUILD_JOB_ID from the kb_build job resource.
   - name: MATE_KB_BUILD_MODE
     value: thread
+  # Model tier for the extraction agents. fast = lower latency, shallower
+  # research. Agent/tool/middleware wiring is identical either way.
+  - name: MATE_EXTRACT_MODEL_KIND
+    value: thinking
   # A build with no heartbeat for this long is reported as failed, not pending.
   - name: MATE_KB_BUILD_STALE_S
     value: "900"

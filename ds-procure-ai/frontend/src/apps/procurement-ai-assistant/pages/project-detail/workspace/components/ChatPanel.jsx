@@ -166,12 +166,6 @@ const SKILLS = [
     hint: "Gaps against the uploaded RFP",
     prompt: "What's missing",
   },
-  {
-    id: "ppt",
-    label: "PPT generation",
-    hint: "SteerCo deck",
-    prompt: "Build SteerCo",
-  },
 ];
 
 function skillQuery(draft) {

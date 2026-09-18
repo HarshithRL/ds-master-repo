@@ -1,0 +1,105 @@
+.notes-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.note-form {
+  display: grid;
+  grid-template-columns: 140px 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+}
+
+.note-form select,
+.note-form textarea {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+.note-form button {
+  align-self: stretch;
+}
+
+.note-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.note-item {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+}
+
+.note-item.risk {
+  border-left-color: #fbbf24;
+}
+
+.note-item.decision {
+  border-left-color: #4ade80;
+}
+
+.note-item.question {
+  border-left-color: #60a5fa;
+}
+
+.note-item p {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+}
+
+.note-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.note-kind {
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.note-bid,
+.note-source {
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.note-delete {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.note-delete:hover {
+  color: #ff6b6b;
+}
+
+.note-empty,
+.note-error {
+  color: var(--muted);
+}

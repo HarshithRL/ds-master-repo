@@ -96,6 +96,21 @@ def get_thinking_model_name() -> str:
     return _load_model_names()["thinking"]
 
 
+def get_extract_model_kind() -> ModelKind:
+    """Model tier for the heavy extraction agents (vendor analyst, emit, matrix).
+
+    Set ``MATE_EXTRACT_MODEL_KIND=fast`` to trade extraction depth for latency.
+    Only the model object changes; agent, tool and middleware wiring is identical
+    either way. Defaults to ``thinking``.
+    """
+    raw = (os.getenv("MATE_EXTRACT_MODEL_KIND", "") or "").strip().lower()
+    if raw in ("fast", "thinking"):
+        return raw  # type: ignore[return-value]
+    if raw:
+        log.warning("ignoring invalid MATE_EXTRACT_MODEL_KIND value={}", raw)
+    return "thinking"
+
+
 def _serving_endpoint_name(kind: ModelKind) -> str:
     env_key = (
         "DATABRICKS_FAST_ENDPOINT" if kind == "fast" else "DATABRICKS_THINKING_ENDPOINT"

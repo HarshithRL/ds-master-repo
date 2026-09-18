@@ -167,7 +167,7 @@ def build_comparison_orchestrator(
     from ai_brain.core.kb.api.mcp_tools import langchain_kb_tools
     from ai_brain.core.kb.build.coverage import CoverageMiddleware
 
-    thinking = model or _llm("thinking")
+    primary = model or _llm(get_extract_model_kind())
     fast = fallback_model if fallback_model is not None else _llm("fast")
     agent_tools = tools if tools is not None else langchain_kb_tools()
     backend = StateBackend()
@@ -192,7 +192,7 @@ def build_comparison_orchestrator(
         },
     ]
     return create_deep_agent(
-        model=thinking,
+        model=primary,
         tools=agent_tools,
         system_prompt=ORCHESTRATOR_PROMPT,
         backend=backend,
@@ -219,10 +219,10 @@ def build_comparison_emit(
     from langchain.agents import create_agent
     from langchain.agents.structured_output import ToolStrategy
 
-    thinking = model or _llm("thinking")
+    primary = model or _llm(get_extract_model_kind())
     fast = fallback_model if fallback_model is not None else _llm("fast")
     return create_agent(
-        model=thinking,
+        model=primary,
         tools=[],
         system_prompt=EMIT_PROMPT,
         response_format=ToolStrategy(ComparisonMatrix, handle_errors=True),
@@ -307,6 +307,12 @@ def empty_matrix_for_process(process_type: str) -> ComparisonMatrix | None:
         return load_catalog(process_type)
     except ValueError:
         return None
+
+
+def get_extract_model_kind() -> str:
+    from ai_brain.core.config.llm import get_extract_model_kind as _kind
+
+    return _kind()
 
 
 def _llm(kind: str):

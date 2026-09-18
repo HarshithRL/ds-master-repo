@@ -100,29 +100,7 @@ function OverviewTab({ projectId }) {
           </div>
         </section>
 
-        <section className="overview-card">
-          <div className="overview-card-head">
-            <h2>Upcoming Milestones</h2>
-          </div>
-          <ul className="milestone-list">
-            {milestones.length === 0 ? (
-              <li className="empty-row">No milestones extracted yet.</li>
-            ) : null}
-            {milestones.map((item) => (
-              <li key={item.title}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.date}</span>
-                </div>
-                <em className={`milestone-status ${(item.status || "upcoming").toLowerCase().replace(/\s+/g, "-")}`}>
-                  {item.status}
-                </em>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="overview-card">
+                <section className="overview-card">
           <div className="overview-card-head">
             <h2>AI Insights</h2>
           </div>
@@ -163,27 +141,7 @@ function OverviewTab({ projectId }) {
           </div>
         </section>
 
-        <section className="overview-card">
-          <div className="overview-card-head">
-            <h2>Vendors</h2>
-          </div>
-          <div className="stat-row">
-            <div>
-              <span>Invited</span>
-              <strong>{vendors.invited}</strong>
-            </div>
-            <div>
-              <span>Responded</span>
-              <strong>{vendors.responded}</strong>
-            </div>
-            <div>
-              <span>Shortlisted</span>
-              <strong>{vendors.shortlisted}</strong>
-            </div>
-          </div>
-        </section>
-
-        <section className="overview-card">
+                <section className="overview-card">
           <div className="overview-card-head">
             <h2>Documents & Artifacts</h2>
           </div>
@@ -199,25 +157,7 @@ function OverviewTab({ projectId }) {
           </ul>
         </section>
 
-        <section className="overview-card">
-          <div className="overview-card-head">
-            <h2>Tasks & Approvals</h2>
-          </div>
-          <ul className="approval-list">
-            {approvals.map((item) => (
-              <li key={item.title}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.owner}</span>
-                </div>
-                <em className={`approval-status ${item.status.toLowerCase()}`}>
-                  {item.status}
-                </em>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
+              </div>
     </div>
   );
 }
