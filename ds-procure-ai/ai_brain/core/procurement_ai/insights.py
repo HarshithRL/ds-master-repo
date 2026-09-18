@@ -14,6 +14,9 @@ from ai_brain.core.procurement_ai.process_type import (
     owner_label,
     process_chip,
 )
+from shared.logger_global import get_logger
+
+log = get_logger(__name__, service="ai_brain")
 
 KNOWN_VENDORS = (
     "EY", "BDO", "KPMG", "PwC", "PWC", "Trifinance", "Inetum", "HISENER",
@@ -129,6 +132,12 @@ def _kb_status(project_id: str, file_count: int, packs: dict[str, Any]) -> tuple
     job = packs.get("kb") if isinstance(packs.get("kb"), dict) else {}
     job_status = str(job.get("status") or "").strip()
     job_message = job.get("message")
+    if job_status in {"ingesting", "building"}:
+        # A build whose worker stopped reporting is dead, not slow. Surface it
+        # instead of leaving the UI spinning indefinitely.
+        reaped = _reaped_kb_status(project_id, file_count)
+        if reaped is not None:
+            return reaped
     if job_status in {"ingesting", "building", "failed", "ready", "needs_review", "staged"}:
         return job_status, job_message or _default_kb_message(job_status, file_count)
     if not file_count:
@@ -149,6 +158,22 @@ def _kb_status(project_id: str, file_count: int, packs: dict[str, Any]) -> tuple
     if classified:
         return "building", _default_kb_message("building", file_count)
     return "ingesting", _default_kb_message("ingesting", file_count)
+
+
+def _reaped_kb_status(project_id: str, file_count: int) -> tuple[str, str | None] | None:
+    """Flip a stalled build to failed. Returns None when the run is still alive."""
+    if not project_id:
+        return None
+    try:
+        from ai_brain.core.kb.extract import job_store
+
+        reaped = job_store.reap_stalled(project_id)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("kb stall check failed project_id={}: {}", project_id, exc)
+        return None
+    if not reaped:
+        return None
+    return "failed", reaped.get("message") or _default_kb_message("failed", file_count)
 
 
 def _default_kb_message(status: str, file_count: int) -> str:

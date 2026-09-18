@@ -329,19 +329,46 @@ def _auto_kb_build_enabled() -> bool:
     return os.getenv("KB_AUTO_BUILD", "1").strip().lower() not in {"0", "false", "no"}
 
 
-def enqueue_kb_build(project_id: str) -> threading.Thread:
-    """Fire-and-forget kb_build after parse/classify. Does not write Excel."""
-    log.info("enqueue kb_build project_id={}", project_id)
-    _set_kb_job(
-        project_id,
-        status="building",
-        message="Extracting vendor evidence from uploaded files…",
-    )
+def enqueue_kb_build(project_id: str) -> threading.Thread | None:
+    """Start kb_build after parse/classify. Does not write Excel.
+
+    MATE_KB_BUILD_MODE=job runs it as a durable Databricks Job (survives app
+    restarts); the default `thread` mode keeps the original in-process path.
+    Returns the thread for thread mode, None for job mode.
+    """
+    from ai_brain.core.kb.extract import dispatch, job_store
+
+    mode = dispatch.build_mode()
+    log.info("enqueue kb_build project_id={} mode={}", project_id, mode)
+    kb_job_id = job_store.create_job(project_id, mode=mode)
+
+    if mode == dispatch.MODE_JOB:
+        try:
+            run_id = dispatch.submit_databricks_job(project_id, kb_job_id)
+            job_store.mark_running(kb_job_id, project_id, run_id=run_id)
+            return None
+        except Exception as exc:
+            # Submission failed (misconfig, permissions). Fall back to the
+            # in-process path rather than leaving the project with no build.
+            log.exception(
+                "kb_build job submit failed project_id={}, falling back to thread",
+                project_id,
+            )
+            job_store.finish(
+                kb_job_id,
+                project_id,
+                status="queued",
+                message="Job submit failed; running in-process instead.",
+                error=f"{type(exc).__name__}: {exc}",
+            )
+            kb_job_id = job_store.create_job(project_id, mode=dispatch.MODE_THREAD)
+
+    job_store.mark_running(kb_job_id, project_id)
     # Propagate visitor OBO context for UC writes in kb_build.
     ctx = contextvars.copy_context()
     thread = threading.Thread(
         target=ctx.run,
-        args=(_run_kb_build_thread, project_id),
+        args=(_run_kb_build_thread, project_id, kb_job_id),
         daemon=True,
         name=f"kb-build-{project_id[:12]}",
     )
@@ -349,9 +376,13 @@ def enqueue_kb_build(project_id: str) -> threading.Thread:
     return thread
 
 
-def _run_kb_build_thread(project_id: str) -> None:
+def _run_kb_build_thread(project_id: str, kb_job_id: str = "") -> None:
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+    from ai_brain.core.kb.extract import dispatch, job_store
+
+    stop_heartbeat = dispatch.start_heartbeat(kb_job_id) if kb_job_id else None
     try:
         from ai_brain.core.kb.extract.runner import run_kb_build
 
@@ -363,12 +394,28 @@ def _run_kb_build_thread(project_id: str) -> None:
         detail = "".join(
             traceback.format_exception(type(exc), exc, exc.__traceback__)
         )[-4000:]
-        _set_kb_job(
-            project_id,
-            status="failed",
-            message=f"Knowledge base build failed: {type(exc).__name__}: {exc}"[:500],
-            error=detail,
-        )
+        message = f"Knowledge base build failed: {type(exc).__name__}: {exc}"[:500]
+        if kb_job_id:
+            job_store.finish(
+                kb_job_id, project_id, status="failed", message=message, error=detail
+            )
+        else:
+            _set_kb_job(project_id, status="failed", message=message, error=detail)
+    else:
+        if kb_job_id:
+            from ai_brain.core.procurement_ai.packs import store as pack_store
+
+            kb = pack_store.read_status(project_id).get("kb") or {}
+            job_store.finish(
+                kb_job_id,
+                project_id,
+                status=str(kb.get("status") or "ready"),
+                message=kb.get("message"),
+                error=kb.get("error"),
+            )
+    finally:
+        if stop_heartbeat is not None:
+            stop_heartbeat.set()
 
 
 def pending_artifact_ids(project_id: str) -> list[str]:

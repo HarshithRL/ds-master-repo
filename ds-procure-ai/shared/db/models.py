@@ -489,6 +489,31 @@ class QualityFlag(Base):
     created_at: Mapped[str] = mapped_column(String, nullable=False, default=utc_now_iso)
 
 
+class KbBuildJob(Base):
+    """Durable kb_build run record.
+
+    The legacy in-process thread leaves no trace if the app restarts mid-build,
+    so a project can sit on "building" forever. A row here plus `heartbeat_at`
+    makes a dead run detectable instead of indistinguishable from a slow one.
+    """
+
+    __tablename__ = "kb_build_job"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    project_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="queued")
+    mode: Mapped[str] = mapped_column(String, nullable=False, default="thread")
+    run_id: Mapped[str | None] = mapped_column(String)
+    message: Mapped[str | None] = mapped_column(Text)
+    error: Mapped[str | None] = mapped_column(Text)
+    attempt: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    heartbeat_at: Mapped[str | None] = mapped_column(String)
+    started_at: Mapped[str | None] = mapped_column(String)
+    finished_at: Mapped[str | None] = mapped_column(String)
+    created_at: Mapped[str] = mapped_column(String, nullable=False, default=utc_now_iso)
+    updated_at: Mapped[str] = mapped_column(String, nullable=False, default=utc_now_iso)
+
+
 def identity_user_payload(user: dict[str, Any] | None) -> dict[str, str | None]:
     if not isinstance(user, dict):
         return {
