@@ -24,15 +24,24 @@ __all__ = [
 
 log = get_logger(__name__)
 
+_FILES_SCOPE = "files.files"
+
 
 def _files_client():
     from shared.databricks_runtime import (
         obo_is_bound,
+        obo_token_scopes,
         request_workspace_client,
         workspace_client,
     )
 
-    if obo_is_bound():
+    # Mirror shared/db/connection.py's _SQL_SCOPE check: only trust the
+    # visitor OBO token for the Files API if it actually carries the
+    # files.files scope. An app deploy/update that hasn't (re)granted this
+    # scope yet still issues OBO tokens without it — using them anyway
+    # causes every volume read/write to fail permission checks, which
+    # exists()/read_text() then swallow, masking real data as "not found".
+    if obo_is_bound() and _FILES_SCOPE in obo_token_scopes():
         return request_workspace_client()
     return workspace_client()
 
@@ -81,7 +90,8 @@ def exists(path: Path) -> bool:
     try:
         _files_client().files.get_status(posix)
         return True
-    except Exception:
+    except Exception as exc:
+        log.debug("uc volume exists check failed path={}: {}", posix, exc)
         return False
 
 
