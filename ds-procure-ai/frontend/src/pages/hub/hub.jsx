@@ -63,7 +63,7 @@ const PLATFORM_UPDATES = [
 ];
 
 function brandNameForDisplay(name) {
-  return name === "Mate" ? "Nexus" : name;
+  return name === "Mate" ? "Procurement Hub" : name;
 }
 
 function displayNameFrom(identity) {
@@ -214,7 +214,7 @@ function Hub() {
     return (
       <div className="hub-loading">
         <span className="hub-loading-mark" />
-        Loading Nexus...
+        Loading Procurement Hub...
       </div>
     );
   }
@@ -232,8 +232,6 @@ function Hub() {
   const featuredTool =
     tools.find((tool) => tool.id === "procurement-ai-assistant") ??
     tools.find((tool) => tool.available !== false);
-  const upcomingTools = tools.filter((tool) => tool.id !== featuredTool?.id);
-  const heroDescription = "Your workspace for Etex AI modules";
 
   // --------------------------------------------------
   // Hub
@@ -259,27 +257,6 @@ function Hub() {
             </span>
           </div>
 
-          <div className="hub-search">
-            <Search aria-hidden="true" size={24} strokeWidth={1.7} />
-            <input
-              aria-label="Search Nexus"
-              type="search"
-              placeholder="Search Nexus"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-            />
-            {searchQuery ? (
-              <button
-                type="button"
-                className="hub-search-clear"
-                aria-label="Clear search"
-                onClick={() => setSearchQuery("")}
-              >
-                <X aria-hidden="true" size={16} strokeWidth={2} />
-              </button>
-            ) : null}
-          </div>
-
           <div className="hub-actions">
             <ThemeToggle className="hub-theme-toggle" />
             <span className="hub-action-divider" />
@@ -295,95 +272,17 @@ function Hub() {
           <div className="welcome-content">
 
             <h1 id="hub-title">
-              Welcome to Nexus
+              Welcome to Procurement Hub
             </h1>
 
-            <p>
-              {heroDescription}
-            </p>
-
-          </div>
-
-          <NexusMap />
-
-        </section>
-
-        {featuredTool ? (
-          <section className="hub-featured" aria-labelledby="hub-featured-title">
-            <ModuleIcon tool={featuredTool} featured />
-
-            <div className="hub-featured-copy">
-              <div className="hub-featured-heading">
-                <h2 id="hub-featured-title">{featuredTool.name}</h2>
-                <span>Available now</span>
-              </div>
-              <p>
-                Compare vendor responses, organise project evidence, and reach
-                decisions faster.
-              </p>
-              <div className="hub-tags" aria-label="Module capabilities">
-                {FEATURED_TAGS.map((tag) => (
-                  <span key={tag}>{tag}</span>
-                ))}
-              </div>
-            </div>
-
-            {featuredTool.available === false ? (
-              <div className="hub-featured-disabled" aria-disabled="true">
-                Coming soon
-              </div>
-            ) : (
-              <Link className="hub-featured-cta" to={featuredTool.path}>
-                Open Procurement
+            {featuredTool ? (
+              <Link className="hub-hero-cta" to={featuredTool.path}>
+                Open the AI Hub
               </Link>
-            )}
-          </section>
-        ) : null}
+            ) : null}
 
-        {upcomingTools.length > 0 ? (
-          <section className="hub-upcoming" aria-labelledby="hub-upcoming-title">
-            <h2 id="hub-upcoming-title">Explore upcoming modules</h2>
-
-            <div className="hub-module-grid">
-              {upcomingTools.map((tool) => (
-                <article
-                  key={tool.id ?? tool.name}
-                  className="hub-module-card"
-                  aria-disabled={tool.available === false ? "true" : undefined}
-                >
-                  <ModuleIcon tool={tool} />
-                  <div className="hub-module-copy">
-                    <h3>{tool.name}</h3>
-                    <p>{tool.description}</p>
-                    <span className="hub-development-status">
-                      <span aria-hidden="true" />
-                      In development
-                    </span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section className="hub-platform-updates" aria-labelledby="hub-updates-title">
-          <h2 id="hub-updates-title">Platform updates</h2>
-
-          <div className="hub-update-list">
-            {PLATFORM_UPDATES.map((item) => {
-              return (
-                <article className="hub-update-item" key={item.title}>
-                  <div className="hub-update-icon">
-                    {renderUpdateIcon(item.icon)}
-                  </div>
-                  <div>
-                    <h3>{item.title}</h3>
-                    <p>{item.meta}</p>
-                  </div>
-                </article>
-              );
-            })}
           </div>
+
         </section>
 
       </div>

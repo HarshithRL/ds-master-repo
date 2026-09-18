@@ -21,9 +21,6 @@ import { useWorkspaceChatStream } from "./useWorkspaceChatStream";
 
 const CENTER_TABS = [
   "Chat",
-  "Document",
-  "Spreadsheet",
-  "Presentation",
   "History",
 ];
 
@@ -316,7 +313,6 @@ function ChatPanel({
   const analysis = useChatAnalysis(projectId, {
     refreshToken: analysisRefresh,
     onInsights,
-    uploading,
   });
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const sending = ui.status === "sending";

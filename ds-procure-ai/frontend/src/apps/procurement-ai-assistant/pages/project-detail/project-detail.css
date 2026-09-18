@@ -287,3 +287,18 @@
     align-items: stretch;
   }
 }
+
+.secondary-button.is-danger {
+  color: #ff6b6b;
+  border-color: rgba(255, 107, 107, 0.45);
+}
+
+.secondary-button.is-danger:hover:not(:disabled) {
+  background: rgba(255, 107, 107, 0.12);
+  border-color: rgba(255, 107, 107, 0.7);
+}
+
+.project-header-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

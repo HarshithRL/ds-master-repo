@@ -71,7 +71,7 @@ function Navbar() {
             />
 
             <span className="navbar-mate">
-              Nexus
+              Procurement Hub
             </span>
           </Link>
         </div>
