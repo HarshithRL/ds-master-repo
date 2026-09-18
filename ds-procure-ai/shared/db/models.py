@@ -256,8 +256,9 @@ class Vendor(Base):
 class Requirement(Base):
     __tablename__ = "requirement"
 
+    # R-ids repeat across projects, so identity is (id, project_id), not id alone.
     id: Mapped[str] = mapped_column(String, primary_key=True)
-    project_id: Mapped[str] = mapped_column(String, nullable=False)
+    project_id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
     ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
     section: Mapped[str | None] = mapped_column(String)
     text: Mapped[str] = mapped_column(Text, nullable=False)
@@ -273,7 +274,11 @@ class Evidence(Base):
     __tablename__ = "evidence"
     __table_args__ = (
         UniqueConstraint(
-            "requirement_id", "vendor_id", "model_version", name="uq_evidence_req_vendor_model"
+            "project_id",
+            "requirement_id",
+            "vendor_id",
+            "model_version",
+            name="uq_evidence_req_vendor_model",
         ),
         CheckConstraint(
             "status IN ('met','partial','not_offered','not_stated','unclear','extraction_failed')",
