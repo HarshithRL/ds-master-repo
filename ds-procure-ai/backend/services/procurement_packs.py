@@ -71,10 +71,17 @@ def insights_for_owner(project_id: str, owner_id: str) -> dict[str, Any] | None:
 
 
 def _build_local_insights(project_id: str, project: Any, owner_id: str) -> dict[str, Any]:
+    from concurrent.futures import ThreadPoolExecutor
+
     from ai_brain.core.procurement_ai.insights import build_insight_payload
 
-    artifacts = artifact_repo.list_for_project(project_id, owner_id)
-    chunks = chunk_repo.list_for_project(project_id)
+    # Each call opens its own NullPool DBSQL connection (OBO-scoped, not
+    # pooled/reusable) — run them concurrently instead of two round trips.
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        artifacts_future = pool.submit(artifact_repo.list_for_project, project_id, owner_id)
+        chunks_future = pool.submit(chunk_repo.list_for_project, project_id)
+        artifacts = artifacts_future.result()
+        chunks = chunks_future.result()
     return build_insight_payload(project, artifacts, chunks)
 
 
