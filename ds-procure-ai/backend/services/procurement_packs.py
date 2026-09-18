@@ -60,13 +60,21 @@ def insights_for_owner(project_id: str, owner_id: str) -> dict[str, Any] | None:
             result = _build_local_insights(project_id, project, owner_id)
     except Exception as exc:  # noqa: BLE001
         log.warning("brain insights fallback: {}", exc)
-        result = _build_local_insights(project_id, project, owner_id)
-    finally:
-        with _INSIGHT_LOCK:
-            _INSIGHT_CACHE[cache_key] = (monotonic(), result)
-            waiter = _INSIGHT_IN_FLIGHT.pop(cache_key, None)
-            if waiter:
-                waiter.set()
+        try:
+            result = _build_local_insights(project_id, project, owner_id)
+        except Exception:
+            # Fallback itself failed — release waiters and surface the real
+            # error instead of masking it with an unbound `result` in finally.
+            with _INSIGHT_LOCK:
+                waiter = _INSIGHT_IN_FLIGHT.pop(cache_key, None)
+                if waiter:
+                    waiter.set()
+            raise
+    with _INSIGHT_LOCK:
+        _INSIGHT_CACHE[cache_key] = (monotonic(), result)
+        waiter = _INSIGHT_IN_FLIGHT.pop(cache_key, None)
+        if waiter:
+            waiter.set()
     return result
 
 
@@ -81,10 +89,15 @@ def _build_local_insights(project_id: str, project: Any, owner_id: str) -> dict[
     # ThreadPoolExecutor workers do not inherit contextvars, so the visitor
     # OBO token must be copied in explicitly or these silently run as the
     # app service principal instead (which lacks the visitor's UC grants).
-    ctx = contextvars.copy_context()
+    # Each thread needs its OWN Context — the same Context cannot be
+    # entered concurrently from two threads (raises RuntimeError).
     with ThreadPoolExecutor(max_workers=2) as pool:
-        artifacts_future = pool.submit(ctx.run, artifact_repo.list_for_project, project_id, owner_id)
-        chunks_future = pool.submit(ctx.run, chunk_repo.list_for_project, project_id)
+        artifacts_future = pool.submit(
+            contextvars.copy_context().run, artifact_repo.list_for_project, project_id, owner_id
+        )
+        chunks_future = pool.submit(
+            contextvars.copy_context().run, chunk_repo.list_for_project, project_id
+        )
         artifacts = artifacts_future.result()
         chunks = chunks_future.result()
     return build_insight_payload(project, artifacts, chunks)
