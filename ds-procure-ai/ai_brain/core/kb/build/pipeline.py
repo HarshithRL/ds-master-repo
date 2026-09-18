@@ -25,7 +25,8 @@ from shared.logger_global import get_logger
 
 log = get_logger(__name__, service="ai_brain")
 
-ANALYZE_BID_TIMEOUT_S = 240.0
+# 240s was too tight for the multi-turn vendor_analyst + pricing/profile passes on larger bids.
+ANALYZE_BID_TIMEOUT_S = 480.0
 
 
 def classify_unpinned_artifacts(project_id: str) -> int:
