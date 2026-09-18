@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import time
 from typing import Any, Optional
 
 from langchain_core.runnables import RunnableConfig
@@ -122,6 +123,20 @@ def plan_kb_build(state: dict[str, Any]) -> list[Send] | str:
         )
         for bid_id in bids
     ]
+
+
+def _tool_call_stats(messages: Any) -> tuple[int, int]:
+    """(assistant turns, tool calls) — each assistant turn is one model round trip."""
+    turns = 0
+    tool_calls = 0
+    for msg in list(messages or []):
+        calls = getattr(msg, "tool_calls", None)
+        if calls:
+            tool_calls += len(calls)
+        msg_type = getattr(msg, "type", None) or type(msg).__name__
+        if str(msg_type).lower() in {"ai", "aimessage"}:
+            turns += 1
+    return turns, tool_calls
 
 
 async def analyze_bid(
@@ -317,11 +332,23 @@ async def invoke_vendor_analyst(
         "files": payload.get("files") or {},
     }
     research: dict[str, Any] = {"messages": payload["messages"]}
+    research_t0 = time.monotonic()
     async with mcp_kb_tools_context() as tools:
         researcher = build_vendor_analyst(tools=tools)
         with coverage_scope(coverage):
             for turn in range(1 + MAX_COVERAGE_REFILLS):
+                turn_t0 = time.monotonic()
                 research = await researcher.ainvoke(state, config=nested)
+                turns, tool_calls = _tool_call_stats(research.get("messages"))
+                log.info(
+                    "PERF vendor_analyst turn={} elapsed_s={:.1f} llm_turns={} tool_calls={} project_id={} bid_id={}",
+                    turn + 1,
+                    time.monotonic() - turn_t0,
+                    turns,
+                    tool_calls,
+                    project_id,
+                    bid_id,
+                )
                 unread = coverage.unread()
                 if not unread:
                     break
@@ -338,6 +365,17 @@ async def invoke_vendor_analyst(
                     "files": payload.get("files") or {},
                 }
     research_messages = list(research.get("messages") or payload["messages"])
+    research_elapsed = time.monotonic() - research_t0
+    total_turns, total_tool_calls = _tool_call_stats(research_messages)
+    log.info(
+        "PERF vendor_analyst TOTAL elapsed_s={:.1f} llm_turns={} tool_calls={} chunks={} project_id={} bid_id={}",
+        research_elapsed,
+        total_turns,
+        total_tool_calls,
+        len(required),
+        project_id,
+        bid_id,
+    )
     unread = coverage.unread()
     emit_messages = _databricks_safe_messages(research_messages)
     emit = build_vendor_emit()
@@ -415,10 +453,17 @@ async def invoke_vendor_analyst(
             )
             return None
 
+    extract_t0 = time.monotonic()
     result, pricing_result, profile_result = await asyncio.gather(
         _ainvoke_emit(),
         _ainvoke_pricing(),
         _ainvoke_profile(),
+    )
+    log.info(
+        "PERF extractors elapsed_s={:.1f} project_id={} bid_id={}",
+        time.monotonic() - extract_t0,
+        project_id,
+        bid_id,
     )
     try:
         bundle = bundle_from_result(result, bid_id)

@@ -20,7 +20,18 @@ PARSE_ERROR = "error"
 PARSE_SKIPPED = "skipped"
 
 
-def parse_and_store(artifact: Artifact) -> Artifact:
+def parse_and_store(artifact: Artifact, *, force: bool = False) -> Artifact:
+    # Two independent callers reach this for the same artifact (the upload
+    # route's ingest pipeline and ai_brain's ingest fanout). Re-running Azure
+    # Document Intelligence produces an identical result at full cost/latency.
+    if not force and (getattr(artifact, "parse_status", "") or "") == PARSE_OK:
+        log.info(
+            "artifact parse skipped (already parsed) artifact_id={} name={}",
+            artifact.id,
+            artifact.original_name,
+        )
+        return artifact
+
     source_path = artifact_absolute_path(artifact.storage_relpath)
     try:
         from shared.db.volume_fs import read_bytes as vol_read_bytes
