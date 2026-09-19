@@ -6,7 +6,7 @@
 # MAGIC %md
 # MAGIC # Setup Mate UC Tables
 # MAGIC
-# MAGIC Creates the 21 `mate_*` Delta tables (+ volume) in `{catalog}.bronze` for the
+# MAGIC Creates the 24 `mate_*` Delta tables (+ volume) in `{catalog}.bronze` for the
 # MAGIC ds-procure-ai app. Run this in each environment **before** the consumer access
 # MAGIC pipeline so that GRANT statements don't fail on non-existent objects.
 # MAGIC
@@ -152,6 +152,20 @@ tables = {
     "mate_quality_flag": """
         id STRING NOT NULL, project_id STRING, artifact_id STRING, kind STRING NOT NULL,
         detail STRING, severity STRING, created_at STRING NOT NULL
+    """,
+    # Analyst decision log. bid_id NULL = project-level note.
+    "mate_note": """
+        id STRING NOT NULL, project_id STRING NOT NULL, bid_id STRING, body STRING NOT NULL,
+        kind STRING NOT NULL, source STRING NOT NULL, author STRING,
+        created_at STRING NOT NULL, updated_at STRING NOT NULL
+    """,
+    # Durable kb_build run record. heartbeat_at is what distinguishes a dead
+    # build from a slow one; without this table stalled builds are never reaped.
+    "mate_kb_build_job": """
+        id STRING NOT NULL, project_id STRING NOT NULL, status STRING NOT NULL,
+        mode STRING NOT NULL, run_id STRING, message STRING, error STRING,
+        attempt INT NOT NULL, heartbeat_at STRING, started_at STRING,
+        finished_at STRING, created_at STRING NOT NULL, updated_at STRING NOT NULL
     """,
 }
 
