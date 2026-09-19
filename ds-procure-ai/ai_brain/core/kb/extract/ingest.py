@@ -450,6 +450,21 @@ def _usable_markdown(parsed_json: str | None) -> bool:
     return isinstance(markdown, str) and bool(markdown.strip())
 
 
+def failed_artifact_ids(project_id: str) -> list[str]:
+    """parse_status=error — retried because a parser fix cannot heal them otherwise."""
+    if not project_id:
+        return []
+    with session_scope() as session:
+        rows = session.scalars(
+            select(Artifact)
+            .where(Artifact.project_id == project_id)
+            .order_by(Artifact.created_at.asc())
+        ).all()
+        return [
+            row.id for row in rows if (row.parse_status or "").strip() == PARSE_ERROR
+        ]
+
+
 def stale_ok_artifact_ids(project_id: str) -> list[str]:
     """parse_status=ok but missing SQL chunks or usable parsed_json.markdown — reparse."""
     if not project_id:
@@ -476,6 +491,9 @@ async def ensure_parsed_for_matrix(project_id: str) -> IngestReport:
     """Parse pending uploads and reparse ok-but-empty corpus. Does not start kb_build."""
     ids = pending_artifact_ids(project_id)
     for aid in stale_ok_artifact_ids(project_id):
+        if aid not in ids:
+            ids.append(aid)
+    for aid in failed_artifact_ids(project_id):
         if aid not in ids:
             ids.append(aid)
     if not ids:

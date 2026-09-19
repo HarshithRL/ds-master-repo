@@ -236,13 +236,24 @@ def list_bid_chunk_rows(project_id: str | None, bid_id: str) -> list[dict[str, A
         """
         params = {"pid": pid}
     else:
+        # Role order, not filename order: a company-registry extract can be 65%
+        # of a bid's chunks and answers almost no requirement, so the agent must
+        # reach the priced proposal before its turn budget runs out.
         sql = f"""
             SELECT c.id AS chunk_id, c.artifact_id, c.ordinal, c.token_count,
                    c.heading_path_json, c.location_json, a.original_name, a.vendor_id
               FROM {chunk} c
               JOIN {artifact} a ON a.id = c.artifact_id
              WHERE c.project_id = :pid AND a.vendor_id = :bid
-             ORDER BY a.original_name, c.ordinal
+             ORDER BY CASE lower(coalesce(a.doc_role, ''))
+                        WHEN 'pricing' THEN 0
+                        WHEN 'proposal' THEN 1
+                        WHEN 'reference' THEN 3
+                        WHEN 'csr' THEN 4
+                        WHEN 'registry' THEN 5
+                        ELSE 2
+                      END,
+                      a.original_name, c.ordinal
         """
         params = {"pid": pid, "bid": bid}
     with session_scope() as session:

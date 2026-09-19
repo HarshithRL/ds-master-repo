@@ -27,12 +27,14 @@ from shared.logger_global import get_logger
 log = get_logger(__name__, service="ai_brain")
 
 # 240s was too tight for the multi-turn vendor_analyst + pricing/profile passes on larger bids.
-ANALYZE_BID_TIMEOUT_S = 480.0
+ANALYZE_BID_TIMEOUT_S = 600.0
 # Self-guard must fire before LangGraph's Send timeout. LangGraph enforces that
 # one by cancelling the task (CancelledError is a BaseException), which this
 # node cannot catch — one slow bid would fail the whole build with no record of
 # which bid stalled. Timing out ourselves keeps the failure scoped to one bid.
-ANALYZE_BID_SOFT_TIMEOUT_S = ANALYZE_BID_TIMEOUT_S - 60.0
+# The gap must also cover fill_extraction_failed; at 60s a real run was killed
+# mid-cleanup and left the project with no evidence at all.
+ANALYZE_BID_SOFT_TIMEOUT_S = 420.0
 
 
 def classify_unpinned_artifacts(project_id: str) -> int:
