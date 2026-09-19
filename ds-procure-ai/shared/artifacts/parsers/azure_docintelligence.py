@@ -83,6 +83,19 @@ class AzureDocIntelligenceParser:
 class AzurePdfParser(AzureDocIntelligenceParser):
     kind = ArtifactType.PDF
 
+    def parse(self, path: Path, options: ParseOptions) -> ArtifactDocument:
+        # Document Intelligence is the only PDF path; without this an outage or a
+        # single rejected file fails the whole ingest.
+        try:
+            return super().parse(path, options)
+        except ArtifactParseError as exc:
+            from .pdf_parser import PdfParser
+
+            log.warning(
+                "pdf falling back to local parser file={} detail={}", path.name, exc
+            )
+            return PdfParser().parse(path, options)
+
 
 class AzureDocxParser(AzureDocIntelligenceParser):
     kind: ArtifactType = ArtifactType.WORD
