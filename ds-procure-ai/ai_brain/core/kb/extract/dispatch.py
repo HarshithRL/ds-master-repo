@@ -10,6 +10,7 @@ Select with MATE_KB_BUILD_MODE=thread|job.
 
 from __future__ import annotations
 
+import contextvars
 import os
 import threading
 import time
@@ -43,8 +44,11 @@ def start_heartbeat(job_id: str) -> threading.Event:
         while not stop.wait(HEARTBEAT_INTERVAL_S):
             job_store.heartbeat(job_id)
 
+    # Threads start with an empty context, so without this copy the beat loses
+    # the visitor's OBO token and every UC write is denied.
+    ctx = contextvars.copy_context()
     threading.Thread(
-        target=_beat, daemon=True, name=f"kb-heartbeat-{job_id[:8]}"
+        target=ctx.run, args=(_beat,), daemon=True, name=f"kb-heartbeat-{job_id[:8]}"
     ).start()
     return stop
 

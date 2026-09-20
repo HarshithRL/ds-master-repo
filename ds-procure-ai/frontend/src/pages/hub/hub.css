@@ -91,7 +91,7 @@
 .hub-header {
   min-height: 68px;
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(320px, 604px) minmax(260px, 1fr);
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 24px;
   border-bottom: 1px solid rgba(181, 197, 207, 0.12);
