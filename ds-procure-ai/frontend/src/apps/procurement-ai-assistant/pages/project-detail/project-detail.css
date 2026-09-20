@@ -13,7 +13,7 @@
 .project-detail-container {
   max-width: 1450px;
   margin: 0 auto;
-  padding: 42px;
+  padding: 24px 42px 16px;
 }
 
 .project-detail-container.is-workspace {
@@ -41,13 +41,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 14px;
   color: var(--text-muted);
   font-size: 13px;
-}
-
-.project-detail-container.is-workspace .project-breadcrumb {
-  margin-bottom: 14px;
 }
 
 .project-breadcrumb a {
@@ -73,16 +69,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 28px;
-}
-
-.project-detail-container.is-workspace .project-detail-header {
   margin-bottom: 12px;
-}
-
-.project-detail-container.is-workspace .project-detail-header h1 {
-  margin: 4px 0;
-  font-size: 26px;
 }
 
 .project-detail-eyebrow {
@@ -94,8 +81,8 @@
 }
 
 .project-detail-header h1 {
-  margin: 8px 0;
-  font-size: 34px;
+  margin: 4px 0;
+  font-size: 26px;
   font-weight: 400;
   line-height: 1.2;
 }

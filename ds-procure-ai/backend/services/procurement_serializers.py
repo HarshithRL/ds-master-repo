@@ -338,20 +338,17 @@ def _category_filters(projects: list[Project]) -> list[dict[str, str]]:
 
 
 def _requirements_summary(requirements_json: str | None) -> dict[str, int]:
+    # Seeded requirements only: no evidence exists yet, so everything is a gap.
+    empty = {"total": 0, "answered": 0, "gaps": 0, "failed": 0, "reviewed": 0}
     if not requirements_json:
-        return {"total": 0, "approved": 0, "pending": 0, "rejected": 0}
+        return empty
     try:
         rows = json.loads(requirements_json)
     except json.JSONDecodeError:
-        return {"total": 0, "approved": 0, "pending": 0, "rejected": 0}
+        return empty
     if not isinstance(rows, list):
-        return {"total": 0, "approved": 0, "pending": 0, "rejected": 0}
-    return {
-        "total": len(rows),
-        "approved": 0,
-        "pending": len(rows),
-        "rejected": 0,
-    }
+        return empty
+    return {**empty, "total": len(rows), "gaps": len(rows)}
 
 
 def _document_type_counts(artifacts: list[Artifact]) -> dict[str, int]:

@@ -254,13 +254,28 @@ def _stages(file_count: int, kb_status: str, source: MatrixSource) -> list[dict[
 
 
 def _requirement_counts(source: MatrixSource) -> dict[str, int]:
+    """Counts in the same vocabulary the evidence rows and the review UI use."""
     total = len(source.requirements)
-    pending = sum(1 for row in source.requirements if not _req_statuses(source, row.id))
+    answered = 0
+    failed = 0
+    reviewed = 0
+    for row in source.requirements:
+        statuses = _req_statuses(source, row.id)
+        if COVERED_STATUSES.intersection(statuses):
+            answered += 1
+        elif statuses and all(status == "extraction_failed" for status in statuses):
+            failed += 1
+        for bid in source.bids:
+            cell = source.cells.get((row.id, bid))
+            if cell is not None and cell.pinned:
+                reviewed += 1
+                break
     return {
         "total": total,
-        "approved": 0,
-        "pending": pending,
-        "rejected": 0,
+        "answered": answered,
+        "gaps": total - answered - failed,
+        "failed": failed,
+        "reviewed": reviewed,
     }
 
 

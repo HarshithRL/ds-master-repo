@@ -127,16 +127,22 @@ function OverviewTab({ projectId }) {
               <strong>{requirements.total}</strong>
             </div>
             <div>
-              <span>Approved</span>
-              <strong>{requirements.approved}</strong>
+              <span>Answered</span>
+              <strong>{requirements.answered}</strong>
             </div>
             <div>
-              <span>Pending</span>
-              <strong>{requirements.pending}</strong>
+              <span>Gaps</span>
+              <strong>{requirements.gaps}</strong>
             </div>
             <div>
-              <span>Rejected</span>
-              <strong>{requirements.rejected}</strong>
+              <span>Failed</span>
+              <strong className={requirements.failed ? "stat-alert" : undefined}>
+                {requirements.failed}
+              </strong>
+            </div>
+            <div>
+              <span>Reviewed</span>
+              <strong>{requirements.reviewed}</strong>
             </div>
           </div>
         </section>
