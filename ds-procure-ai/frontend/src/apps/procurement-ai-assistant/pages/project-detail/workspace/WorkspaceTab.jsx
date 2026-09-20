@@ -69,6 +69,7 @@ function WorkspaceTab({ projectId, onProjectUpdated }) {
     error: null,
     status: null,
   });
+  const [indexing, setIndexing] = useState(false);
   const [insights, setInsights] = useState(null);
   const [fileProgress, setFileProgress] = useState({});
 
@@ -211,6 +212,24 @@ function WorkspaceTab({ projectId, onProjectUpdated }) {
     fileInputRef.current?.click();
   }
 
+  async function rebuildIndex() {
+    if (indexing) {
+      return;
+    }
+    setIndexing(true);
+    try {
+      await apiPost(`/api/procurement/projects/${projectId}/packs/kb`, {});
+      setFileTick((tick) => tick + 1);
+    } catch (err) {
+      setUploadUi((prev) => ({
+        ...prev,
+        error: err?.message || "Index rebuild failed.",
+      }));
+    } finally {
+      setIndexing(false);
+    }
+  }
+
   async function handleFilesSelected(event) {
     const incoming = Array.from(event.target.files || []);
     event.target.value = "";
@@ -280,6 +299,8 @@ function WorkspaceTab({ projectId, onProjectUpdated }) {
         uploading={uploadUi.uploading}
         kbBuilding={kbBuilding}
         onAddFile={openFilePicker}
+        onIndex={rebuildIndex}
+        indexing={indexing}
         fileStatus={fileProgress}
       />
       <ChatPanel

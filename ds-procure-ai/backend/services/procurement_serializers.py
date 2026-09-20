@@ -152,8 +152,45 @@ def vendors_payload(project_id: str) -> dict[str, Any]:
     return build_vendors_view(project_id)
 
 
-def documents_payload(artifacts: list[Artifact]) -> dict[str, Any]:
-    return {"fileGroups": _file_groups(artifacts)}
+def documents_payload(
+    artifacts: list[Artifact], packs: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    groups = _file_groups(artifacts)
+    generated = _generated_group(packs)
+    if generated:
+        groups.append(generated)
+    return {"fileGroups": groups}
+
+
+_PACK_LABELS = {
+    "xlsx": ("comparison_matrix.xlsx", "xlsx"),
+    "ppt": ("steerco_pack.pptx", "pptx"),
+}
+
+
+def _generated_group(packs: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Packs live on the volume, not in `artifact`, so they need their own group."""
+    if not packs:
+        return None
+    files: list[dict[str, Any]] = []
+    for kind, (fallback_name, file_type) in _PACK_LABELS.items():
+        pack = packs.get(kind) or {}
+        href = str(pack.get("href") or "").strip()
+        if str(pack.get("status") or "") != "ready" or not href:
+            continue
+        updated = str(pack.get("updated_at") or "")[:10]
+        files.append(
+            {
+                "id": f"pack-{kind}",
+                "name": str(pack.get("filename") or fallback_name),
+                "type": file_type,
+                "meta": f"Generated{' ' + updated if updated else ''}",
+                "href": href,
+            }
+        )
+    if not files:
+        return None
+    return {"title": artifact_repo.FOLDER_TITLES[artifact_repo.FOLDER_AI_GENERATED], "files": files}
 
 
 def workspace_payload(

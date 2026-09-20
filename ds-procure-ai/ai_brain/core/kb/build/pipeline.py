@@ -301,6 +301,7 @@ async def invoke_vendor_analyst(
     config: Optional[RunnableConfig] = None,  # noqa: UP045
 ) -> tuple[VendorEvidenceBundle, PricingExtraction | None, int, BidProfile | None]:
     """Phase A deep-agent research (files + MCP), then ToolStrategy emit."""
+    bid_t0 = time.monotonic()
     from ai_brain.core.kb.extract.agents import (
         MAX_COVERAGE_REFILLS,
         bid_invoke_payload,
@@ -486,13 +487,13 @@ async def invoke_vendor_analyst(
         pricing_from_result(pricing_result, bid_id)
         or pricing_from_result(result, bid_id)
         or pricing_from_result(research, bid_id)
-        or await _optional_structured(PricingExtraction, emit_messages, bid_id)
+        or await _optional_structured(PricingExtraction, emit_messages, bid_id, bid_t0)
     )
     profile = (
         profile_from_result(profile_result, bid_id)
         or profile_from_result(result, bid_id)
         or profile_from_result(research, bid_id)
-        or await _optional_structured(BidProfile, emit_messages, bid_id)
+        or await _optional_structured(BidProfile, emit_messages, bid_id, bid_t0)
     )
     return bundle, pricing, file_count, profile
 
@@ -598,11 +599,31 @@ def profile_from_result(result: Any, bid_id: str) -> BidProfile | None:
     return None
 
 
-async def _optional_structured(schema: type, messages: list[Any], bid_id: str) -> Any:
+# Recovering pricing/BAFO facts must never cost the evidence bundle its own
+# deadline, so the fallback only runs when the bid still has budget to spare.
+OPTIONAL_STRUCTURED_TIMEOUT_S = 45.0
+OPTIONAL_STRUCTURED_MIN_REMAINING_S = 75.0
+
+
+async def _optional_structured(
+    schema: type, messages: list[Any], bid_id: str, bid_t0: float
+) -> Any:
     """Last-resort structured call. The emit agents raise at their model-call
     limit, which used to drop pricing and BAFO facts silently."""
+    remaining = ANALYZE_BID_SOFT_TIMEOUT_S - (time.monotonic() - bid_t0)
+    if remaining < OPTIONAL_STRUCTURED_MIN_REMAINING_S:
+        log.info(
+            "{} fallback skipped bid_id={} remaining_s={:.0f}",
+            schema.__name__,
+            bid_id,
+            remaining,
+        )
+        return None
+    budget = min(OPTIONAL_STRUCTURED_TIMEOUT_S, remaining - 30.0)
     try:
-        return await _structured_fallback(schema, messages, bid_id)
+        return await asyncio.wait_for(
+            _structured_fallback(schema, messages, bid_id), timeout=budget
+        )
     except Exception as exc:  # noqa: BLE001
         if is_checkpoint_sync_error(exc):
             raise
