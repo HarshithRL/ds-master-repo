@@ -76,26 +76,42 @@ def process_chip(process_type: str) -> str:
 
 
 def checklist_for(process_type: str) -> list[dict[str, Any]]:
+    """Expected documents per process. `hint` says what the label actually means."""
     if process_type == DIRECT_TG:
         return [
-            {"checklist_key": "nda", "label": "NDA", "severity": "blocking"},
-            {"checklist_key": "requirements", "label": "Requirements checklist", "severity": "blocking"},
-            {"checklist_key": "pricing_pq", "label": "Pricing P×Q", "severity": "blocking"},
-            {"checklist_key": "technical", "label": "Technical assessment", "severity": "blocking"},
-            {"checklist_key": "safety", "label": "Safety assessment", "severity": "blocking"},
+            {"checklist_key": "nda", "label": "NDA", "severity": "blocking",
+             "hint": "Signed non-disclosure agreement with the supplier"},
+            {"checklist_key": "requirements", "label": "Requirements checklist", "severity": "blocking",
+             "hint": "The requirement list the supplier answered against"},
+            {"checklist_key": "pricing_pq", "label": "Pricing P×Q", "severity": "blocking",
+             "hint": "Unit price and quantity per line item"},
+            {"checklist_key": "technical", "label": "Technical assessment", "severity": "blocking",
+             "hint": "Technical evaluation of the offered goods"},
+            {"checklist_key": "safety", "label": "Safety assessment", "severity": "blocking",
+             "hint": "Safety / compliance evaluation"},
         ]
     if process_type == IT_SOFTWARE:
         return [
-            {"checklist_key": "nda", "label": "NDA", "severity": "blocking"},
-            {"checklist_key": "dpa", "label": "GDPR Part B / DPA", "severity": "blocking"},
-            {"checklist_key": "architecture", "label": "Architecture pack", "severity": "blocking"},
-            {"checklist_key": "evsat", "label": "EVSAT", "severity": "blocking"},
-            {"checklist_key": "pricing_tco", "label": "Licence + implementation TCO", "severity": "blocking"},
+            {"checklist_key": "nda", "label": "NDA", "severity": "blocking",
+             "hint": "Signed non-disclosure agreement with the supplier"},
+            {"checklist_key": "dpa", "label": "GDPR Part B / DPA", "severity": "blocking",
+             "hint": "Data processing agreement covering personal data"},
+            {"checklist_key": "architecture", "label": "Architecture pack", "severity": "blocking",
+             "hint": "Solution architecture and integration design"},
+            {"checklist_key": "evsat", "label": "EVSAT", "severity": "blocking",
+             "hint": "Etex vendor security assessment questionnaire"},
+            {"checklist_key": "pricing_tco", "label": "Licence + implementation TCO", "severity": "blocking",
+             "hint": "Licence fees plus implementation cost over the term"},
         ]
     return [
-        {"checklist_key": "nda", "label": "NDA", "severity": "blocking"},
-        {"checklist_key": "dpa", "label": "GDPR Part B / DPA", "severity": "optional"},
-        {"checklist_key": "proposal", "label": "Vendor proposal", "severity": "blocking"},
-        {"checklist_key": "pricing_days", "label": "Professional-services days / rate", "severity": "blocking"},
-        {"checklist_key": "references", "label": "References", "severity": "optional"},
+        {"checklist_key": "nda", "label": "NDA", "severity": "blocking",
+         "hint": "Signed non-disclosure agreement with the supplier"},
+        {"checklist_key": "dpa", "label": "GDPR Part B / DPA", "severity": "optional",
+         "hint": "Data processing agreement covering personal data"},
+        {"checklist_key": "proposal", "label": "Vendor proposal", "severity": "blocking",
+         "hint": "The supplier's technical proposal or statement of work"},
+        {"checklist_key": "pricing_days", "label": "Professional-services days / rate", "severity": "blocking",
+         "hint": "Day rate card and estimated effort in man-days"},
+        {"checklist_key": "references", "label": "References", "severity": "optional",
+         "hint": "Client references or case studies for comparable assignments"},
     ]

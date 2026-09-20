@@ -481,6 +481,12 @@ async def invoke_vendor_analyst(
     )
     unread = coverage.unread()
     emit_messages = _databricks_safe_messages(research_messages)
+    # Pricing and BAFO facts do not need 40 requirements' worth of quoted
+    # evidence. Sending the full transcript to all three extractors tripled the
+    # bid's input tokens and tripped the workspace per-minute cap.
+    side_messages = _databricks_safe_messages(
+        research_messages, limit=SIDE_TRANSCRIPT_CHARS
+    )
     if total_turns == 0:
         # Research never got a turn in. Hand emit the packed corpus directly so
         # the bid still yields cited evidence instead of nothing.
@@ -515,7 +521,7 @@ async def invoke_vendor_analyst(
         try:
             return await pricing_agent.ainvoke(
                 {
-                    "messages": emit_messages
+                    "messages": side_messages
                     + [
                         {
                             "role": "user",
@@ -542,7 +548,7 @@ async def invoke_vendor_analyst(
         try:
             return await profile_agent.ainvoke(
                 {
-                    "messages": emit_messages
+                    "messages": side_messages
                     + [
                         {
                             "role": "user",
@@ -637,13 +643,13 @@ async def invoke_vendor_analyst(
         pricing_from_result(pricing_result, bid_id)
         or pricing_from_result(result, bid_id)
         or pricing_from_result(research, bid_id)
-        or await _optional_structured(PricingExtraction, emit_messages, bid_id, bid_t0)
+        or await _optional_structured(PricingExtraction, side_messages, bid_id, bid_t0)
     )
     profile = (
         profile_from_result(profile_result, bid_id)
         or profile_from_result(result, bid_id)
         or profile_from_result(research, bid_id)
-        or await _optional_structured(BidProfile, emit_messages, bid_id, bid_t0)
+        or await _optional_structured(BidProfile, side_messages, bid_id, bid_t0)
     )
     return bundle, pricing, file_count, profile
 
@@ -653,6 +659,9 @@ async def invoke_vendor_analyst(
 # with a preview. Stay under that with headroom; 60_000 was throwing away 84%
 # of a large bid's transcript before emit ever saw it.
 EMIT_TRANSCRIPT_CHARS = 150_000
+# Pricing/profile extractors read the same transcript; at full size the three
+# calls together are what exhausts the workspace input-token-per-minute tier.
+SIDE_TRANSCRIPT_CHARS = 50_000
 _TRANSCRIPT_MIN_SLICE = 2_000
 _TRUNC_MARK = "\n...[truncated]"
 # Emit must quote chunk text literally to pass the grounding gate, so the
@@ -697,7 +706,9 @@ def _message_name(msg: Any) -> str:
     return str(getattr(msg, "name", "") or "")
 
 
-def _databricks_safe_messages(messages: list[Any]) -> list[dict[str, str]]:
+def _databricks_safe_messages(
+    messages: list[Any], *, limit: int = EMIT_TRANSCRIPT_CHARS
+) -> list[dict[str, str]]:
     """Collapse research tool round-trips into plain user text.
 
     ChatDatabricks rejects Anthropic ``tool_result`` blocks that include
@@ -726,7 +737,7 @@ def _databricks_safe_messages(messages: list[Any]) -> list[dict[str, str]]:
             parts.append((role not in {"user", "human"}, text))
 
     # A flat head-cut dropped the tail, which is where the conclusions are.
-    said_cap = int(EMIT_TRANSCRIPT_CHARS * _TRANSCRIPT_SAID_SHARE)
+    said_cap = int(limit * _TRANSCRIPT_SAID_SHARE)
     said_keep: dict[int, str] = {}
     said_used = 0
     for idx in range(len(parts) - 1, -1, -1):
@@ -746,7 +757,7 @@ def _databricks_safe_messages(messages: list[Any]) -> list[dict[str, str]]:
             said_keep[idx] = head + text[-(free - len(head)) :]
             said_used = said_cap
             break
-    room = max(0, EMIT_TRANSCRIPT_CHARS - said_used - 2 * len(parts))
+    room = max(0, limit - said_used - 2 * len(parts))
     out: list[str] = []
     used = 0
     for idx, (is_said, text) in enumerate(parts):
@@ -761,9 +772,9 @@ def _databricks_safe_messages(messages: list[Any]) -> list[dict[str, str]]:
             out.append(text[: room - used - len(_TRUNC_MARK)] + _TRUNC_MARK)
             used = room
     body = "\n\n".join(out).strip() or "(no research notes)"
-    if len(body) > EMIT_TRANSCRIPT_CHARS:
+    if len(body) > limit:
         head = _TRUNC_MARK.strip() + "\n"
-        body = head + body[-(EMIT_TRANSCRIPT_CHARS - len(head)) :]
+        body = head + body[-(limit - len(head)) :]
     return [{"role": "user", "content": body}]
 
 

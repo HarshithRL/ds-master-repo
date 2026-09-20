@@ -92,14 +92,28 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
         <article className="ws-insight-card pack">
           <header>
             <span>HITL</span>
-            <strong>{missing.length} missing</strong>
+            <strong>
+              {missing.some((item) => item.severity === "blocking")
+                ? `${missing.filter((item) => item.severity === "blocking").length} blocking`
+                : `${missing.length} optional`}
+            </strong>
           </header>
-          <p>Upload the remaining files, or continue with gaps marked missing. Packs stay draft.</p>
+          <p>
+            {missing.some((item) => item.severity === "blocking")
+              ? "A comparison needs these. Upload them, or continue and the pack will record them as not supplied."
+              : "Nothing blocking. Continue, and the pack records these as not supplied."}
+          </p>
           <ul className="ws-gap-list">
             {missing.map((item) => (
-              <li key={item.checklist_key} className="block">
-                <span>{item.label}</span>
-                <em>missing</em>
+              <li
+                key={item.checklist_key}
+                className={item.severity === "blocking" ? "block" : "opt"}
+              >
+                <span>
+                  {item.label}
+                  {item.hint ? <small>{item.hint}</small> : null}
+                </span>
+                <em>{item.severity === "blocking" ? "required" : "optional"}</em>
               </li>
             ))}
           </ul>

@@ -26,6 +26,9 @@ log = get_logger(__name__, service="ai_brain")
 
 DEFAULT_PROFILE = "adb-7181820732839861"
 DEFAULT_MODEL = "system.ai.claude-opus-4-5"
+# Workspace FMAPI caps input tokens per minute. Parallel bids trip it, and a
+# per-minute cap clears on its own, so back off instead of failing the bid.
+LLM_MAX_RETRIES = 5
 DEFAULT_MAX_TOKENS = 1024
 _LLM_YAML = Path(__file__).with_name("llm.yaml")
 # Retired Unity Gateway model-service ids. Env leftover from older deploys
@@ -180,6 +183,7 @@ def get_llm(kind: ModelKind = "fast", *, max_tokens: int | None = None) -> ChatD
         "workspace_client": client,
         "use_ai_gateway": use_ai_gateway,
         "max_tokens": max_tokens,
+        "max_retries": LLM_MAX_RETRIES,
     }
     if temperature is not None:
         kwargs["temperature"] = temperature

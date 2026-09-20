@@ -911,6 +911,22 @@
   font-size: 12px;
 }
 
+.ws-gap-list li span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ws-gap-list li small {
+  color: var(--text-muted, #8b8b8b);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.ws-gap-list li.opt em {
+  color: var(--text-muted, #8b8b8b);
+}
+
 .ws-gap-list em {
   flex-shrink: 0;
   color: #f07178;
