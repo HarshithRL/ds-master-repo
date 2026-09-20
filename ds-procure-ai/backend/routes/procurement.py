@@ -396,7 +396,14 @@ def project_documents(project_id):
     if not project:
         return jsonify({"error": "not_found"}), 404
     artifacts = artifact_repo.list_for_project(project_id, owner_id)
-    return jsonify(documents_payload(artifacts))
+    try:
+        from ai_brain.core.procurement_ai.packs import store as pack_store
+
+        packs = pack_store.pack_status(project_id)
+    except Exception:
+        log.exception("pack status unavailable for documents project_id={}", project_id)
+        packs = None
+    return jsonify(documents_payload(artifacts, packs))
 
 
 @procurement_bp.route(

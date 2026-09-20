@@ -13,15 +13,14 @@ import { Spinner } from "@/components/ui/spinner";
 import { API_BASE } from "../../../../../../services/api";
 import { kbIsBuilding, kbStatusCopy } from "../kbStatus";
 import AnalysisRail from "./AnalysisRail";
-import ChatAttachMenu from "./ChatAttachMenu";
 import ChatMarkdown from "./ChatMarkdown";
 import ChatThoughtProcess from "./ChatThoughtProcess";
 import { useChatAnalysis } from "./useChatAnalysis";
 import { useWorkspaceChatStream } from "./useWorkspaceChatStream";
 
 const CENTER_TABS = [
+  "Analysis",
   "Chat",
-  "History",
 ];
 
 function messageKey(msg, index) {
@@ -103,6 +102,15 @@ function CenterTabs({ tab, onTab, onNewChat }) {
             {name}
           </button>
         ))}
+      </div>
+      <div className="ws-center-tabs ws-center-tabs-end">
+        <button
+          type="button"
+          className={tab === "History" ? "active" : ""}
+          onClick={() => onTab("History")}
+        >
+          History
+        </button>
       </div>
       <button
         type="button"
@@ -233,10 +241,6 @@ function ChatComposer({
         </div>
       ) : null}
       <form className="ws-chat-composer" onSubmit={submit}>
-        <ChatAttachMenu
-          onAddFile={onAddFile}
-          disabled={uploading || sending}
-        />
         {picked ? (
           <button
             type="button"
@@ -308,7 +312,6 @@ function ChatPanel({
     refreshToken: analysisRefresh,
     onInsights,
   });
-  const [analysisOpen, setAnalysisOpen] = useState(false);
   const sending = ui.status === "sending";
   const insights = analysis.insights;
   const kbStatus = insights?.kb_status;
@@ -340,21 +343,20 @@ function ChatPanel({
         }}
       />
 
-      {ui.tab === "Chat" ? (
+      {ui.tab === "Analysis" ? (
+        <AnalysisRail
+          insights={insights}
+          error={analysis.error}
+          skippedGaps={analysis.skippedGaps}
+          busy={analysis.busy}
+          onSkipGaps={analysis.skipGaps}
+          onBuild={analysis.buildPack}
+          onAddFile={onAddFile}
+          downloadPath={analysis.downloadPath}
+        />
+      ) : ui.tab === "Chat" ? (
         <>
         <div className="ws-chat-content">
-          <AnalysisRail
-            open={analysisOpen}
-            onOpenChange={setAnalysisOpen}
-            insights={insights}
-            error={analysis.error}
-            skippedGaps={analysis.skippedGaps}
-            busy={analysis.busy}
-            onSkipGaps={analysis.skipGaps}
-            onBuild={analysis.buildPack}
-            onAddFile={onAddFile}
-            downloadPath={analysis.downloadPath}
-          />
           {!hasMessages && !sending ? (
             <Empty className="ws-chat-empty">
               <EmptyHeader>

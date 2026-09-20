@@ -6,11 +6,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Spinner } from "@/components/ui/spinner";
 
 import { API_BASE } from "../../../../../../services/api";
@@ -181,8 +176,6 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
 }
 
 function AnalysisRail({
-  open,
-  onOpenChange,
   insights,
   error,
   skippedGaps,
@@ -193,12 +186,7 @@ function AnalysisRail({
   downloadPath,
 }) {
   return (
-    <Collapsible open={open} onOpenChange={onOpenChange} className="ws-chat-analysis">
-      <CollapsibleTrigger className="ws-analysis-toggle" type="button">
-        Analysis
-        <span>{open ? "Hide" : "Show"}</span>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="ws-analysis-panel">
+    <div className="ws-analysis-panel ws-analysis-tab">
         {error ? <p className="ws-insight-meta">{error}</p> : null}
         <article className="ws-insight-card">
           <header>
@@ -229,8 +217,7 @@ function AnalysisRail({
             <p>{vendor.headline}</p>
           </article>
         ))}
-      </CollapsibleContent>
-    </Collapsible>
+    </div>
   );
 }
 

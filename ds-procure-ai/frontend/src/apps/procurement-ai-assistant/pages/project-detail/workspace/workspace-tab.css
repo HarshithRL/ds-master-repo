@@ -1277,3 +1277,28 @@
 .ws-pack-card:hover {
   background: rgba(255, 105, 0, 0.2);
 }
+
+/* Analysis is a first-class tab now, not a collapsible inside the thread. */
+.ws-analysis-tab {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ws-center-tabs-end {
+  margin-left: auto;
+}
+
+.ws-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ws-panel-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

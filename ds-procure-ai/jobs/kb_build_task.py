@@ -13,7 +13,27 @@ import sys
 import traceback
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+def _repo_root() -> Path:
+    """Locate the repo root. Databricks serverless exec()s this file, so
+    `__file__` is undefined there and the path must be recovered another way."""
+    candidates: list[Path] = []
+    try:
+        candidates.append(Path(__file__).resolve().parents[1])
+    except NameError:
+        pass
+    if sys.argv and sys.argv[0]:
+        argv0 = Path(sys.argv[0]).resolve()
+        candidates.extend(p for p in (argv0.parent.parent, argv0.parent) if p)
+    cwd = Path.cwd().resolve()
+    candidates.append(cwd)
+    candidates.extend(cwd.parents)
+    for candidate in candidates:
+        if (candidate / "shared" / "logger_global").is_dir():
+            return candidate
+    return cwd
+
+
+sys.path.insert(0, str(_repo_root()))
 
 from shared.logger_global import get_logger, setup_logging  # noqa: E402
 

@@ -7,7 +7,7 @@ function fileStatusLabel(status) {
   return "";
 }
 
-function FileExplorer({ files, storage, onAddFile, uploading = false, kbBuilding = false, fileStatus = {} }) {
+function FileExplorer({ files, storage, onAddFile, onIndex, indexing = false, uploading = false, kbBuilding = false, fileStatus = {} }) {
   return (
     <aside className="ws-files">
       <div className="ws-panel-header">
@@ -15,14 +15,25 @@ function FileExplorer({ files, storage, onAddFile, uploading = false, kbBuilding
           PROJECT FILES
           {kbBuilding || uploading ? <Spinner /> : null}
         </strong>
-        <button
-          type="button"
-          aria-label="Add file"
-          onClick={onAddFile}
-          disabled={uploading || !onAddFile}
-        >
-          ＋
-        </button>
+        <div className="ws-panel-actions">
+          <button
+            type="button"
+            aria-label="Rebuild index"
+            title="Rebuild knowledge base index"
+            onClick={onIndex}
+            disabled={indexing || kbBuilding || !onIndex}
+          >
+            {indexing ? "…" : "⟳"}
+          </button>
+          <button
+            type="button"
+            aria-label="Add file"
+            onClick={onAddFile}
+            disabled={uploading || !onAddFile}
+          >
+            ＋
+          </button>
+        </div>
       </div>
 
       <div className="ws-file-search">
