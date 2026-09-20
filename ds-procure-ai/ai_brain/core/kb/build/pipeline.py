@@ -32,18 +32,21 @@ from shared.logger_global import get_logger
 log = get_logger(__name__, service="ai_brain")
 
 # 240s was too tight for the multi-turn vendor_analyst + pricing/profile passes on larger bids.
-ANALYZE_BID_TIMEOUT_S = 600.0
+ANALYZE_BID_TIMEOUT_S = 960.0
 # Self-guard must fire before LangGraph's Send timeout. LangGraph enforces that
 # one by cancelling the task (CancelledError is a BaseException), which this
 # node cannot catch — one slow bid would fail the whole build with no record of
 # which bid stalled. Timing out ourselves keeps the failure scoped to one bid.
 # The gap must also cover fill_extraction_failed; at 60s a real run was killed
 # mid-cleanup and left the project with no evidence at all.
-ANALYZE_BID_SOFT_TIMEOUT_S = 480.0
+ANALYZE_BID_SOFT_TIMEOUT_S = 780.0
 # Research is bounded so the emit stage always gets to run. Previously a slow
 # researcher consumed the whole budget and the outer timeout cancelled emit too,
 # so a slow bid produced no evidence at all instead of partial evidence.
-EMIT_RESERVE_S = 150.0
+# Emit gets EMIT_RESERVE_S - BID_RETURN_MARGIN_S - STRUCTURED_FALLBACK_TIMEOUT_S.
+# At 150 that was 65s for work measured at 221.5s (PERF extractors, bid=bdo), so
+# any bid whose research ran to its deadline emitted nothing.
+EMIT_RESERVE_S = 340.0
 # The reserve above only sized the research deadline — the extractors themselves
 # ran unbounded, so a bid reached 832s against the 600s node timeout and failed
 # the whole build. Both stages are now bounded.
@@ -181,6 +184,10 @@ async def analyze_bid(
             invoke_vendor_analyst(project_id, bid_id, config=config),
             timeout=ANALYZE_BID_SOFT_TIMEOUT_S,
         )
+        if not bundle.items:
+            # An empty bundle writes nothing, so last run's rows would stand and
+            # audit_kb would report the project ready on stale data.
+            raise ValueError(f"vendor_analyst returned no evidence for bid {bid_id}")
         # bid_id comes from the fan-out, not from model output: the persist
         # layer deletes by vendor, so an echoed-back wrong id would delete
         # another bid's rows.
@@ -621,8 +628,8 @@ async def invoke_vendor_analyst(
                 budget=max(0.0, bid_deadline - time.monotonic()),
             )
         except (TimeoutError, asyncio.TimeoutError):
-            # Empty beats raising: the node completes, this bid's requirements
-            # land as extraction_failed, and the remaining bids still run.
+            # Return empty rather than raise so the other bids still run;
+            # analyze_bid turns an empty bundle into this bid's failure.
             log.error(
                 "structured fallback timed out project_id={} bid_id={}",
                 project_id,
