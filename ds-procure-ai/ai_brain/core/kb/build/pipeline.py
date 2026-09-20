@@ -167,10 +167,21 @@ async def analyze_bid(
             invoke_vendor_analyst(project_id, bid_id, config=config),
             timeout=ANALYZE_BID_SOFT_TIMEOUT_S,
         )
-        counts = upsert_evidence_bundle(project_id, bundle)
+        # Grounding + upserts are synchronous DBSQL and run outside the timeout
+        # above, so on the loop they are what pushes a big bid past the node
+        # deadline after the analysis itself finished in budget.
+        counts = await asyncio.to_thread(upsert_evidence_bundle, project_id, bundle)
         try:
-            pricing_n = upsert_pricing(project_id, pricing) if pricing and pricing.lines else 0
-            profile_n = upsert_bid_profile(project_id, profile) if profile else 0
+            pricing_n = (
+                await asyncio.to_thread(upsert_pricing, project_id, pricing)
+                if pricing and pricing.lines
+                else 0
+            )
+            profile_n = (
+                await asyncio.to_thread(upsert_bid_profile, project_id, profile)
+                if profile
+                else 0
+            )
         except Exception as persist_exc:  # noqa: BLE001
             if is_checkpoint_sync_error(persist_exc):
                 raise

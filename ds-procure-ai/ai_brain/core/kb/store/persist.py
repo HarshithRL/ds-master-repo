@@ -14,6 +14,8 @@ from ai_brain.core.kb.api.schemas import (
     PricingExtraction,
     VendorEvidenceBundle,
     apply_grounding_gate,
+    load_artifact_markdown,
+    load_chunk_texts,
 )
 from ai_brain.core.kb.skills import SKILLS_PACK_VERSION
 from ai_brain.core.procurement_ai.packs.matrix_layout import SWIFT_REQUIREMENTS
@@ -79,8 +81,30 @@ def upsert_evidence_bundle(
 ) -> dict[str, int]:
     """Ground then upsert. Reviewed cells are not overwritten."""
     gated: list[EvidenceItem] = []
+    # Grounding one item at a time costs a DBSQL round trip per chunk and a full
+    # re-parse of the artifact JSON per fallback, which stalls the whole build on
+    # large vendors. Read every chunk once, and read each artifact at most once.
+    chunk_texts = load_chunk_texts(
+        item.chunk_id for item in bundle.items if item.chunk_id
+    )
+    artifact_cache: dict[str, str | None] = {}
+    ungrounded: list[Any] = []
+
+    def _artifact_markdown(artifact_id: str) -> str | None:
+        if artifact_id not in artifact_cache:
+            artifact_cache[artifact_id] = load_artifact_markdown(artifact_id)
+        return artifact_cache[artifact_id]
+
     for item in bundle.items:
-        gated.append(apply_grounding_gate(item, project_id=project_id))
+        gated.append(
+            apply_grounding_gate(
+                item,
+                project_id=project_id,
+                chunk_lookup=chunk_texts.get,
+                artifact_lookup=_artifact_markdown,
+                flag_sink=ungrounded,
+            )
+        )
     now = utc_now_iso()
     inserted = 0
     updated = 0
@@ -127,6 +151,8 @@ def upsert_evidence_bundle(
                 existing.prompt_version = prompt_version
                 existing.extracted_at = now
                 updated += 1
+        for flag in ungrounded:
+            session.add(flag)
         session.flush()
     return {
         "inserted": inserted,

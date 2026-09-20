@@ -14,13 +14,16 @@ https://docs.langchain.com/oss/python/migrate/langchain-mcp-adapters
 from __future__ import annotations
 
 import json
+import math
 import os
+import re
 import warnings
+from collections import Counter
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncIterator
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 
 from ai_brain.core.kb.build.coverage import record_chunk_ids, record_path
 from ai_brain.core.kb.store.materialize import project_files
@@ -153,12 +156,124 @@ def read_chunk_window(
     return "\n\n".join(parts)
 
 
+_WORD_RE = re.compile(r"[a-z0-9]{3,}")
+_BM25_K1 = 1.5
+_BM25_B = 0.75
+
+# Words too common to tell a useful chunk from boilerplate.
+_STOPWORDS = frozenset(
+    "all and any are can each for from has have into its may must not other our "
+    "shall should than that the then they this was were will with your".split()
+)
+
+
+def _requirement_token_sets(project_id: str) -> list[frozenset[str]]:
+    """One token set per requirement — kept separate so no requirement is starved."""
+    from shared.db.models import Requirement
+
+    texts: list[str] = []
+    try:
+        with session_scope() as session:
+            texts = [
+                str(value or "")
+                for value in session.scalars(
+                    select(Requirement.text).where(
+                        Requirement.project_id == project_id
+                    )
+                ).all()
+            ]
+    except Exception:  # noqa: BLE001
+        texts = []
+    if not texts:
+        from ai_brain.core.procurement_ai.packs.matrix_layout import SWIFT_REQUIREMENTS
+
+        texts = [str(row[1]) for row in SWIFT_REQUIREMENTS]
+    out: list[frozenset[str]] = []
+    for value in texts:
+        tokens = frozenset(_WORD_RE.findall(value.lower())) - _STOPWORDS
+        if tokens:
+            out.append(tokens)
+    return out
+
+
+def _relevance_first(
+    project_id: str, rows: list[dict[str, Any]], bodies: dict[str, str]
+) -> list[dict[str, Any]]:
+    """Order chunks so every requirement's best evidence lands on the first pages.
+
+    Two things go wrong with a single global score. Long chunks win on raw term
+    counts regardless of density, and a requirement whose vocabulary is rare
+    (one chunk mentions ETEXBEBB) is out-ranked by filler that touches many
+    common requirement words — so that requirement silently comes back
+    `not_stated`. BM25 fixes the first (idf + length normalisation); ranking per
+    requirement and then interleaving fixes the second: every requirement
+    contributes its top chunk before any requirement contributes its second.
+
+    Nothing is dropped — unmatched chunks keep their existing doc_role order at
+    the end — so a mis-scored chunk costs reading position, never an answer.
+    """
+    requirements = _requirement_token_sets(project_id)
+    if not requirements or not rows:
+        return rows
+
+    docs: dict[str, list[str]] = {}
+    for row in rows:
+        cid = str(row["chunk_id"])
+        docs[cid] = _WORD_RE.findall(bodies.get(cid, "").lower())
+    total = len(docs)
+    if not total:
+        return rows
+
+    avg_len = (sum(len(tokens) for tokens in docs.values()) / total) or 1.0
+    doc_freq: Counter[str] = Counter()
+    for tokens in docs.values():
+        doc_freq.update(set(tokens))
+    counts = {cid: Counter(tokens) for cid, tokens in docs.items()}
+
+    def bm25(cid: str, query: frozenset[str]) -> float:
+        counter = counts[cid]
+        length = len(docs[cid])
+        score = 0.0
+        for term in query:
+            freq = counter.get(term, 0)
+            if not freq:
+                continue
+            idf = math.log(
+                1 + (total - doc_freq[term] + 0.5) / (doc_freq[term] + 0.5)
+            )
+            score += (idf * freq * (_BM25_K1 + 1)) / (
+                freq + _BM25_K1 * (1 - _BM25_B + _BM25_B * length / avg_len)
+            )
+        return score
+
+    ranked: list[list[str]] = []
+    for query in requirements:
+        hits = [(bm25(cid, query), cid) for cid in docs]
+        hits = [hit for hit in hits if hit[0] > 0]
+        hits.sort(key=lambda hit: (-hit[0], hit[1]))
+        ranked.append([cid for _, cid in hits])
+
+    picked: list[str] = []
+    seen: set[str] = set()
+    for depth in range(max((len(queue) for queue in ranked), default=0)):
+        for queue in ranked:
+            if depth < len(queue) and queue[depth] not in seen:
+                seen.add(queue[depth])
+                picked.append(queue[depth])
+
+    by_id = {str(row["chunk_id"]): row for row in rows}
+    ordered = [by_id[cid] for cid in picked if cid in by_id]
+    ordered.extend(row for row in rows if str(row["chunk_id"]) not in seen)
+    return ordered
+
+
 def prefetch_bid_chunks(project_id: str, bid_id: str) -> tuple[dict[str, str], list[str]]:
     """Pack parsed chunks into virtual /_chunks/*.md files (no LLM)."""
     from ai_brain.core.procurement_ai.project_context import load_project
 
     rows = list_bid_chunk_rows(project_id, bid_id)
     bodies = load_chunk_texts(str(row["chunk_id"]) for row in rows)
+    rows = _relevance_first(project_id, rows, bodies)
     project = load_project(project_id)
     code = project.code if project is not None else "project"
     prefix = f"/project/{code}/vendors/{bid_id}/_chunks"

@@ -150,7 +150,20 @@ def _local_pack(project_id: str, owner_id: str, capability: str, thread_id: str)
 
     if capability == "kb_build":
         # enqueue_kb_build already copies the OBO context onto its own thread.
+        from ai_brain.core.kb.extract import job_store
         from ai_brain.core.kb.extract.ingest import enqueue_kb_build
+
+        # A second build races the first onto the same evidence rows, doubling
+        # cost and per-vendor counts. A dead run is reaped first, so this cannot
+        # wedge the project.
+        job_store.reap_stalled(project_id)
+        live = job_store.latest_status_map([project_id]).get(project_id)
+        if live == "building":
+            return {
+                "route": "procurement",
+                "thread_id": thread_id,
+                "procurement": {"kb_status": "building"},
+            }
 
         enqueue_kb_build(project_id)
         return {
