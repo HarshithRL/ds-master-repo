@@ -12,7 +12,7 @@ from typing import Any, BinaryIO
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
-from shared.db.connection import session_scope
+from shared.db.connection import session_or, session_scope
 from shared.db.models import Artifact, utc_now_iso
 from shared.db.paths import artifact_absolute_path, artifact_storage_relpath
 from shared.db.volume_fs import write_bytes
@@ -205,7 +205,9 @@ def delete_for_owner(
             parsed_path.unlink(missing_ok=True)
 
 
-def upload_counts(project_ids: list[str]) -> dict[str, dict[str, int]]:
+def upload_counts(
+    project_ids: list[str], *, session: Session | None = None
+) -> dict[str, dict[str, int]]:
     """Uploaded vs parsed counts per project, in one query for the whole list.
 
     Notes are mirrored into artifacts for retrieval, so `kind == "note"` is
@@ -215,8 +217,8 @@ def upload_counts(project_ids: list[str]) -> dict[str, dict[str, int]]:
     if not ids:
         return {}
     parsed = func.sum(case((Artifact.parse_status == "ok", 1), else_=0))
-    with session_scope() as session:
-        rows = session.execute(
+    with session_or(session) as active:
+        rows = active.execute(
             select(Artifact.project_id, func.count(Artifact.id), parsed)
             .where(
                 Artifact.project_id.in_(ids),

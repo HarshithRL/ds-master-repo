@@ -13,8 +13,9 @@ from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
-from shared.db.connection import session_scope
+from shared.db.connection import session_or, session_scope
 from shared.db.models import KbBuildJob, utc_now_iso
 from shared.logger_global import get_logger
 
@@ -177,7 +178,9 @@ def latest_job(project_id: str) -> dict[str, Any] | None:
         return None
 
 
-def latest_status_map(project_ids: list[str]) -> dict[str, str]:
+def latest_status_map(
+    project_ids: list[str], *, session: Session | None = None
+) -> dict[str, str]:
     """Newest run state per project, in one query for the whole list.
 
     A non-terminal run with a dead heartbeat reports "failed", not "building",
@@ -203,8 +206,8 @@ def latest_status_map(project_ids: list[str]) -> dict[str, str]:
         .subquery()
     )
     try:
-        with session_scope() as session:
-            rows = session.execute(
+        with session_or(session) as active:
+            rows = active.execute(
                 select(
                     ranked.c.project_id,
                     ranked.c.status,

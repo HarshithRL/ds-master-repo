@@ -7,6 +7,9 @@ import re
 from collections import Counter
 from typing import Any
 
+from sqlalchemy.orm import Session
+
+from shared.db.connection import session_scope
 from shared.db.models import AppUser, Artifact, Project
 from shared.db.repos import artifacts as artifact_repo
 from shared.db.repos import projects as project_repo
@@ -35,14 +38,16 @@ STAGE_LABELS = {
 }
 
 
-def _project_stages(project_ids: list[str]) -> dict[str, str]:
+def _project_stages(
+    project_ids: list[str], *, session: Session | None = None
+) -> dict[str, str]:
     """Where each project sits in the pipeline, from two aggregate queries."""
-    uploads = artifact_repo.upload_counts(project_ids)
+    uploads = artifact_repo.upload_counts(project_ids, session=session)
     # A missing kb_build_job table must not take the whole projects list down.
     try:
         from ai_brain.core.kb.extract import job_store
 
-        kb = job_store.latest_status_map(project_ids)
+        kb = job_store.latest_status_map(project_ids, session=session)
     except Exception:
         kb = {}
 
@@ -131,8 +136,10 @@ def projects_page_payload(
     summary_source = all_projects if all_projects is not None else projects
     rows = [project_repo.project_to_dict(p) for p in projects]
     ids = [row["id"] for row in rows]
-    coverage = project_repo.mandatory_progress_map(ids)
-    stages = _project_stages(ids)
+    # One connection for all three list aggregates.
+    with session_scope() as session:
+        coverage = project_repo.mandatory_progress_map(ids, session=session)
+        stages = _project_stages(ids, session=session)
     for row in rows:
         stage = stages.get(row["id"], "no_files")
         row["progress"] = coverage.get(row["id"], 0)
