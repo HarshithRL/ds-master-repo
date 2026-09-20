@@ -8,9 +8,11 @@ which is a post-processing persist state, not a model output).
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable
 from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, Field, model_validator
+from sqlalchemy import select
 
 from shared.db.connection import session_scope
 from shared.db.models import Chunk, QualityFlag, utc_now_iso
@@ -205,6 +207,23 @@ def load_chunk_text(chunk_id: str) -> str | None:
         if row is None:
             return None
         return row.text
+
+
+def load_chunk_texts(chunk_ids: Iterable[str]) -> dict[str, str]:
+    """Fetch many chunks in one round trip.
+
+    Calling `load_chunk_text` in a loop opens one DBSQL connection per chunk
+    (NullPool), which blocks the event loop long enough that asyncio timeouts
+    never fire.
+    """
+    ids = [cid for cid in dict.fromkeys(chunk_ids) if cid]
+    if not ids:
+        return {}
+    with session_scope() as session:
+        rows = session.execute(
+            select(Chunk.id, Chunk.text).where(Chunk.id.in_(ids))
+        ).all()
+    return {str(cid): (text or "") for cid, text in rows}
 
 
 def record_ungrounded_claim(project_id: str, item: EvidenceItem) -> QualityFlag:

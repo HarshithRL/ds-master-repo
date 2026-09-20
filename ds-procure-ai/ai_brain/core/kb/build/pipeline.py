@@ -325,17 +325,23 @@ async def invoke_vendor_analyst(
     from ai_brain.core.kb.api.mcp_tools import list_bid_chunk_ids, list_bid_chunk_rows, mcp_kb_tools_context
     from ai_brain.server.tracing import child_runnable_config, is_checkpoint_sync_error
 
-    payload = bid_invoke_payload(project_id, bid_id)
+    def _load_inputs() -> tuple[dict[str, Any], set[str], dict[str, str]]:
+        data = bid_invoke_payload(project_id, bid_id)
+        ids = set(list_bid_chunk_ids(project_id, bid_id))
+        paths = {
+            row["chunk_id"]: row.get("path") or ""
+            for row in list_bid_chunk_rows(project_id, bid_id)
+            if row.get("path")
+        }
+        return data, ids, paths
+
+    # All three are synchronous DBSQL; on the loop they stall it long enough
+    # that the surrounding asyncio timeouts never get a chance to fire.
+    payload, required, chunk_paths = await asyncio.to_thread(_load_inputs)
     file_count = sum(
         1 for path in payload.get("files") or {} if f"/vendors/{bid_id}/" in path
     )
     nested = child_runnable_config(_config_dict(config))
-    required = set(list_bid_chunk_ids(project_id, bid_id))
-    chunk_paths = {
-        row["chunk_id"]: row.get("path") or ""
-        for row in list_bid_chunk_rows(project_id, bid_id)
-        if row.get("path")
-    }
     packed_ids = [str(cid) for cid in (payload.get("packed_chunk_ids") or []) if cid]
     coverage = CoverageState(required=required, chunk_paths=chunk_paths)
     coverage.read.update(packed_ids)
