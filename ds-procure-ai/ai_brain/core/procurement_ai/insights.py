@@ -14,6 +14,9 @@ from ai_brain.core.procurement_ai.process_type import (
     owner_label,
     process_chip,
 )
+from shared.logger_global import get_logger
+
+log = get_logger(__name__, service="ai_brain")
 
 KNOWN_VENDORS = (
     "EY", "BDO", "KPMG", "PwC", "PWC", "Trifinance", "Inetum", "HISENER",
@@ -31,22 +34,6 @@ def _pack_card(row: Any, status: str) -> dict[str, Any]:
     }
 
 
-_KEY_HINTS = {
-    "nda": ("nda", "non-disclosure"),
-    "dpa": ("dpa", "gdpr", "data processing"),
-    "proposal": ("proposal", "offer", "response", "rfp"),
-    "pricing_days": ("pric", "day", "rate", "fee", "commercial"),
-    "pricing_tco": ("pric", "tco", "licence", "license", "commercial"),
-    "pricing_pq": ("pric", "quote", "pq", "p*q", "commercial"),
-    "technical": ("technical", "lab", "spec"),
-    "safety": ("safety", "fire", "reach"),
-    "architecture": ("architecture", "solution design", "integration"),
-    "evsat": ("evsat", "security assessment"),
-    "requirements": ("requirement", "specification", "rfx"),
-    "references": ("reference", "case study"),
-}
-
-
 def build_insight_payload(project: Any, artifacts: list[Any], chunks: list[Any] | None = None) -> dict[str, Any]:
     file_blob = " ".join(getattr(a, "original_name", "") or "" for a in artifacts)
     process_type = classify_process_type(
@@ -58,7 +45,7 @@ def build_insight_payload(project: Any, artifacts: list[Any], chunks: list[Any] 
         ),
     )
     vendors = _vendor_cards(artifacts, chunks or [])
-    requirements = _requirement_card(process_type, artifacts)
+    requirements = _requirement_card(process_type, artifacts, chunks or [])
     packs = pack_store.pack_status(getattr(project, "id", ""))
     parsed_ok = sum(1 for a in artifacts if (getattr(a, "parse_status", "") or "") == "ok")
     file_count = len(artifacts)
@@ -129,6 +116,12 @@ def _kb_status(project_id: str, file_count: int, packs: dict[str, Any]) -> tuple
     job = packs.get("kb") if isinstance(packs.get("kb"), dict) else {}
     job_status = str(job.get("status") or "").strip()
     job_message = job.get("message")
+    if job_status in {"ingesting", "building"}:
+        # A build whose worker stopped reporting is dead, not slow. Surface it
+        # instead of leaving the UI spinning indefinitely.
+        reaped = _reaped_kb_status(project_id, file_count)
+        if reaped is not None:
+            return reaped
     if job_status in {"ingesting", "building", "failed", "ready", "needs_review", "staged"}:
         return job_status, job_message or _default_kb_message(job_status, file_count)
     if not file_count:
@@ -149,6 +142,22 @@ def _kb_status(project_id: str, file_count: int, packs: dict[str, Any]) -> tuple
     if classified:
         return "building", _default_kb_message("building", file_count)
     return "ingesting", _default_kb_message("ingesting", file_count)
+
+
+def _reaped_kb_status(project_id: str, file_count: int) -> tuple[str, str | None] | None:
+    """Flip a stalled build to failed. Returns None when the run is still alive."""
+    if not project_id:
+        return None
+    try:
+        from ai_brain.core.kb.extract import job_store
+
+        reaped = job_store.reap_stalled(project_id)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("kb stall check failed project_id={}: {}", project_id, exc)
+        return None
+    if not reaped:
+        return None
+    return "failed", reaped.get("message") or _default_kb_message("failed", file_count)
 
 
 def _default_kb_message(status: str, file_count: int) -> str:
@@ -240,13 +249,76 @@ def _roles_seen(files: list[Any]) -> list[str]:
     return list(dict.fromkeys(roles))
 
 
-def _requirement_card(process_type: str, artifacts: list[Any]) -> dict[str, Any]:
-    names = " ".join((getattr(a, "original_name", "") or "").lower() for a in artifacts)
+# Checklist keys the LLM classifier already answers authoritatively via doc_role.
+_ROLE_FOR_KEY = {
+    "proposal": ("proposal",),
+    "pricing_days": ("pricing",),
+    "pricing_tco": ("pricing",),
+    "pricing_pq": ("pricing",),
+    "references": ("reference",),
+}
+
+# Whole-word phrases searched in parsed document text. Filename matching used to
+# decide these, which both passed "Vendor proposal" off the RFP's own filename
+# and missed priced proposals whose names contain no commercial word.
+_CONTENT_PHRASES = {
+    "nda": ("non-disclosure", "nondisclosure", "confidentiality agreement", "nda"),
+    "dpa": ("data processing agreement", "gdpr", "data protection agreement"),
+    "proposal": ("our proposal", "we propose", "statement of work"),
+    "pricing_days": ("day rate", "daily rate", "man-day", "manday", "blended rate"),
+    "pricing_tco": ("tco", "total cost of ownership", "licence fee", "license fee"),
+    "pricing_pq": ("unit price", "quantity", "price per"),
+    "technical": ("technical specification", "test report", "laboratory"),
+    "safety": ("safety data", "fire rating", "reach regulation"),
+    "architecture": ("architecture", "solution design", "integration design"),
+    "evsat": ("evsat", "security assessment", "penetration test"),
+    "requirements": ("requirements matrix", "specification", "scope of work"),
+    "references": ("reference client", "case study", "referenceable"),
+}
+
+
+def _phrase_present(phrase: str, blob: str) -> bool:
+    return re.search(rf"(?<!\w){re.escape(phrase)}(?!\w)", blob) is not None
+
+
+def _content_blob(chunks: list[Any]) -> str:
+    parts: list[str] = []
+    total = 0
+    for chunk in chunks or []:
+        text = (getattr(chunk, "text", "") or "").lower()
+        if not text:
+            continue
+        parts.append(text)
+        total += len(text)
+        if total > 2_000_000:
+            break
+    return "\n".join(parts)
+
+
+def _requirement_card(
+    process_type: str, artifacts: list[Any], chunks: list[Any] | None = None
+) -> dict[str, Any]:
+    roles = {
+        (getattr(a, "doc_role", "") or "").strip().lower()
+        for a in artifacts
+        if (getattr(a, "doc_role", "") or "").strip()
+    }
+    blob = _content_blob(chunks or [])
     items = []
     for spec in checklist_for(process_type):
-        hints = _KEY_HINTS.get(spec["checklist_key"], (spec["checklist_key"],))
-        met = any(hint in names for hint in hints)
-        items.append({**spec, "status": "met" if met else "missing", "needed": None if met else f"Upload {spec['label']} or mark N/A"})
+        key = spec["checklist_key"]
+        met = any(role in roles for role in _ROLE_FOR_KEY.get(key, ()))
+        if not met and blob:
+            met = any(
+                _phrase_present(phrase, blob) for phrase in _CONTENT_PHRASES.get(key, ())
+            )
+        items.append(
+            {
+                **spec,
+                "status": "met" if met else "missing",
+                "needed": None if met else f"Upload {spec['label']} or mark N/A",
+            }
+        )
     mandatory = [i for i in items if i["severity"] == "blocking"]
     return {
         "mandatory_total": len(mandatory),

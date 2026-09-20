@@ -1,9 +1,47 @@
+import { useState } from "react";
 import KbStatusBanner from "../KbStatusBanner";
 import { useProjectView } from "../useProjectView";
+import { apiPatch, apiPost } from "../../../../../services/api";
 import "./vendors-tab.css";
 
 function VendorsTab({ projectId }) {
   const { data, error } = useProjectView(projectId, "/vendors");
+  const [picked, setPicked] = useState({});
+  const [busyBid, setBusyBid] = useState("");
+  const [noteDraft, setNoteDraft] = useState({});
+  const [savingNote, setSavingNote] = useState("");
+
+  async function addVendorNote(bidId) {
+    const text = (noteDraft[bidId] || "").trim();
+    if (!text) return;
+    setSavingNote(bidId);
+    try {
+      await apiPost(`/api/procurement/projects/${projectId}/notes`, {
+        body: text,
+        bid_id: bidId,
+      });
+      setNoteDraft((prev) => ({ ...prev, [bidId]: "" }));
+    } catch (err) {
+      window.alert(err?.message || "Could not save note.");
+    } finally {
+      setSavingNote("");
+    }
+  }
+
+  async function toggleShortlist(bidId, next) {
+    setBusyBid(bidId);
+    setPicked((prev) => ({ ...prev, [bidId]: next }));
+    try {
+      await apiPatch(`/api/procurement/projects/${projectId}/vendors/${bidId}`, {
+        shortlisted: next,
+      });
+    } catch (err) {
+      setPicked((prev) => ({ ...prev, [bidId]: !next }));
+      window.alert(err?.message || "Could not update selection.");
+    } finally {
+      setBusyBid("");
+    }
+  }
 
   if (!data && !error) {
     return <section className="vendors-tab">Loading…</section>;
@@ -43,7 +81,17 @@ function VendorsTab({ projectId }) {
           <article key={vendor.bid_id} className="vendor-card">
             <div className="vendor-card-head">
               <div>
-                <h3>{vendor.name}</h3>
+                <label className="vendor-select">
+                  <input
+                    type="checkbox"
+                    checked={picked[vendor.bid_id] ?? Boolean(vendor.shortlisted)}
+                    disabled={busyBid === vendor.bid_id}
+                    onChange={(event) =>
+                      toggleShortlist(vendor.bid_id, event.target.checked)
+                    }
+                  />
+                  <h3>{vendor.name}</h3>
+                </label>
                 <span>{vendor.legal_name}</span>
               </div>
               <em className={vendor.responded ? "responded" : "invited"}>
@@ -84,6 +132,30 @@ function VendorsTab({ projectId }) {
                 ))}
               </ul>
             ) : null}
+
+            <div className="vendor-note">
+              <textarea
+                rows={2}
+                value={noteDraft[vendor.bid_id] || ""}
+                placeholder={`Note on ${vendor.name} — e.g. reference call, risk, why shortlisted`}
+                onChange={(event) =>
+                  setNoteDraft((prev) => ({
+                    ...prev,
+                    [vendor.bid_id]: event.target.value,
+                  }))
+                }
+              />
+              <button
+                type="button"
+                className="vendor-note-btn"
+                disabled={
+                  savingNote === vendor.bid_id || !(noteDraft[vendor.bid_id] || "").trim()
+                }
+                onClick={() => addVendorNote(vendor.bid_id)}
+              >
+                {savingNote === vendor.bid_id ? "Saving…" : "Add note"}
+              </button>
+            </div>
           </article>
         ))}
       </div>

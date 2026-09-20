@@ -19,14 +19,11 @@ import { GREET_TRIGGER, writeIntakeSeed } from "./intakeChat";
 import { projectWorkspacePath } from "./paths";
 import {
   EMPTY_BRIEF,
-  WORKFLOW_ENTRY_POINTS,
   canCreateProject,
   createProjectPayload,
 } from "./projectFormOptions";
 import { useNextProjectCode } from "./useNextProjectCode";
 import "./CreateProjectDialog.css";
-
-const EMPTY_OPTION = "";
 
 function CreateProjectDialog() {
   const navigate = useNavigate();
@@ -153,24 +150,6 @@ function CreateProjectDialog() {
                   placeholder="Fasteners / mechanical fixings"
                   disabled={submitting}
                 />
-              </label>
-
-              <label>
-                <span>WORKFLOW</span>
-                <select
-                  value={brief.workflowEntryPoint}
-                  onChange={(event) =>
-                    updateBrief("workflowEntryPoint", event.target.value)
-                  }
-                  disabled={submitting}
-                >
-                  <option value={EMPTY_OPTION}>Select workflow…</option>
-                  {WORKFLOW_ENTRY_POINTS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
               </label>
             </div>
 

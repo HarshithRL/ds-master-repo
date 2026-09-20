@@ -18,7 +18,7 @@ from shared.db.connection import session_scope
 from shared.db.models import Artifact, Vendor, utc_now_iso
 
 DOC_ROLES = ("rfp", "proposal", "pricing", "registry", "csr", "reference")
-DocRole = Literal["rfp", "proposal", "pricing", "registry", "csr", "reference"]
+DocRole = Literal["rfp", "proposal", "pricing", "registry", "csr", "reference", "note"]
 
 
 class LegalEntity(BaseModel):

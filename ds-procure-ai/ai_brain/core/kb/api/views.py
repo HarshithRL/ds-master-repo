@@ -16,6 +16,9 @@ from ai_brain.core.procurement_ai.packs.matrix_from_evidence import (
 )
 from ai_brain.core.procurement_ai.project_context import load_artifacts, load_project
 from shared.db.repos import artifacts as artifact_repo
+from shared.logger_global import get_logger
+
+log = get_logger(__name__, service="ai_brain")
 
 COVERED_STATUSES = frozenset({"met", "partial"})
 TIMELINE_IDS = frozenset({f"R{i:02d}" for i in range(10, 18)})
@@ -74,6 +77,29 @@ def _bid_responded(source: MatrixSource, bid: str) -> bool:
         return True
     profile = source.profiles.get(bid) or {}
     return any(str(profile.get(key) or "").strip() for key in RESPONDED_KEYS)
+
+
+def _shortlisted_bids(project_id: str) -> set[str]:
+    """Bid ids the user ticked. Vendor.id is f"{project_id}:{bid_id}"."""
+    if not project_id:
+        return set()
+    try:
+        from sqlalchemy import select as _select
+
+        from shared.db.connection import session_scope as _session_scope
+        from shared.db.models import Vendor as _Vendor
+
+        with _session_scope() as session:
+            rows = session.execute(
+                _select(_Vendor.id).where(
+                    _Vendor.project_id == project_id,
+                    _Vendor.status == "shortlisted",
+                )
+            ).all()
+        return {str(r[0]).split(":", 1)[-1] for r in rows}
+    except Exception as exc:  # noqa: BLE001
+        log.warning("shortlist read failed project_id={}: {}", project_id, exc)
+        return set()
 
 
 def _profile_text(profile: dict[str, Any], *keys: str) -> str:
@@ -228,13 +254,28 @@ def _stages(file_count: int, kb_status: str, source: MatrixSource) -> list[dict[
 
 
 def _requirement_counts(source: MatrixSource) -> dict[str, int]:
+    """Counts in the same vocabulary the evidence rows and the review UI use."""
     total = len(source.requirements)
-    pending = sum(1 for row in source.requirements if not _req_statuses(source, row.id))
+    answered = 0
+    failed = 0
+    reviewed = 0
+    for row in source.requirements:
+        statuses = _req_statuses(source, row.id)
+        if COVERED_STATUSES.intersection(statuses):
+            answered += 1
+        elif statuses and all(status == "extraction_failed" for status in statuses):
+            failed += 1
+        for bid in source.bids:
+            cell = source.cells.get((row.id, bid))
+            if cell is not None and cell.pinned:
+                reviewed += 1
+                break
     return {
         "total": total,
-        "approved": 0,
-        "pending": pending,
-        "rejected": 0,
+        "answered": answered,
+        "gaps": total - answered - failed,
+        "failed": failed,
+        "reviewed": reviewed,
     }
 
 
@@ -297,6 +338,19 @@ def build_requirements_view(project_id: str) -> dict[str, Any]:
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in source.requirements:
         statuses = _req_statuses(source, row.id)
+        bids = []
+        for bid in source.bids:
+            cell = source.cells.get((row.id, bid))
+            bids.append(
+                {
+                    # bid_id, not the label: the review endpoint is keyed on it.
+                    "bid_id": bid,
+                    "label": source.bid_labels.get(bid, bid),
+                    "status": cell.status if cell else "not_stated",
+                    "reviewed": bool(cell.pinned) if cell else False,
+                    "citation": (cell.citation if cell else None) or "",
+                }
+            )
         grouped[row.category or "other"].append(
             {
                 "id": row.id,
@@ -305,14 +359,7 @@ def build_requirements_view(project_id: str) -> dict[str, Any]:
                 "category": row.category or "other",
                 "mandatory": bool(int(row.mandatory or 0)),
                 "coverage": _coverage_chip(statuses),
-                "bid_statuses": {
-                    source.bid_labels.get(bid, bid): (
-                        source.cells[(row.id, bid)].status
-                        if (row.id, bid) in source.cells
-                        else "not_stated"
-                    )
-                    for bid in source.bids
-                },
+                "bids": bids,
             }
         )
     groups = [
@@ -332,6 +379,7 @@ def build_vendors_view(project_id: str) -> dict[str, Any]:
     meta = _kb_meta(pid)
     source = load_matrix_source(pid) if pid else load_matrix_source("")
     vendors: list[dict[str, Any]] = []
+    shortlisted_bids = _shortlisted_bids(source.project_id)
     for bid in source.bids:
         profile = source.profiles.get(bid) or {}
         files = list(source.sources_by_bid.get(bid) or [])
@@ -339,6 +387,7 @@ def build_vendors_view(project_id: str) -> dict[str, Any]:
         vendors.append(
             {
                 "bid_id": bid,
+                "shortlisted": bid in shortlisted_bids,
                 "name": source.bid_labels.get(bid, bid),
                 "legal_name": source.legal_names.get(bid) or _profile_text(profile, "legal_name") or bid,
                 "files": files,
@@ -349,7 +398,7 @@ def build_vendors_view(project_id: str) -> dict[str, Any]:
                 "timeline": _profile_text(profile, "timeline"),
                 "ecovadis": _profile_text(profile, "ecovadis"),
                 "delivery_model": _profile_text(profile, "delivery_model"),
-                "headline": tco or _profile_text(profile, "y1_solution") or "; ".join(files),
+                "headline": tco or _profile_text(profile, "y1_solution") or "",
             }
         )
     return {

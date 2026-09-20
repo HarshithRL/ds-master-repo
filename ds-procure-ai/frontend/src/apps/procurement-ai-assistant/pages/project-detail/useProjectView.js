@@ -7,6 +7,7 @@ const POLL_MS = 4000;
 export function useProjectView(projectId, path) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     if (!projectId) {
@@ -42,7 +43,7 @@ export function useProjectView(projectId, path) {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [projectId, path]);
+  }, [projectId, path, reloadToken]);
 
-  return { data, error };
+  return { data, error, refresh: () => setReloadToken((n) => n + 1) };
 }

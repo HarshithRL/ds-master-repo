@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Spinner } from "@/components/ui/spinner";
 import { apiGet } from "../../../../services/api";
 import CreateProjectDialog from "../new-project/CreateProjectDialog";
 import "./projects.css";
@@ -9,11 +10,27 @@ function Projects() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
+  const anyBuilding = (data?.projects || []).some((p) => p.building);
+
   useEffect(() => {
-    apiGet("/api/procurement/projects")
-      .then(setData)
-      .catch(() => setError("Unable to load projects."));
-  }, []);
+    let cancelled = false;
+    const load = () =>
+      apiGet("/api/procurement/projects")
+        .then((next) => {
+          if (!cancelled) setData(next);
+        })
+        .catch(() => {
+          if (!cancelled) setError("Unable to load projects.");
+        });
+
+    load();
+    // Keep the spinner honest: only poll while something is actually running.
+    const timer = anyBuilding ? window.setInterval(load, 10000) : null;
+    return () => {
+      cancelled = true;
+      if (timer) window.clearInterval(timer);
+    };
+  }, [anyBuilding]);
 
   const openProject = (project) => {
     navigate(
@@ -37,7 +54,7 @@ function Projects() {
     );
   }
 
-  const { summary, filters, pagination, projects } = data;
+  const { filters, pagination, projects } = data;
 
   return (
     <div className="projects-page">
@@ -59,16 +76,6 @@ function Projects() {
 
           <CreateProjectDialog />
         </header>
-
-        <section className="project-summary-grid">
-          {summary.map((card) => (
-            <div key={card.label} className="summary-card">
-              <span>{card.label}</span>
-              <strong>{card.value}</strong>
-              <small>{card.trend}</small>
-            </div>
-          ))}
-        </section>
 
         <section className="projects-content">
 
@@ -106,10 +113,8 @@ function Projects() {
             <div className="project-row project-row-header">
               <span>Project</span>
               <span>Category</span>
-              <span>Owner</span>
+              <span>Creator</span>
               <span>Status</span>
-              <span>Priority</span>
-              <span>Budget</span>
               <span>Progress</span>
             </div>
 
@@ -138,25 +143,23 @@ function Projects() {
                   {project.status}
                 </span>
 
-                <span>
-                  <span
-                    className={`priority-badge ${project.priority.toLowerCase()}`}
-                  >
-                    {project.priority}
-                  </span>
-                </span>
-
-                <span>{project.budget}</span>
-
                 <span className="progress-cell">
-                  <span>{project.progress}%</span>
-                  <span className="progress-bar">
-                    <span
-                      style={{
-                        width: `${project.progress}%`,
-                      }}
-                    />
+                  <span className={`stage-chip is-${project.stage || "no_files"}`}>
+                    {project.building ? <Spinner /> : <span className="stage-dot" />}
+                    {project.stageLabel || "No files"}
                   </span>
+                  {project.stage === "ready" || project.stage === "needs_review" ? (
+                    <span className="stage-coverage">
+                      <span>{project.progress}%</span>
+                      <span className="progress-bar">
+                        <span
+                          style={{
+                            width: `${project.progress}%`,
+                          }}
+                        />
+                      </span>
+                    </span>
+                  ) : null}
                 </span>
 
               </button>

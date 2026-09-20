@@ -19,7 +19,6 @@ import {
 import { kbIsBuilding } from "./kbStatus";
 import FileExplorer from "./components/FileExplorer";
 import ChatPanel from "./components/ChatPanel";
-import StudioPanel from "./components/StudioPanel";
 import "./workspace-tab.css";
 
 function seedFromLocation(projectId, locationState) {
@@ -70,9 +69,8 @@ function WorkspaceTab({ projectId, onProjectUpdated }) {
     error: null,
     status: null,
   });
+  const [indexing, setIndexing] = useState(false);
   const [insights, setInsights] = useState(null);
-  const [studioOpen, setStudioOpen] = useState(true);
-  const [studioTab, setStudioTab] = useState("Evidence");
   const [fileProgress, setFileProgress] = useState({});
 
   const handleFileProgress = useCallback((evt) => {
@@ -214,6 +212,24 @@ function WorkspaceTab({ projectId, onProjectUpdated }) {
     fileInputRef.current?.click();
   }
 
+  async function rebuildIndex() {
+    if (indexing) {
+      return;
+    }
+    setIndexing(true);
+    try {
+      await apiPost(`/api/procurement/projects/${projectId}/packs/kb`, {});
+      setFileTick((tick) => tick + 1);
+    } catch (err) {
+      setUploadUi((prev) => ({
+        ...prev,
+        error: err?.message || "Index rebuild failed.",
+      }));
+    } finally {
+      setIndexing(false);
+    }
+  }
+
   async function handleFilesSelected(event) {
     const incoming = Array.from(event.target.files || []);
     event.target.value = "";
@@ -267,7 +283,7 @@ function WorkspaceTab({ projectId, onProjectUpdated }) {
   }
 
   return (
-    <div className={studioOpen ? "workspace-tab" : "workspace-tab studio-collapsed"}>
+    <div className="workspace-tab studio-collapsed">
       <input
         ref={fileInputRef}
         id="ws-project-file-input"
@@ -283,6 +299,8 @@ function WorkspaceTab({ projectId, onProjectUpdated }) {
         uploading={uploadUi.uploading}
         kbBuilding={kbBuilding}
         onAddFile={openFilePicker}
+        onIndex={rebuildIndex}
+        indexing={indexing}
         fileStatus={fileProgress}
       />
       <ChatPanel
@@ -308,20 +326,6 @@ function WorkspaceTab({ projectId, onProjectUpdated }) {
         onInsights={handleInsights}
         onFileProgress={handleFileProgress}
       />
-      {studioOpen ? (
-        <StudioPanel
-          projectName={data.projectName}
-          graph={data.graph}
-          insights={insights}
-          tab={studioTab}
-          onTab={setStudioTab}
-          onCollapse={() => setStudioOpen(false)}
-        />
-      ) : (
-        <button type="button" className="ws-studio-rail" onClick={() => setStudioOpen(true)}>
-          Studio
-        </button>
-      )}
     </div>
   );
 }

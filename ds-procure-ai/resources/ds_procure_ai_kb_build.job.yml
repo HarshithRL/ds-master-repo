@@ -1,0 +1,61 @@
+# =============================================================================
+# Job: kb_build (durable, out-of-process)
+# =============================================================================
+# Runs one project's knowledge-base build outside the Databricks App process.
+#
+# Why this exists: the app's in-process daemon thread (MATE_KB_BUILD_MODE=thread)
+# dies silently on app restart and competes with interactive chat for the single
+# ai_brain process. This job keeps the build isolated and durable.
+#
+# The app triggers it with run_now(job_parameters={project_id, kb_job_id}) when
+# MATE_KB_BUILD_MODE=job. Wire the resulting job id into the app as
+# MATE_KB_BUILD_JOB_ID.
+#
+# Usage (manual):
+#   databricks bundle run kb_build --target A -- --project-id <uuid>
+# =============================================================================
+
+resources:
+  jobs:
+    kb_build:
+      name: "[${bundle.target}] ds-procure-ai – KB Build"
+      tags:
+        project: ds-procure-ai
+        purpose: kb-build
+      parameters:
+        - name: project_id
+          default: ""
+        - name: kb_job_id
+          default: ""
+        - name: extract_model_kind
+          default: ""
+      # One retry covers transient LLM/warehouse blips; beyond that the failure
+      # is real and must surface instead of looping.
+      max_concurrent_runs: 4
+      # Serverless compute; deps come from the synced repo requirements.txt.
+      environments:
+        - environment_key: kb_build_env
+          spec:
+            client: "3"
+            dependencies:
+              - --requirement=${workspace.file_path}/requirements.txt
+      tasks:
+        - task_key: build
+          environment_key: kb_build_env
+          max_retries: 1
+          min_retry_interval_millis: 30000
+          retry_on_timeout: false
+          # Hard ceiling: analyze_bid self-guards at 420s per bid, so a whole
+          # project should never legitimately need this long.
+          timeout_seconds: 3600
+          spark_python_task:
+            python_file: ../jobs/kb_build_task.py
+            parameters:
+              - "--project-id"
+              - "{{job.parameters.project_id}}"
+              - "--kb-job-id"
+              - "{{job.parameters.kb_job_id}}"
+              - "--extract-model-kind"
+              - "{{job.parameters.extract_model_kind}}"
+      # No schedule — triggered on demand by the app after ingest.
+      # No cluster — uses serverless by default.

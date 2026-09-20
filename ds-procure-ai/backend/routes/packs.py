@@ -42,9 +42,17 @@ def start_project_pack(project_id, kind):
         owner_id = require_workspace_id()
     except AuthRequiredError as exc:
         return auth_error_response(exc)
-    capability = "compare_xlsx" if kind == "xlsx" else "steerco_ppt" if kind == "ppt" else ""
+    capability = (
+        "compare_xlsx"
+        if kind == "xlsx"
+        else "steerco_ppt"
+        if kind == "ppt"
+        else "kb_build"
+        if kind == "kb"
+        else ""
+    )
     if not capability:
-        return jsonify({"error": "bad_request", "detail": "kind must be xlsx or ppt"}), 400
+        return jsonify({"error": "bad_request", "detail": "kind must be xlsx, ppt or kb"}), 400
     payload = procurement_packs.start_pack(project_id, owner_id, capability)
     if payload is None:
         return jsonify({"error": "not_found"}), 404

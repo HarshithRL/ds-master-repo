@@ -291,3 +291,34 @@ CREATE TABLE IF NOT EXISTS {catalog}.bronze.mate_quality_flag (
   severity STRING,
   created_at STRING NOT NULL
 ) USING DELTA;
+
+-- Analyst decision log. bid_id NULL = project-level note.
+CREATE TABLE IF NOT EXISTS {catalog}.bronze.mate_note (
+  id STRING,
+  project_id STRING NOT NULL,
+  bid_id STRING,
+  body STRING NOT NULL,
+  kind STRING NOT NULL,
+  source STRING NOT NULL,
+  author STRING,
+  created_at STRING NOT NULL,
+  updated_at STRING NOT NULL
+) USING DELTA;
+
+-- Durable kb_build run record. `heartbeat_at` is what makes a dead build
+-- distinguishable from a slow one (an app restart leaves no other trace).
+CREATE TABLE IF NOT EXISTS {catalog}.bronze.mate_kb_build_job (
+  id STRING,
+  project_id STRING NOT NULL,
+  status STRING NOT NULL,
+  mode STRING NOT NULL,
+  run_id STRING,
+  message STRING,
+  error STRING,
+  attempt INT NOT NULL,
+  heartbeat_at STRING,
+  started_at STRING,
+  finished_at STRING,
+  created_at STRING NOT NULL,
+  updated_at STRING NOT NULL
+) USING DELTA;

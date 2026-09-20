@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { apiGet } from "../../../../../services/api";
 import "./documents-tab.css";
 
-function FileRow({ name, type, meta }) {
+function FileRow({ name, type, meta, href }) {
   return (
     <div className="file-row">
       <span className={`file-icon ${type}`}>{type.toUpperCase()}</span>
@@ -10,7 +10,13 @@ function FileRow({ name, type, meta }) {
         <strong>{name}</strong>
         <span>{meta}</span>
       </div>
-      <span className="file-action">⋯</span>
+      {href ? (
+        <a className="file-action" href={href} download>
+          Download
+        </a>
+      ) : (
+        <span className="file-action">⋯</span>
+      )}
     </div>
   );
 }
@@ -47,9 +53,6 @@ function DocumentsTab({ projectId }) {
           <h2>Project Files</h2>
           <p>Documents associated with this procurement project.</p>
         </div>
-        <button type="button" className="primary-button">
-          ✦ New AI Task
-        </button>
       </div>
 
       <div className="file-search">

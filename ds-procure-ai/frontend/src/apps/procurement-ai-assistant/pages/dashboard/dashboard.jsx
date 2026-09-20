@@ -29,7 +29,7 @@ function Dashboard() {
     );
   }
 
-  const { kpis, projectStatus, spendByCategory, topVendors, recentActivity } =
+  const { kpis, projectStatus, spendByCategory, topVendors } =
     data;
 
   return (
@@ -128,26 +128,6 @@ function Dashboard() {
                   <span className="vendor-rank">{vendor.rank}</span>
                   <span>{vendor.name}</span>
                   <strong>{vendor.amount}</strong>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="dashboard-card">
-            <div className="card-header">
-              <h2>Recent Activity</h2>
-              <span>View all →</span>
-            </div>
-
-            <div className="activity-list">
-              {recentActivity.map((item) => (
-                <div key={item.title} className="activity-item">
-                  <div className="activity-icon">{item.icon}</div>
-                  <div>
-                    <strong>{item.title}</strong>
-                    <span>{item.subtitle}</span>
-                  </div>
-                  <small>{item.timeAgo}</small>
                 </div>
               ))}
             </div>

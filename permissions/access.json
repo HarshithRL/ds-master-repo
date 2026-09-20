@@ -435,6 +435,22 @@
               "privileges": [
                 "SELECT"
               ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "mate_kb_build_job",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "mate_note",
+              "privileges": [
+                "SELECT"
+              ]
             }
           ],
           "members": [
@@ -646,6 +662,22 @@
               "catalog": "automation",
               "schema": "bronze",
               "table": "mate_quality_flag",
+              "privileges": [
+                "MODIFY"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "mate_kb_build_job",
+              "privileges": [
+                "MODIFY"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "mate_note",
               "privileges": [
                 "MODIFY"
               ]

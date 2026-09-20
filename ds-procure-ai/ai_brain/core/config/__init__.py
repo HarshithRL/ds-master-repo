@@ -1,6 +1,7 @@
 """AI Brain configuration."""
 
 from .llm import (
+    get_extract_model_kind,
     get_fast_llm,
     get_fast_model_name,
     get_llm,
@@ -12,6 +13,7 @@ from .memory import MemorySettings, get_memory_settings, search_path_options
 
 __all__ = [
     "MemorySettings",
+    "get_extract_model_kind",
     "get_fast_llm",
     "get_fast_model_name",
     "get_llm",

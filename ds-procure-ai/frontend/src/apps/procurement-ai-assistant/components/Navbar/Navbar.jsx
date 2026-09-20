@@ -14,13 +14,6 @@ function displayNameFrom(identity) {
   return user?.display_name || user?.user_name || user?.email || "Loading…";
 }
 
-function subtitleFrom(identity) {
-  if (!identity) {
-    return "";
-  }
-  return identity.user?.email || identity.env || "";
-}
-
 function initialFrom(name) {
   const trimmed = (name || "").trim();
   if (!trimmed || trimmed === "Loading…") {
@@ -53,7 +46,6 @@ function Navbar() {
   const togglePopup = useCallback(() => setOpen((current) => !current), []);
 
   const name = displayNameFrom(identity);
-  const subtitle = subtitleFrom(identity);
 
   return (
     <>
@@ -71,26 +63,11 @@ function Navbar() {
             />
 
             <span className="navbar-mate">
-              Nexus
+              Procurement Hub
             </span>
           </Link>
         </div>
 
-        <div className="navbar-search">
-          <span className="navbar-search-icon">
-            ⌕
-          </span>
-
-          <input
-            type="text"
-            placeholder="Search"
-            aria-label="Search"
-          />
-
-          <span className="navbar-search-shortcut">
-            /
-          </span>
-        </div>
 
         <div className="navbar-section">
 
@@ -138,36 +115,6 @@ function Navbar() {
 
           <ThemeToggle className="theme-toggle--navbar" />
 
-          <NavLink
-            to="/app/settings"
-            className={({ isActive }) =>
-              `navbar-link ${isActive ? "active" : ""}`
-            }
-          >
-            <span className="navbar-link-icon">
-              ⚙
-            </span>
-
-            <span>
-              Settings
-            </span>
-          </NavLink>
-
-          <NavLink
-            to="/app/help"
-            className={({ isActive }) =>
-              `navbar-link ${isActive ? "active" : ""}`
-            }
-          >
-            <span className="navbar-link-icon">
-              ?
-            </span>
-
-            <span>
-              Help
-            </span>
-          </NavLink>
-
         </div>
 
         <div className="navbar-user">
@@ -185,9 +132,6 @@ function Navbar() {
             <div className="navbar-user-info">
               <span className="navbar-user-name">
                 {name}
-              </span>
-              <span className="navbar-user-role">
-                {subtitle}
               </span>
             </div>
           </button>

@@ -1111,10 +1111,25 @@
   margin: 10px 10px 0;
 }
 
+.ws-center-head {
+  padding: 0 4px 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
 .ws-center-head .ws-center-tabs {
-  flex: 1;
   width: auto;
   margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  gap: 4px;
+}
+
+.ws-center-head .ws-center-tabs-end {
+  margin-left: auto;
 }
 
 .ws-new-chat {
@@ -1276,4 +1291,87 @@
 }
 .ws-pack-card:hover {
   background: rgba(255, 105, 0, 0.2);
+}
+
+/* Analysis is a first-class tab now, not a collapsible inside the thread. */
+.ws-analysis-tab {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none; /* beats the 42% cap .ws-analysis-panel uses in the rail */
+  overflow-y: auto;
+  margin: 10px;
+  padding: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ws-center-tabs-end {
+  margin-left: auto;
+}
+
+.ws-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ws-panel-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ws-file-folder-block + .ws-file-folder-block {
+  margin-top: 6px;
+}
+
+.ws-file-subgroup {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin-left: 8px;
+  padding-left: 12px;
+}
+
+/* Guide line tying a vendor's files back to the vendor label. */
+.ws-file-subgroup::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  bottom: 6px;
+  left: 3px;
+  width: 1px;
+  background: var(--border);
+}
+
+.ws-file-subgroup:hover::before {
+  background: var(--accent, #ff6900);
+}
+
+.ws-file-vendor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px 4px;
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ws-file-vendor::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent, #ff6900);
+  flex-shrink: 0;
+}
+
+.ws-file-subgroup .ws-file-item {
+  padding-left: 14px;
 }

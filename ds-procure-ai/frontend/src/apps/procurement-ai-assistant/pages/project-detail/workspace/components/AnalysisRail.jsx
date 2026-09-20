@@ -6,11 +6,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Spinner } from "@/components/ui/spinner";
 
 import { API_BASE } from "../../../../../../services/api";
@@ -54,9 +49,8 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
     { id: "kb", label: "Knowledge base" },
     { id: "gaps", label: "Missing docs" },
     { id: "xlsx", label: "Comparison Excel" },
-    { id: "ppt", label: "SteerCo PPT" },
   ];
-  const currentIndex = ["upload", "kb", "gaps", "xlsx", "ppt", "done"].indexOf(step);
+  const currentIndex = ["upload", "kb", "gaps", "xlsx", "done"].indexOf(step);
 
   return (
     <div className="ws-hitl">
@@ -158,25 +152,6 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
         </article>
       )}
 
-      {xlsxReady && !pptReady && (
-        <article className="ws-insight-card pack">
-          <header>
-            <span>Permission</span>
-            <strong>SteerCo</strong>
-          </header>
-          <p>Review the Excel first. PPT numbers come only from named Excel fields.</p>
-          <div className="ws-pack-actions">
-            {xlsxHref ? (
-              <a className="ws-pack-link" href={xlsxHref}>
-                Review Excel
-              </a>
-            ) : null}
-            <button type="button" className="ws-pack-btn" disabled={busy === "ppt"} onClick={() => onBuild("ppt")}>
-              {busy === "ppt" ? "Building..." : "Yes, build SteerCo"}
-            </button>
-          </div>
-        </article>
-      )}
 
       {pptReady && pptHref && (
         <article className="ws-insight-card pack">
@@ -201,8 +176,6 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
 }
 
 function AnalysisRail({
-  open,
-  onOpenChange,
   insights,
   error,
   skippedGaps,
@@ -213,12 +186,7 @@ function AnalysisRail({
   downloadPath,
 }) {
   return (
-    <Collapsible open={open} onOpenChange={onOpenChange} className="ws-chat-analysis">
-      <CollapsibleTrigger className="ws-analysis-toggle" type="button">
-        Analysis
-        <span>{open ? "Hide" : "Show"}</span>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="ws-analysis-panel">
+    <div className="ws-analysis-panel ws-analysis-tab">
         {error ? <p className="ws-insight-meta">{error}</p> : null}
         <article className="ws-insight-card">
           <header>
@@ -229,8 +197,6 @@ function AnalysisRail({
             {insights?.owner_entity || "Owner unset"}
             {" · "}
             {insights?.file_count || 0} files
-            {" · "}
-            {insights?.knowledge_pct ?? 0}% coverage
           </p>
         </article>
         <HitlRail
@@ -242,17 +208,7 @@ function AnalysisRail({
           onAddFile={onAddFile}
           downloadPath={downloadPath}
         />
-        {(insights?.vendors || []).map((vendor) => (
-          <article key={vendor.vendor_id} className="ws-insight-card">
-            <header>
-              <span>Vendor</span>
-              <strong>{vendor.name}</strong>
-            </header>
-            <p>{vendor.headline}</p>
-          </article>
-        ))}
-      </CollapsibleContent>
-    </Collapsible>
+    </div>
   );
 }
 

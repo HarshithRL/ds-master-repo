@@ -7,7 +7,7 @@ function fileStatusLabel(status) {
   return "";
 }
 
-function FileExplorer({ files, storage, onAddFile, uploading = false, kbBuilding = false, fileStatus = {} }) {
+function FileExplorer({ files, storage, onAddFile, onIndex, indexing = false, uploading = false, kbBuilding = false, fileStatus = {} }) {
   return (
     <aside className="ws-files">
       <div className="ws-panel-header">
@@ -15,14 +15,25 @@ function FileExplorer({ files, storage, onAddFile, uploading = false, kbBuilding
           PROJECT FILES
           {kbBuilding || uploading ? <Spinner /> : null}
         </strong>
-        <button
-          type="button"
-          aria-label="Add file"
-          onClick={onAddFile}
-          disabled={uploading || !onAddFile}
-        >
-          ＋
-        </button>
+        <div className="ws-panel-actions">
+          <button
+            type="button"
+            aria-label="Rebuild index"
+            title="Rebuild knowledge base index"
+            onClick={onIndex}
+            disabled={indexing || kbBuilding || !onIndex}
+          >
+            {indexing ? "…" : "⟳"}
+          </button>
+          <button
+            type="button"
+            aria-label="Add file"
+            onClick={onAddFile}
+            disabled={uploading || !onAddFile}
+          >
+            ＋
+          </button>
+        </div>
       </div>
 
       <div className="ws-file-search">
@@ -39,15 +50,25 @@ function FileExplorer({ files, storage, onAddFile, uploading = false, kbBuilding
           {files.inputs.map((group) => (
             <div key={group.folder} className="ws-file-folder-block">
               <div className="ws-file-folder">📁 {group.folder}</div>
-              {group.files.map((name) => {
-                const status = fileStatusLabel(fileStatus[name] || files.statuses?.[name]);
-                return (
-                <button key={name} type="button" className="ws-file-item">
-                  <span className="ws-file-name">{name}</span>
-                  {status ? <span className={"ws-file-status is-" + status}>{status}</span> : null}
-                </button>
-                );
-              })}
+              {(group.groups?.length
+                ? group.groups
+                : [{ label: null, files: group.files }]
+              ).map((sub) => (
+                <div key={sub.label ?? group.folder} className="ws-file-subgroup">
+                  {sub.label ? (
+                    <div className="ws-file-vendor">{sub.label}</div>
+                  ) : null}
+                  {sub.files.map((name) => {
+                    const status = fileStatusLabel(fileStatus[name] || files.statuses?.[name]);
+                    return (
+                      <button key={name} type="button" className="ws-file-item">
+                        <span className="ws-file-name">{name}</span>
+                        {status ? <span className={"ws-file-status is-" + status}>{status}</span> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           ))}
         </div>

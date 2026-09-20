@@ -8,14 +8,17 @@ import uuid
 from datetime import date
 from typing import Any
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
-from shared.db.connection import session_scope
-from shared.db.models import AppUser, Project, utc_now_iso
+from shared.db.connection import session_or, session_scope
+from shared.db.models import AppUser, Evidence, Project, Requirement, utc_now_iso
 from shared.db.paths import project_root
 from shared.db.volume_fs import ensure_dir
 from shared.db.seed import PROCUREMENT_MODULE_ID
+from shared.logger_global import get_logger
+
+log = get_logger(__name__)
 
 DEFAULT_PAGE_SIZE = 50
 UNTITLED = "untitled"
@@ -26,6 +29,7 @@ WORKFLOW_ENTRY_POINTS = (
     "Contract Negotiation",
 )
 BUSINESS_PROCESSES = ("Indirect", "Direct")
+PROJECT_STATUSES = ("Active", "On Hold", "Completed")
 
 
 class ProjectNotFoundError(LookupError):
@@ -246,6 +250,11 @@ def update_for_owner(
                 if isinstance(value, list) and value:
                     project.requirements_json = json.dumps(value)
                 continue
+            if attr == "status":
+                if not _is_real_value(value):
+                    continue
+                project.status = _validate_status(value)
+                continue
             if attr == "budget":
                 if not _is_real_value(value):
                     continue
@@ -275,16 +284,127 @@ def delete_for_owner(
     *,
     module_id: str = PROCUREMENT_MODULE_ID,
 ) -> None:
+    from sqlalchemy import delete as sa_delete
+
+    from shared.db.models import (
+        Artifact,
+        BidProfileRow,
+        ChatMessage,
+        ChatSession,
+        Chunk,
+        Evidence,
+        KbBuildJob,
+        KbEdge,
+        KbNode,
+        Note,
+        OntologyFlag,
+        OntologyOffering,
+        OntologyRequirement,
+        Pack,
+        PricingLine,
+        QualityFlag,
+        Requirement,
+        TcoLine,
+        Vendor,
+    )
+
+    # Only `artifacts` cascades on the ORM relationship, and UC/Delta has no
+    # real FK enforcement — every other child table must be cleared explicitly
+    # or its rows outlive the project.
+    project_scoped = (
+        Evidence,
+        PricingLine,
+        BidProfileRow,
+        KbNode,
+        KbEdge,
+        Requirement,
+        Vendor,
+        Chunk,
+        OntologyRequirement,
+        OntologyOffering,
+        TcoLine,
+        OntologyFlag,
+        Pack,
+        QualityFlag,
+        KbBuildJob,
+        Note,
+        Artifact,
+    )
+
     with session_scope() as session:
         project = _get_for_owner(session, project_id, owner_id, module_id=module_id)
         if project is None:
             raise ProjectNotFoundError(project_id)
+
+        session_ids = list(
+            session.scalars(
+                select(ChatSession.id).where(ChatSession.project_id == project_id)
+            ).all()
+        )
+        if session_ids:
+            session.execute(
+                sa_delete(ChatMessage).where(ChatMessage.session_id.in_(session_ids))
+            )
+        session.execute(sa_delete(ChatSession).where(ChatSession.project_id == project_id))
+
+        for model in project_scoped:
+            try:
+                session.execute(sa_delete(model).where(model.project_id == project_id))
+            except Exception as exc:  # noqa: BLE001
+                log.warning(
+                    "project delete: clearing {} failed project_id={}: {}",
+                    getattr(model, "__tablename__", model),
+                    project_id,
+                    exc,
+                )
+
         session.delete(project)
         session.flush()
 
-    root = project_root(project_id)
-    if root.exists():
-        shutil.rmtree(root, ignore_errors=True)
+    from shared.db.volume_fs import delete_dir
+
+    try:
+        delete_dir(project_root(project_id))
+    except Exception as exc:  # noqa: BLE001
+        log.warning("project delete: volume cleanup failed project_id={}: {}", project_id, exc)
+
+
+COVERED_EVIDENCE_STATUSES = ("met", "partial")
+
+
+def mandatory_progress_map(
+    project_ids: list[str], *, session: Session | None = None
+) -> dict[str, int]:
+    """Percent of each project's mandatory requirements that a vendor has answered."""
+    ids = [pid for pid in project_ids if pid]
+    if not ids:
+        return {}
+    answered = func.max(
+        case((Evidence.status.in_(COVERED_EVIDENCE_STATUSES), 1), else_=0)
+    )
+    with session_or(session) as active:
+        rows = active.execute(
+            select(Requirement.project_id, Requirement.id, answered)
+            .join(
+                Evidence,
+                (Evidence.project_id == Requirement.project_id)
+                & (Evidence.requirement_id == Requirement.id),
+                isouter=True,
+            )
+            .where(Requirement.project_id.in_(ids), Requirement.mandatory == 1)
+            .group_by(Requirement.project_id, Requirement.id)
+        ).all()
+
+    tally: dict[str, list[int]] = {}
+    for project_id, _requirement_id, is_answered in rows:
+        counts = tally.setdefault(project_id, [0, 0])
+        counts[0] += 1
+        counts[1] += 1 if is_answered else 0
+    return {
+        project_id: int(round(done / total * 100))
+        for project_id, (total, done) in tally.items()
+        if total
+    }
 
 
 def project_to_dict(project: Project) -> dict[str, Any]:
@@ -402,6 +522,16 @@ def _validate_workflow_entry_point(value: object) -> str:
             f"workflowEntryPoint must be one of: {', '.join(WORKFLOW_ENTRY_POINTS)}"
         )
     return text
+
+
+def _validate_status(value: object) -> str:
+    text = str(value or "").strip()
+    match = {s.lower(): s for s in PROJECT_STATUSES}.get(text.lower())
+    if match is None:
+        raise ProjectValidationError(
+            f"status must be one of: {', '.join(PROJECT_STATUSES)}"
+        )
+    return match
 
 
 def _validate_business_process(value: object) -> str:

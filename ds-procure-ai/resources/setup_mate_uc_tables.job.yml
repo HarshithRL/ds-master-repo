@@ -1,9 +1,11 @@
 # =============================================================================
 # Job: Setup Mate UC Tables
 # =============================================================================
-# One-time (or on-demand) job to create the 21 mate_* Delta tables + volume
+# One-time (or on-demand) job to create the 24 mate_* Delta tables + volume
 # in the target environment's catalog. Run this BEFORE the consumer access
 # pipeline so that GRANT statements don't fail on non-existent objects.
+# Re-run it after any release that adds a table; CREATE TABLE IF NOT EXISTS
+# makes it safe to run repeatedly.
 #
 # Usage:
 #   databricks bundle run setup_mate_uc_tables --target D

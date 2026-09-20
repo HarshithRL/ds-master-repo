@@ -36,7 +36,7 @@ def seed_swift_requirements(project_id: str) -> int:
     written = 0
     with session_scope() as session:
         for ordinal, (rid, text, category, target) in enumerate(SWIFT_REQUIREMENTS, start=1):
-            row = session.get(Requirement, rid)
+            row = session.get(Requirement, {"id": rid, "project_id": project_id})
             if row is None:
                 session.add(
                     Requirement(
@@ -51,14 +51,11 @@ def seed_swift_requirements(project_id: str) -> int:
                     )
                 )
                 written += 1
-            elif row.project_id == project_id:
+            else:
                 row.ordinal = ordinal
                 row.section = target
                 row.text = text
                 row.category = category
-            else:
-                # Another project owns this R-id in this sqlite file; skip clash.
-                continue
         session.flush()
     return written
 
@@ -92,6 +89,7 @@ def upsert_evidence_bundle(
         for item in gated:
             existing = session.scalars(
                 select(Evidence).where(
+                    Evidence.project_id == project_id,
                     Evidence.requirement_id == item.requirement_id,
                     Evidence.vendor_id == bundle.bid_id,
                     Evidence.model_version == model_version,
@@ -225,14 +223,18 @@ def fill_extraction_failed(
     written = 0
     note = (detail or "vendor analyst did not return a grounded bundle")[:500]
     with session_scope() as session:
+        # One round trip: this runs inside the timeout cleanup window, where 40
+        # separate DBSQL lookups did not finish before the node was killed.
+        existing_rows = session.scalars(
+            select(Evidence).where(
+                Evidence.project_id == project_id,
+                Evidence.vendor_id == bid_id,
+                Evidence.model_version == model_version,
+            )
+        ).all()
+        by_requirement = {row.requirement_id: row for row in existing_rows}
         for rid in ids:
-            existing = session.scalars(
-                select(Evidence).where(
-                    Evidence.requirement_id == rid,
-                    Evidence.vendor_id == bid_id,
-                    Evidence.model_version == model_version,
-                )
-            ).first()
+            existing = by_requirement.get(rid)
             if existing is not None and (existing.reviewed_by or "").strip():
                 continue
             if existing is None:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import time
 from typing import Any, Optional
 
 from langchain_core.runnables import RunnableConfig
@@ -26,12 +27,18 @@ from shared.logger_global import get_logger
 log = get_logger(__name__, service="ai_brain")
 
 # 240s was too tight for the multi-turn vendor_analyst + pricing/profile passes on larger bids.
-ANALYZE_BID_TIMEOUT_S = 480.0
+ANALYZE_BID_TIMEOUT_S = 600.0
 # Self-guard must fire before LangGraph's Send timeout. LangGraph enforces that
 # one by cancelling the task (CancelledError is a BaseException), which this
 # node cannot catch — one slow bid would fail the whole build with no record of
 # which bid stalled. Timing out ourselves keeps the failure scoped to one bid.
-ANALYZE_BID_SOFT_TIMEOUT_S = ANALYZE_BID_TIMEOUT_S - 60.0
+# The gap must also cover fill_extraction_failed; at 60s a real run was killed
+# mid-cleanup and left the project with no evidence at all.
+ANALYZE_BID_SOFT_TIMEOUT_S = 480.0
+# Research is bounded so the emit stage always gets to run. Previously a slow
+# researcher consumed the whole budget and the outer timeout cancelled emit too,
+# so a slow bid produced no evidence at all instead of partial evidence.
+EMIT_RESERVE_S = 150.0
 
 
 def classify_unpinned_artifacts(project_id: str) -> int:
@@ -122,6 +129,20 @@ def plan_kb_build(state: dict[str, Any]) -> list[Send] | str:
         )
         for bid_id in bids
     ]
+
+
+def _tool_call_stats(messages: Any) -> tuple[int, int]:
+    """(assistant turns, tool calls) — each assistant turn is one model round trip."""
+    turns = 0
+    tool_calls = 0
+    for msg in list(messages or []):
+        calls = getattr(msg, "tool_calls", None)
+        if calls:
+            tool_calls += len(calls)
+        msg_type = getattr(msg, "type", None) or type(msg).__name__
+        if str(msg_type).lower() in {"ai", "aimessage"}:
+            turns += 1
+    return turns, tool_calls
 
 
 async def analyze_bid(
@@ -284,6 +305,7 @@ async def invoke_vendor_analyst(
     config: Optional[RunnableConfig] = None,  # noqa: UP045
 ) -> tuple[VendorEvidenceBundle, PricingExtraction | None, int, BidProfile | None]:
     """Phase A deep-agent research (files + MCP), then ToolStrategy emit."""
+    bid_t0 = time.monotonic()
     from ai_brain.core.kb.extract.agents import (
         MAX_COVERAGE_REFILLS,
         bid_invoke_payload,
@@ -317,11 +339,44 @@ async def invoke_vendor_analyst(
         "files": payload.get("files") or {},
     }
     research: dict[str, Any] = {"messages": payload["messages"]}
+    research_t0 = time.monotonic()
+    research_deadline = bid_t0 + ANALYZE_BID_SOFT_TIMEOUT_S - EMIT_RESERVE_S
     async with mcp_kb_tools_context() as tools:
         researcher = build_vendor_analyst(tools=tools)
         with coverage_scope(coverage):
             for turn in range(1 + MAX_COVERAGE_REFILLS):
-                research = await researcher.ainvoke(state, config=nested)
+                turn_t0 = time.monotonic()
+                remaining = research_deadline - turn_t0
+                if remaining <= 0:
+                    log.warning(
+                        "vendor_analyst research budget spent before turn={} project_id={} bid_id={}",
+                        turn + 1,
+                        project_id,
+                        bid_id,
+                    )
+                    break
+                try:
+                    research = await asyncio.wait_for(
+                        researcher.ainvoke(state, config=nested), timeout=remaining
+                    )
+                except asyncio.TimeoutError:
+                    log.warning(
+                        "vendor_analyst research cut at {:.0f}s, emitting from what was gathered project_id={} bid_id={}",
+                        time.monotonic() - research_t0,
+                        project_id,
+                        bid_id,
+                    )
+                    break
+                turns, tool_calls = _tool_call_stats(research.get("messages"))
+                log.info(
+                    "PERF vendor_analyst turn={} elapsed_s={:.1f} llm_turns={} tool_calls={} project_id={} bid_id={}",
+                    turn + 1,
+                    time.monotonic() - turn_t0,
+                    turns,
+                    tool_calls,
+                    project_id,
+                    bid_id,
+                )
                 unread = coverage.unread()
                 if not unread:
                     break
@@ -338,8 +393,28 @@ async def invoke_vendor_analyst(
                     "files": payload.get("files") or {},
                 }
     research_messages = list(research.get("messages") or payload["messages"])
+    research_elapsed = time.monotonic() - research_t0
+    total_turns, total_tool_calls = _tool_call_stats(research_messages)
+    log.info(
+        "PERF vendor_analyst TOTAL elapsed_s={:.1f} llm_turns={} tool_calls={} chunks={} project_id={} bid_id={}",
+        research_elapsed,
+        total_turns,
+        total_tool_calls,
+        len(required),
+        project_id,
+        bid_id,
+    )
     unread = coverage.unread()
     emit_messages = _databricks_safe_messages(research_messages)
+    if total_turns == 0:
+        # Research never got a turn in. Hand emit the packed corpus directly so
+        # the bid still yields cited evidence instead of nothing.
+        emit_messages = emit_messages + _packed_corpus_messages(project_id, bid_id)
+        log.warning(
+            "vendor_analyst produced no turns, emitting from packed chunks project_id={} bid_id={}",
+            project_id,
+            bid_id,
+        )
     emit = build_vendor_emit()
     pricing_agent = build_pricing_extractor()
     profile_agent = build_profile_extractor()
@@ -415,10 +490,17 @@ async def invoke_vendor_analyst(
             )
             return None
 
+    extract_t0 = time.monotonic()
     result, pricing_result, profile_result = await asyncio.gather(
         _ainvoke_emit(),
         _ainvoke_pricing(),
         _ainvoke_profile(),
+    )
+    log.info(
+        "PERF extractors elapsed_s={:.1f} project_id={} bid_id={}",
+        time.monotonic() - extract_t0,
+        project_id,
+        bid_id,
     )
     try:
         bundle = bundle_from_result(result, bid_id)
@@ -439,16 +521,43 @@ async def invoke_vendor_analyst(
         pricing_from_result(pricing_result, bid_id)
         or pricing_from_result(result, bid_id)
         or pricing_from_result(research, bid_id)
+        or await _optional_structured(PricingExtraction, emit_messages, bid_id, bid_t0)
     )
     profile = (
         profile_from_result(profile_result, bid_id)
         or profile_from_result(result, bid_id)
         or profile_from_result(research, bid_id)
+        or await _optional_structured(BidProfile, emit_messages, bid_id, bid_t0)
     )
     return bundle, pricing, file_count, profile
 
 
 EMIT_TRANSCRIPT_CHARS = 60_000
+
+
+def _packed_corpus_messages(project_id: str, bid_id: str) -> list[dict[str, str]]:
+    """The bid's chunks as plain text, for when research stalls before any turn."""
+    from ai_brain.core.kb.api.mcp_tools import prefetch_bid_chunks
+
+    try:
+        packed, _ = prefetch_bid_chunks(project_id, bid_id)
+    except Exception:
+        log.exception("packed corpus fallback failed project_id={} bid_id={}", project_id, bid_id)
+        return []
+    parts: list[str] = []
+    total = 0
+    for path in sorted(packed):
+        text = packed[path] or ""
+        if not text:
+            continue
+        parts.append(text)
+        total += len(text)
+        if total > EMIT_TRANSCRIPT_CHARS:
+            break
+    if not parts:
+        return []
+    body = "\n\n".join(parts)[:EMIT_TRANSCRIPT_CHARS]
+    return [{"role": "user", "content": f"Bid corpus for `{bid_id}`:\n\n{body}"}]
 
 
 def _message_role(msg: Any) -> str:
@@ -549,12 +658,46 @@ def profile_from_result(result: Any, bid_id: str) -> BidProfile | None:
     return None
 
 
+# Recovering pricing/BAFO facts must never cost the evidence bundle its own
+# deadline, so the fallback only runs when the bid still has budget to spare.
+OPTIONAL_STRUCTURED_TIMEOUT_S = 45.0
+OPTIONAL_STRUCTURED_MIN_REMAINING_S = 75.0
+
+
+async def _optional_structured(
+    schema: type, messages: list[Any], bid_id: str, bid_t0: float
+) -> Any:
+    """Last-resort structured call. The emit agents raise at their model-call
+    limit, which used to drop pricing and BAFO facts silently."""
+    remaining = ANALYZE_BID_SOFT_TIMEOUT_S - (time.monotonic() - bid_t0)
+    if remaining < OPTIONAL_STRUCTURED_MIN_REMAINING_S:
+        log.info(
+            "{} fallback skipped bid_id={} remaining_s={:.0f}",
+            schema.__name__,
+            bid_id,
+            remaining,
+        )
+        return None
+    budget = min(OPTIONAL_STRUCTURED_TIMEOUT_S, remaining - 30.0)
+    try:
+        return await asyncio.wait_for(
+            _structured_fallback(schema, messages, bid_id), timeout=budget
+        )
+    except Exception as exc:  # noqa: BLE001
+        if is_checkpoint_sync_error(exc):
+            raise
+        log.warning(
+            "{} fallback failed bid_id={}: {}", schema.__name__, bid_id, exc
+        )
+        return None
+
+
 async def _structured_fallback(schema: type, messages: list[Any], bid_id: str) -> Any:
     """ChatDatabricks.with_structured_output when the agent skipped ToolStrategy."""
-    from ai_brain.core.config.llm import get_llm
+    from ai_brain.core.config.llm import get_extract_model_kind, get_llm
     from ai_brain.core.procurement_ai.packs.matrix_layout import EXTRACT_MAX_TOKENS
 
-    llm = get_llm("thinking", max_tokens=EXTRACT_MAX_TOKENS)
+    llm = get_llm(get_extract_model_kind(), max_tokens=EXTRACT_MAX_TOKENS)
     out = await llm.with_structured_output(schema).ainvoke(
         _databricks_safe_messages(messages)
     )

@@ -389,3 +389,8 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Extraction failures are not a neutral zero — they mean unusable evidence. */
+.stat-row strong.stat-alert {
+  color: #ff7a7a;
+}

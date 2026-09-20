@@ -73,6 +73,9 @@ async def arun_kb_build(project_id: str, *, write_xlsx: bool = False) -> dict:
 
 
 def run_kb_build(project_id: str, *, write_xlsx: bool = False) -> dict:
+    from ai_brain.core.kb.extract.notes_corpus import materialize_notes
+
+    materialize_notes(project_id)
     return asyncio.run(arun_kb_build(project_id, write_xlsx=write_xlsx))
 
 

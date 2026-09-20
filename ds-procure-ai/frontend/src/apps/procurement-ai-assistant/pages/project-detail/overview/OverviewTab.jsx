@@ -45,7 +45,6 @@ function OverviewTab({ projectId }) {
   const milestones = data.milestones || [];
   const insights = data.insights || [];
   const approvals = data.approvals || [];
-  const quickActions = data.quickActions || [];
   const documents = data.documents || { pdf: 0, docx: 0, xlsx: 0, recent: [] };
   const requirements = data.requirements || { total: 0, approved: 0, pending: 0, rejected: 0 };
   const vendors = data.vendors || { invited: 0, responded: 0, shortlisted: 0 };
@@ -101,29 +100,7 @@ function OverviewTab({ projectId }) {
           </div>
         </section>
 
-        <section className="overview-card">
-          <div className="overview-card-head">
-            <h2>Upcoming Milestones</h2>
-          </div>
-          <ul className="milestone-list">
-            {milestones.length === 0 ? (
-              <li className="empty-row">No milestones extracted yet.</li>
-            ) : null}
-            {milestones.map((item) => (
-              <li key={item.title}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.date}</span>
-                </div>
-                <em className={`milestone-status ${(item.status || "upcoming").toLowerCase().replace(/\s+/g, "-")}`}>
-                  {item.status}
-                </em>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="overview-card">
+                <section className="overview-card">
           <div className="overview-card-head">
             <h2>AI Insights</h2>
           </div>
@@ -150,41 +127,27 @@ function OverviewTab({ projectId }) {
               <strong>{requirements.total}</strong>
             </div>
             <div>
-              <span>Approved</span>
-              <strong>{requirements.approved}</strong>
+              <span>Answered</span>
+              <strong>{requirements.answered}</strong>
             </div>
             <div>
-              <span>Pending</span>
-              <strong>{requirements.pending}</strong>
+              <span>Gaps</span>
+              <strong>{requirements.gaps}</strong>
             </div>
             <div>
-              <span>Rejected</span>
-              <strong>{requirements.rejected}</strong>
+              <span>Failed</span>
+              <strong className={requirements.failed ? "stat-alert" : undefined}>
+                {requirements.failed}
+              </strong>
+            </div>
+            <div>
+              <span>Reviewed</span>
+              <strong>{requirements.reviewed}</strong>
             </div>
           </div>
         </section>
 
-        <section className="overview-card">
-          <div className="overview-card-head">
-            <h2>Vendors</h2>
-          </div>
-          <div className="stat-row">
-            <div>
-              <span>Invited</span>
-              <strong>{vendors.invited}</strong>
-            </div>
-            <div>
-              <span>Responded</span>
-              <strong>{vendors.responded}</strong>
-            </div>
-            <div>
-              <span>Shortlisted</span>
-              <strong>{vendors.shortlisted}</strong>
-            </div>
-          </div>
-        </section>
-
-        <section className="overview-card">
+                <section className="overview-card">
           <div className="overview-card-head">
             <h2>Documents & Artifacts</h2>
           </div>
@@ -200,38 +163,7 @@ function OverviewTab({ projectId }) {
           </ul>
         </section>
 
-        <section className="overview-card">
-          <div className="overview-card-head">
-            <h2>Tasks & Approvals</h2>
-          </div>
-          <ul className="approval-list">
-            {approvals.map((item) => (
-              <li key={item.title}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.owner}</span>
-                </div>
-                <em className={`approval-status ${item.status.toLowerCase()}`}>
-                  {item.status}
-                </em>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-
-      <section className="overview-quick-actions">
-        <div className="overview-card-head">
-          <h2>Quick Actions</h2>
-        </div>
-        <div className="quick-action-row">
-            {quickActions.map((action) => (
-            <button key={action} type="button" className="quick-action-btn">
-              {action}
-            </button>
-          ))}
-        </div>
-      </section>
+              </div>
     </div>
   );
 }

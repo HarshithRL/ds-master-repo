@@ -1,9 +1,10 @@
 import KbStatusBanner from "../KbStatusBanner";
 import { useProjectView } from "../useProjectView";
+import ReviewCell from "./ReviewCell";
 import "./requirements-tab.css";
 
 function RequirementsTab({ projectId }) {
-  const { data, error } = useProjectView(projectId, "/requirements");
+  const { data, error, refresh } = useProjectView(projectId, "/requirements");
 
   if (!data && !error) {
     return <section className="requirements-tab">Loading…</section>;
@@ -54,6 +55,19 @@ function RequirementsTab({ projectId }) {
                 <span className={`coverage-chip ${item.coverage || "gap"}`}>
                   {item.coverage || "gap"}
                 </span>
+                {(item.bids || []).length ? (
+                  <div className="req-cells">
+                    {item.bids.map((bid) => (
+                      <ReviewCell
+                        key={bid.bid_id}
+                        projectId={projectId}
+                        requirementId={item.id}
+                        bid={bid}
+                        onSaved={refresh}
+                      />
+                    ))}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>

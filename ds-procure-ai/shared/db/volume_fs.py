@@ -9,11 +9,13 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+import shutil
 
 from shared.db.paths import db_backend
 from shared.logger_global import get_logger
 
 __all__ = [
+    "delete_dir",
     "ensure_dir",
     "exists",
     "read_bytes",
@@ -92,6 +94,43 @@ def exists(path: Path) -> bool:
     except Exception as exc:
         log.debug("uc volume not found path={} exc_type={}: {}", posix, type(exc).__name__, exc)
         return False
+
+
+def delete_dir(path: Path) -> None:
+    """Recursively remove a directory tree.
+
+    Databricks Apps has no FUSE mount, so `shutil.rmtree` silently no-ops on a
+    UC Volume path; and the Files API only deletes *empty* directories, so the
+    contents have to be walked and removed first.
+    """
+    if db_backend() != "uc":
+        shutil.rmtree(path, ignore_errors=True)
+        return
+    _files_rmtree(path.as_posix().rstrip("/"))
+
+
+def _files_rmtree(posix: str) -> None:
+    client = _files_client()
+    try:
+        entries = list(client.files.list_directory_contents(posix))
+    except Exception as exc:
+        log.warning("uc volume list failed path={}: {}", posix, exc)
+        return
+    for entry in entries:
+        child = str(getattr(entry, "path", "") or "").rstrip("/")
+        if not child or child == posix:
+            continue
+        if bool(getattr(entry, "is_directory", False)):
+            _files_rmtree(child)
+            continue
+        try:
+            client.files.delete(child)
+        except Exception as exc:
+            log.warning("uc volume file delete failed path={}: {}", child, exc)
+    try:
+        client.files.delete_directory(posix)
+    except Exception as exc:
+        log.warning("uc volume dir delete failed path={}: {}", posix, exc)
 
 
 def _files_mkdirs(path: Path) -> None:
