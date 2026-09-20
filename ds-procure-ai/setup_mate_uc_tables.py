@@ -45,6 +45,11 @@ print(f"✓ Volume {catalog}.{schema}.{volume}")
 
 # COMMAND ----------
 
+# A table created here is NOT reachable by the app until it is ALSO added to
+# permissions/access.json (both READ and WRITE tiers) in
+# da-mdp-automation-deployments and the Automation_Assign_Consumer_Access
+# pipeline is re-run. Without the grant, Databricks reports the highest missing
+# privilege in the chain — a misleading "does not have USE CATALOG".
 tables = {
     "mate_hub_module": """
         id STRING NOT NULL, name STRING NOT NULL, description STRING, icon STRING,
