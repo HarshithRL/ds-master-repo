@@ -18,7 +18,12 @@ from ai_brain.server.request import (
 )
 from ai_brain.server.runtime import runtime
 from ai_brain.server.streaming import iter_response_events
-from shared.databricks_runtime import bind_obo_from_headers, clear_obo
+from shared.databricks_runtime import (
+    bind_obo_from_headers,
+    clear_obo,
+    headers_carry_obo,
+    obo_is_bound,
+)
 
 
 def _user_id() -> str:
@@ -60,7 +65,14 @@ async def _ensure_runtime() -> None:
 @stream()
 async def streaming(request: ResponsesAgentRequest):
     await _ensure_runtime()
-    bind_obo_from_headers(get_request_headers() or {})
+    # MLflow's agent server only populates request headers on its own
+    # /invocations path. ai_brain's native HTTP routes bind the visitor token in
+    # ASGI middleware instead, where get_request_headers() is empty - rebinding
+    # from it there would clear OBO and silently downgrade the run to the app
+    # service principal, which holds no Unity Catalog grants.
+    headers = get_request_headers() or {}
+    if headers_carry_obo(headers) or not obo_is_bound():
+        bind_obo_from_headers(headers)
     try:
         async for event in _stream_graph(request):
             yield event
