@@ -24,7 +24,7 @@ from sqlalchemy import text
 
 from ai_brain.core.kb.build.coverage import record_chunk_ids, record_path
 from ai_brain.core.kb.store.materialize import project_files
-from ai_brain.core.kb.api.schemas import load_chunk_text
+from ai_brain.core.kb.api.schemas import load_chunk_text, load_chunk_texts
 from ai_brain.core.kb.store.search import search_kb as _search_kb
 from shared.db.connection import mate_table_name, session_scope
 from shared.logger_global import get_logger
@@ -108,11 +108,12 @@ def read_chunks(chunk_ids: list[str] | str, project_id: str | None = None) -> st
     ids = _as_id_list(chunk_ids)
     if not ids:
         return "(no chunk_ids)"
+    bodies = load_chunk_texts(ids)
     parts: list[str] = []
     used = 0
     unread: list[str] = []
     for index, cid in enumerate(ids):
-        body = load_chunk_text(cid) or ""
+        body = bodies.get(cid, "")
         block = f"[{cid}]\n{body}\n"
         if used and used + len(block) > READ_CHUNKS_CHAR_CAP:
             unread = ids[index:]
@@ -138,10 +139,11 @@ def read_chunk_window(
     window = rows[start : start + take]
     if not window:
         return "(no chunks)"
+    bodies = load_chunk_texts(str(row["chunk_id"]) for row in window)
     parts: list[str] = []
     for row in window:
         cid = str(row["chunk_id"])
-        body = load_chunk_text(cid) or ""
+        body = bodies.get(cid, "")
         record_chunk_ids(cid)
         header = f"[{cid}] {row.get('original_name') or ''} {row.get('locator') or ''}".strip()
         parts.append(f"{header}\n{body}")
@@ -156,6 +158,7 @@ def prefetch_bid_chunks(project_id: str, bid_id: str) -> tuple[dict[str, str], l
     from ai_brain.core.procurement_ai.project_context import load_project
 
     rows = list_bid_chunk_rows(project_id, bid_id)
+    bodies = load_chunk_texts(str(row["chunk_id"]) for row in rows)
     project = load_project(project_id)
     code = project.code if project is not None else "project"
     prefix = f"/project/{code}/vendors/{bid_id}/_chunks"
@@ -176,7 +179,7 @@ def prefetch_bid_chunks(project_id: str, bid_id: str) -> tuple[dict[str, str], l
 
     for row in rows:
         cid = str(row["chunk_id"])
-        body = load_chunk_text(cid) or ""
+        body = bodies.get(cid, "")
         block = (
             f"## `{cid}`\n"
             f"artifact: {row.get('original_name') or ''}\n"
