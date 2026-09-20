@@ -24,6 +24,40 @@ STATUS_FILTERS = [
 ]
 
 
+STAGE_LABELS = {
+    "no_files": "No files",
+    "not_processed": "Not processed",
+    "building": "Extracting…",
+    "failed": "Extraction failed",
+    "staged": "Draft only",
+    "needs_review": "Needs review",
+    "ready": "Knowledge base ready",
+}
+
+
+def _project_stages(project_ids: list[str]) -> dict[str, str]:
+    """Where each project sits in the pipeline, from two aggregate queries."""
+    uploads = artifact_repo.upload_counts(project_ids)
+    # A missing kb_build_job table must not take the whole projects list down.
+    try:
+        from ai_brain.core.kb.extract import job_store
+
+        kb = job_store.latest_status_map(project_ids)
+    except Exception:
+        kb = {}
+
+    stages: dict[str, str] = {}
+    for project_id in project_ids:
+        run = kb.get(project_id)
+        if run in STAGE_LABELS and run != "not_processed":
+            stages[project_id] = run
+            continue
+        stages[project_id] = (
+            "not_processed" if uploads.get(project_id, {}).get("total") else "no_files"
+        )
+    return stages
+
+
 def nav_payload(user: AppUser | None, identity: dict[str, Any]) -> dict[str, Any]:
     display = _display_name(user, identity)
     return {
@@ -95,14 +129,17 @@ def projects_page_payload(
     pages = max((total + page_size - 1) // page_size, 1)
 
     summary_source = all_projects if all_projects is not None else projects
-    status_counts = Counter(p.status.lower() for p in summary_source)
+    rows = [project_repo.project_to_dict(p) for p in projects]
+    ids = [row["id"] for row in rows]
+    coverage = project_repo.mandatory_progress_map(ids)
+    stages = _project_stages(ids)
+    for row in rows:
+        stage = stages.get(row["id"], "no_files")
+        row["progress"] = coverage.get(row["id"], 0)
+        row["stage"] = stage
+        row["stageLabel"] = STAGE_LABELS[stage]
+        row["building"] = stage == "building"
     return {
-        "summary": [
-            {"label": "Total Projects", "value": str(total), "trend": "—"},
-            {"label": "Active Projects", "value": str(status_counts.get("active", 0)), "trend": "—"},
-            {"label": "On Hold", "value": str(status_counts.get("on hold", 0)), "trend": "—"},
-            {"label": "Completed", "value": str(status_counts.get("completed", 0)), "trend": "—"},
-        ],
         "filters": {
             "status": STATUS_FILTERS,
             "category": _category_filters(summary_source),
@@ -114,7 +151,7 @@ def projects_page_payload(
             "pages": list(range(1, min(pages, 3) + 1)),
             "currentPage": page,
         },
-        "projects": [project_repo.project_to_dict(p) for p in projects],
+        "projects": rows,
     }
 
 

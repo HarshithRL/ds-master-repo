@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, BinaryIO
 
-from sqlalchemy import or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from shared.db.connection import session_scope
@@ -203,6 +203,32 @@ def delete_for_owner(
         parsed_path = artifact_absolute_path(parsed_relpath)
         if parsed_path.exists():
             parsed_path.unlink(missing_ok=True)
+
+
+def upload_counts(project_ids: list[str]) -> dict[str, dict[str, int]]:
+    """Uploaded vs parsed counts per project, in one query for the whole list.
+
+    Notes are mirrored into artifacts for retrieval, so `kind == "note"` is
+    excluded here to keep the count equal to what the user actually uploaded.
+    """
+    ids = [pid for pid in project_ids if pid]
+    if not ids:
+        return {}
+    parsed = func.sum(case((Artifact.parse_status == "ok", 1), else_=0))
+    with session_scope() as session:
+        rows = session.execute(
+            select(Artifact.project_id, func.count(Artifact.id), parsed)
+            .where(
+                Artifact.project_id.in_(ids),
+                Artifact.superseded_by.is_(None),
+                Artifact.kind != "note",
+            )
+            .group_by(Artifact.project_id)
+        ).all()
+    return {
+        project_id: {"total": int(total or 0), "parsed": int(ok or 0)}
+        for project_id, total, ok in rows
+    }
 
 
 def total_bytes_for_project(project_id: str) -> int:

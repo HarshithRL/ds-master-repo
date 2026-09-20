@@ -18,7 +18,7 @@ function subtitleFrom(identity) {
   if (!identity) {
     return "";
   }
-  return identity.user?.email || identity.env || "";
+  return identity.env || "";
 }
 
 function initialFrom(name) {
@@ -141,9 +141,11 @@ function Navbar() {
               <span className="navbar-user-name">
                 {name}
               </span>
-              <span className="navbar-user-role">
-                {subtitle}
-              </span>
+              {subtitle ? (
+                <span className="navbar-user-role">
+                  {subtitle}
+                </span>
+              ) : null}
             </div>
           </button>
 
