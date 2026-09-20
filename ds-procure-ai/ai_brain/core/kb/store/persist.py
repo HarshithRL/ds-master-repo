@@ -358,9 +358,24 @@ def fill_extraction_failed(
                 Evidence.model_version == model_version,
             )
         ).all()
-        by_requirement = {row.requirement_id: row for row in existing_rows}
+        by_requirement: dict[str, Evidence] = {}
+        duplicate_ids: list[str] = []
+        for row in existing_rows:
+            kept = by_requirement.get(row.requirement_id)
+            if kept is None:
+                by_requirement[row.requirement_id] = row
+                continue
+            kept_reviewed = bool((kept.reviewed_by or "").strip())
+            row_reviewed = bool((row.reviewed_by or "").strip())
+            if row_reviewed and not kept_reviewed:
+                duplicate_ids.append(kept.id)
+                by_requirement[row.requirement_id] = row
+            elif not row_reviewed:
+                duplicate_ids.append(row.id)
+            # Both reviewed: leave the duplicate rather than delete human work.
+
         new_rows: list[dict[str, Any]] = []
-        stale_ids: list[str] = []
+        touch_ids: list[str] = []
         for rid in ids:
             existing = by_requirement.get(rid)
             if existing is not None and (existing.reviewed_by or "").strip():
@@ -380,19 +395,30 @@ def fill_extraction_failed(
                         "confidence": 0.0,
                     }
                 )
-            elif existing.status != "extraction_failed":
-                stale_ids.append(existing.id)
+            else:
+                touch_ids.append(existing.id)
         # Two statements, not one per requirement. Row-at-a-time here cost ~120s
         # for 40 rows on Delta and ate a fifth of the node budget.
+        if duplicate_ids:
+            # A failed bid used to keep last run's met rows alongside the new
+            # failures, so one requirement showed two contradictory answers.
+            session.execute(
+                delete(Evidence)
+                .where(Evidence.id.in_(duplicate_ids))
+                .execution_options(synchronize_session=False)
+            )
         if new_rows:
             session.execute(insert(Evidence), new_rows)
-        if stale_ids:
+        if touch_ids:
+            # Refresh even when the status is unchanged: skipping already-failed
+            # rows left extracted_at stale, so a repeat failure was invisible.
             session.execute(
                 update(Evidence)
-                .where(Evidence.id.in_(stale_ids))
+                .where(Evidence.id.in_(touch_ids))
                 .values(status="extraction_failed", claim_text=note, extracted_at=now)
+                .execution_options(synchronize_session=False)
             )
-        written = len(new_rows) + len(stale_ids)
+        written = len(new_rows) + len(touch_ids)
         session.flush()
     return written
 
