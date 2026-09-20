@@ -23,6 +23,8 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
   const decision = insights?.decision || {};
   const packs = insights?.packs || {};
   const missing = (insights?.requirements?.items || []).filter((item) => item.status === "missing");
+  const blockingMissing = missing.filter((item) => item.severity === "blocking");
+  const optionalMissing = missing.filter((item) => item.severity !== "blocking");
   const xlsxReady = xlsxIsFilled(packs.xlsx?.status);
   const xlsxWritten = xlsxIsWritten(packs.xlsx?.status);
   const pptReady = packs.ppt?.status === "ready";
@@ -39,7 +41,9 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
     step = "kb";
   } else if (!building && fileCount > 0) {
     step = "gaps";
-    if (skippedGaps || missing.length === 0) step = "xlsx";
+    // Only blocking gaps gate. skippedGaps is per-mount state, so an optional
+    // gap used to pin the rail on step 3 again after every reload.
+    if (skippedGaps || blockingMissing.length === 0) step = "xlsx";
     if (xlsxReady) step = "ppt";
     if (pptReady) step = "done";
   }
@@ -92,16 +96,11 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
         <article className="ws-insight-card pack">
           <header>
             <span>HITL</span>
-            <strong>
-              {missing.some((item) => item.severity === "blocking")
-                ? `${missing.filter((item) => item.severity === "blocking").length} blocking`
-                : `${missing.length} optional`}
-            </strong>
+            <strong>{blockingMissing.length} blocking</strong>
           </header>
           <p>
-            {missing.some((item) => item.severity === "blocking")
-              ? "A comparison needs these. Upload them, or continue and the pack will record them as not supplied."
-              : "Nothing blocking. Continue, and the pack records these as not supplied."}
+            A comparison needs these. Upload them, or continue and the pack will record them as
+            not supplied.
           </p>
           <ul className="ws-gap-list">
             {missing.map((item) => (
@@ -135,6 +134,19 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
             <strong>Excel</strong>
           </header>
           <p>{decision.summary || "Build the comparison matrix from parsed files. Humans award."}</p>
+          {optionalMissing.length > 0 ? (
+            <ul className="ws-gap-list">
+              {optionalMissing.map((item) => (
+                <li key={item.checklist_key} className="opt">
+                  <span>
+                    {item.label}
+                    {item.hint ? <small>{item.hint}</small> : null}
+                  </span>
+                  <em>not supplied</em>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <div className="ws-pack-actions">
             <button type="button" className="ws-pack-btn" disabled={busy === "xlsx"} onClick={() => onBuild("xlsx")}>
               {busy === "xlsx" ? "Building..." : "Yes, build comparison"}
