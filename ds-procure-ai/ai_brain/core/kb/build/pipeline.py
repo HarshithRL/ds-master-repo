@@ -98,9 +98,14 @@ async def extract_requirements(
 ) -> dict[str, Any]:
     """Seed R01–R40 (SWIFT overlay). Optional requirement deepagent is additive."""
     project_id = str(state.get("project_id") or "").strip()
-    if project_id:
+
+    def _seed() -> int:
+        # Both are synchronous DBSQL; under NullPool each one is a fresh
+        # warehouse handshake, so on the loop they stall every concurrent node.
         ensure_vendor_bids(project_id)
-    seeded = seed_swift_requirements(project_id) if project_id else 0
+        return seed_swift_requirements(project_id)
+
+    seeded = await asyncio.to_thread(_seed) if project_id else 0
     extra = (
         await invoke_requirement_extractor(project_id, config=config)
         if project_id
@@ -209,7 +214,13 @@ async def analyze_bid(
         else:
             detail = str(exc)
             log.exception("vendor_analyst failed project_id={} bid_id={}", project_id, bid_id)
-        fill_extraction_failed(project_id, bid_id, detail=detail)
+        # Off the loop: this is ~40 Delta row writes under NullPool and it runs
+        # in the narrow window between the soft timeout and the node deadline.
+        # Left synchronous, two bids failing at once serialise here and drag the
+        # whole node past ANALYZE_BID_TIMEOUT_S (observed: 621.9s of a 600s cap).
+        await asyncio.to_thread(
+            fill_extraction_failed, project_id, bid_id, detail=detail
+        )
         counts = {"error": detail}
         pricing_n = 0
         file_count = 0

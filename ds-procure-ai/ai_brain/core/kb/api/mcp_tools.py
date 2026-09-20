@@ -35,7 +35,15 @@ from shared.logger_global import get_logger
 log = get_logger(__name__, service="ai_brain")
 
 READ_CHUNKS_CHAR_CAP = 24_000
-CHUNK_FILE_CHARS = 12_000
+CHUNK_FILE_CHARS = 40_000
+# One read_file call must return a WHOLE pack file. deepagents caps a read at
+# DEFAULT_READ_FILE_LIMIT=100 lines unless the caller passes `limit`, and evicts
+# any tool result over tool_token_limit_before_evict=20_000 tokens (80k chars).
+# So: cap a file by BOTH chars (well under the evict line) and lines, and tell
+# the agent to pass limit=CHUNK_FILE_LINES. Measured on PRJ-2026-0020: a 582
+# chunk bid needed 134 reads at the 100 line default and never finished; the
+# largest bid that ever succeeded needed 24.
+CHUNK_FILE_LINES = 1_200
 READ_CHUNK_WINDOW_DEFAULT = 8
 
 
@@ -281,16 +289,18 @@ def prefetch_bid_chunks(project_id: str, bid_id: str) -> tuple[dict[str, str], l
     packed: list[str] = []
     batch: list[str] = []
     used = 0
+    used_lines = 0
     index = 0
 
     def flush() -> None:
-        nonlocal batch, used, index
+        nonlocal batch, used, used_lines, index
         if not batch:
             return
         files[f"{prefix}/{index:03d}.md"] = "\n\n".join(batch)
         index += 1
         batch = []
         used = 0
+        used_lines = 0
 
     for row in rows:
         cid = str(row["chunk_id"])
@@ -302,10 +312,16 @@ def prefetch_bid_chunks(project_id: str, bid_id: str) -> tuple[dict[str, str], l
             f"heading: {row.get('heading') or ''}\n\n"
             f"{body}"
         )
-        if batch and used + len(block) > CHUNK_FILE_CHARS:
+        # +2 covers the blank line the join inserts before the next block.
+        block_lines = block.count("\n") + 2
+        if batch and (
+            used + len(block) > CHUNK_FILE_CHARS
+            or used_lines + block_lines > CHUNK_FILE_LINES
+        ):
             flush()
         batch.append(block)
         used += len(block)
+        used_lines += block_lines
         packed.append(cid)
     flush()
     return files, packed

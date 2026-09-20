@@ -46,6 +46,10 @@ CITATION_DOCTRINE = (
 VENDOR_ANALYST_PROMPT = STABLE_RULES + CITATION_DOCTRINE + (
     "The bid corpus is packed under /project/*/vendors/<bid>/_chunks/. "
     "Use ls/grep/read_file on those files and the RFP. "
+    "Each _chunks/NNN.md file is sized to be read in ONE call: always pass "
+    "limit=1200 to read_file so you get the whole file, never the 100-line "
+    "default. Files are ordered by relevance, so 000.md is the most likely to "
+    "answer requirements. "
     "Use MCP search_project_kb, read_chunk, read_chunks, or read_chunk_window only "
     "to re-open a cited chunk_id. If you call MCP reads, emit several in one turn. "
     "Do not emit a schema in this step.\n"
@@ -136,13 +140,18 @@ def invoke_payload(project_id: str, user_content: str) -> dict[str, Any]:
 
 
 def bid_invoke_payload(project_id: str, bid_id: str) -> dict[str, Any]:
-    from ai_brain.core.kb.api.mcp_tools import chunk_manifest_block
+    from ai_brain.core.kb.api.mcp_tools import CHUNK_FILE_LINES, chunk_manifest_block
 
     files, packed_ids = files_for_bid(project_id, bid_id)
     index = chunk_manifest_block(project_id, bid_id)
+    pack_files = sorted(p for p in files if f"/vendors/{bid_id}/_chunks/" in p)
     content = (
         f"Analyse bid `{bid_id}` only. Corpus is under "
-        f"/project/*/vendors/{bid_id}/_chunks/ â€” ls/grep/read_file there and the RFP. "
+        f"/project/*/vendors/{bid_id}/_chunks/ — ls/grep/read_file there and the RFP. "
+        f"There are {len(pack_files)} pack files, ordered most-relevant first. "
+        f"Read each with read_file(path, limit={CHUNK_FILE_LINES}) so one call "
+        "returns the whole file; the default limit of 100 lines would give you "
+        "only a fraction of it. "
         "Use MCP search_project_kb / read_chunk / read_chunks / read_chunk_window only "
         "to re-open a cited id. If you call MCP reads, emit several in one turn. "
         "Gather cited facts for VendorEvidenceBundle (R01â€“R40) and BidProfile. "
