@@ -11,7 +11,7 @@ from typing import Any
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
-from shared.db.connection import session_scope
+from shared.db.connection import session_or, session_scope
 from shared.db.models import AppUser, Evidence, Project, Requirement, utc_now_iso
 from shared.db.paths import project_root
 from shared.db.volume_fs import ensure_dir
@@ -372,7 +372,9 @@ def delete_for_owner(
 COVERED_EVIDENCE_STATUSES = ("met", "partial")
 
 
-def mandatory_progress_map(project_ids: list[str]) -> dict[str, int]:
+def mandatory_progress_map(
+    project_ids: list[str], *, session: Session | None = None
+) -> dict[str, int]:
     """Percent of each project's mandatory requirements that a vendor has answered."""
     ids = [pid for pid in project_ids if pid]
     if not ids:
@@ -380,8 +382,8 @@ def mandatory_progress_map(project_ids: list[str]) -> dict[str, int]:
     answered = func.max(
         case((Evidence.status.in_(COVERED_EVIDENCE_STATUSES), 1), else_=0)
     )
-    with session_scope() as session:
-        rows = session.execute(
+    with session_or(session) as active:
+        rows = active.execute(
             select(Requirement.project_id, Requirement.id, answered)
             .join(
                 Evidence,
