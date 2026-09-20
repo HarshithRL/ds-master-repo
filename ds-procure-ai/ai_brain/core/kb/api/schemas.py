@@ -21,6 +21,9 @@ EvidenceStatus = Literal["met", "partial", "not_offered", "not_stated", "unclear
 UNGROUNDED_KIND = "ungrounded_claim"
 
 ChunkLookup = Callable[[str], str | None]
+ArtifactLookup = Callable[[str], str | None]
+# One connection, several statements, rather than one huge IN list.
+CHUNK_FETCH_BATCH = 500
 
 
 class EvidenceItem(BaseModel):
@@ -142,10 +145,14 @@ def verify_grounding(
     chunk_text: str | None = None,
     *,
     chunk_lookup: ChunkLookup | None = None,
+    artifact_lookup: ArtifactLookup | None = None,
 ) -> bool:
     """Claim must literally appear in the cited chunk (normalized substring).
 
     Fail-closed: missing chunk text is not grounded. `not_stated` always passes.
+    Callers grounding a whole bundle should pass batched/memoised lookups; the
+    defaults hit DBSQL once per item, and `load_artifact_markdown` re-parses the
+    artifact's entire JSON every time.
     """
     if item.status == "not_stated":
         return True
@@ -157,7 +164,8 @@ def verify_grounding(
         if item.chunk_id:
             source = lookup(item.chunk_id)
     if source is None and item.artifact_id:
-        source = load_artifact_markdown(item.artifact_id)
+        artifacts = artifact_lookup or load_artifact_markdown
+        source = artifacts(item.artifact_id)
     if source is None:
         return False
     return normalize(item.claim_text) in normalize(source)
@@ -189,13 +197,20 @@ def apply_grounding_gate(
     *,
     project_id: str | None = None,
     chunk_lookup: ChunkLookup | None = None,
+    artifact_lookup: ArtifactLookup | None = None,
+    flag_sink: list[QualityFlag] | None = None,
 ) -> EvidenceItem:
     """Downgrade ungrounded items to unclear/0 and raise `ungrounded_claim`."""
-    if verify_grounding(item, chunk_text, chunk_lookup=chunk_lookup):
+    if verify_grounding(
+        item,
+        chunk_text,
+        chunk_lookup=chunk_lookup,
+        artifact_lookup=artifact_lookup,
+    ):
         return item
     flagged = item.model_copy(update={"status": "unclear", "confidence": 0.0})
     if project_id:
-        record_ungrounded_claim(project_id, item)
+        record_ungrounded_claim(project_id, item, sink=flag_sink)
     return flagged
 
 
@@ -214,19 +229,28 @@ def load_chunk_texts(chunk_ids: Iterable[str]) -> dict[str, str]:
 
     Calling `load_chunk_text` in a loop opens one DBSQL connection per chunk
     (NullPool), which blocks the event loop long enough that asyncio timeouts
-    never fire.
+    never fire. Batched so a bid with thousands of chunks cannot build an
+    `IN (...)` list big enough to hit the statement size limit.
     """
     ids = [cid for cid in dict.fromkeys(chunk_ids) if cid]
     if not ids:
         return {}
+    out: dict[str, str] = {}
     with session_scope() as session:
-        rows = session.execute(
-            select(Chunk.id, Chunk.text).where(Chunk.id.in_(ids))
-        ).all()
-    return {str(cid): (text or "") for cid, text in rows}
+        for start in range(0, len(ids), CHUNK_FETCH_BATCH):
+            rows = session.execute(
+                select(Chunk.id, Chunk.text).where(
+                    Chunk.id.in_(ids[start : start + CHUNK_FETCH_BATCH])
+                )
+            ).all()
+            out.update({str(cid): (text or "") for cid, text in rows})
+    return out
 
 
-def record_ungrounded_claim(project_id: str, item: EvidenceItem) -> QualityFlag:
+def record_ungrounded_claim(
+    project_id: str, item: EvidenceItem, *, sink: list[QualityFlag] | None = None
+) -> QualityFlag:
+    """Write the flag, or hand it to `sink` so a bundle can persist them together."""
     now = utc_now_iso()
     flag = QualityFlag(
         id=str(uuid.uuid4()),
@@ -240,6 +264,9 @@ def record_ungrounded_claim(project_id: str, item: EvidenceItem) -> QualityFlag:
         severity="high",
         created_at=now,
     )
+    if sink is not None:
+        sink.append(flag)
+        return flag
     with session_scope() as session:
         session.add(flag)
         session.flush()
