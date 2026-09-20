@@ -39,6 +39,11 @@ ANALYZE_BID_SOFT_TIMEOUT_S = 480.0
 # researcher consumed the whole budget and the outer timeout cancelled emit too,
 # so a slow bid produced no evidence at all instead of partial evidence.
 EMIT_RESERVE_S = 150.0
+# The reserve above only sized the research deadline — the extractors themselves
+# ran unbounded, so a bid reached 832s against the 600s node timeout and failed
+# the whole build. Both stages are now bounded.
+EMIT_MIN_BUDGET_S = 45.0
+STRUCTURED_FALLBACK_TIMEOUT_S = 60.0
 
 
 def classify_unpinned_artifacts(project_id: str) -> int:
@@ -491,11 +496,26 @@ async def invoke_vendor_analyst(
             return None
 
     extract_t0 = time.monotonic()
-    result, pricing_result, profile_result = await asyncio.gather(
-        _ainvoke_emit(),
-        _ainvoke_pricing(),
-        _ainvoke_profile(),
+    emit_budget = max(
+        EMIT_MIN_BUDGET_S, ANALYZE_BID_SOFT_TIMEOUT_S - (extract_t0 - bid_t0)
     )
+    try:
+        result, pricing_result, profile_result = await asyncio.wait_for(
+            asyncio.gather(
+                _ainvoke_emit(),
+                _ainvoke_pricing(),
+                _ainvoke_profile(),
+            ),
+            emit_budget,
+        )
+    except asyncio.TimeoutError:
+        log.warning(
+            "extractors exceeded {:.0f}s project_id={} bid_id={}; one structured call instead",
+            emit_budget,
+            project_id,
+            bid_id,
+        )
+        result = pricing_result = profile_result = None
     log.info(
         "PERF extractors elapsed_s={:.1f} project_id={} bid_id={}",
         time.monotonic() - extract_t0,
@@ -510,9 +530,19 @@ async def invoke_vendor_analyst(
             project_id,
             bid_id,
         )
-        bundle = await _structured_fallback(
-            VendorEvidenceBundle, emit_messages, bid_id
-        )
+        try:
+            bundle = await _structured_fallback(
+                VendorEvidenceBundle, emit_messages, bid_id
+            )
+        except (TimeoutError, asyncio.TimeoutError):
+            # Empty beats raising: the node completes, this bid's requirements
+            # land as extraction_failed, and the remaining bids still run.
+            log.error(
+                "structured fallback timed out project_id={} bid_id={}",
+                project_id,
+                bid_id,
+            )
+            bundle = VendorEvidenceBundle(bid_id=bid_id, items=[])
     if unread:
         notes = list(bundle.notes or [])
         notes.append("unread chunks: " + ", ".join(unread[:40]))
@@ -698,8 +728,9 @@ async def _structured_fallback(schema: type, messages: list[Any], bid_id: str) -
     from ai_brain.core.procurement_ai.packs.matrix_layout import EXTRACT_MAX_TOKENS
 
     llm = get_llm(get_extract_model_kind(), max_tokens=EXTRACT_MAX_TOKENS)
-    out = await llm.with_structured_output(schema).ainvoke(
-        _databricks_safe_messages(messages)
+    out = await asyncio.wait_for(
+        llm.with_structured_output(schema).ainvoke(_databricks_safe_messages(messages)),
+        STRUCTURED_FALLBACK_TIMEOUT_S,
     )
     if isinstance(out, schema):
         return out
