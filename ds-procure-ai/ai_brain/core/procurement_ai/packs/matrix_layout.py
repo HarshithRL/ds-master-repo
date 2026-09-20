@@ -172,6 +172,8 @@ REVIEWED_MARK = "[reviewed]"
 SOURCE_QUALITY_PREFIX = "⚠ source quality (high):"
 UNCERTAIN_PREFIX = "uncertain — review: "
 CONFIDENCE_FLOOR = 0.7
+# An hourly rate shown against a daily one is an 8x error in a bid comparison.
+MIXED_RATE_BASIS = "mixed rate basis — see pricing lines"
 
 # Marks matching the richness-bar workbook legend; phrases stay distinct.
 STATUS_MARK = {

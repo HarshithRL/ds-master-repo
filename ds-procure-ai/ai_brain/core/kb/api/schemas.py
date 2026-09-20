@@ -19,6 +19,13 @@ from shared.db.models import Chunk, QualityFlag, utc_now_iso
 
 EvidenceStatus = Literal["met", "partial", "not_offered", "not_stated", "unclear"]
 UNGROUNDED_KIND = "ungrounded_claim"
+# not_stated asserts the document is silent, which only holds if the analyst read
+# it all. When research is cut short the absence is ours, not the bidder's.
+INCOMPLETE_RESEARCH_NOTE = "research incomplete: absence not verified"
+ABSENCE_UNVERIFIED_TEXT = (
+    "not determined: the analyst did not finish reading this bid, so no "
+    "conclusion about the bidder was drawn"
+)
 
 ChunkLookup = Callable[[str], str | None]
 ArtifactLookup = Callable[[str], str | None]

@@ -19,7 +19,12 @@ from ai_brain.core.kb.store.persist import (
     upsert_evidence_bundle,
     upsert_pricing,
 )
-from ai_brain.core.kb.api.schemas import BidProfile, PricingExtraction, VendorEvidenceBundle
+from ai_brain.core.kb.api.schemas import (
+    INCOMPLETE_RESEARCH_NOTE,
+    BidProfile,
+    PricingExtraction,
+    VendorEvidenceBundle,
+)
 from ai_brain.core.kb.store.search import set_current_project_id
 from ai_brain.server.tracing import is_checkpoint_sync_error
 from shared.logger_global import get_logger
@@ -44,6 +49,10 @@ EMIT_RESERVE_S = 150.0
 # the whole build. Both stages are now bounded.
 EMIT_MIN_BUDGET_S = 45.0
 STRUCTURED_FALLBACK_TIMEOUT_S = 60.0
+# invoke_vendor_analyst must RETURN before the caller's wait_for fires. Being
+# cancelled there discards every finding, which is how a bid ends up with 40
+# extraction_failed rows after spending its full budget.
+BID_RETURN_MARGIN_S = 25.0
 
 
 def classify_unpinned_artifacts(project_id: str) -> int:
@@ -172,18 +181,30 @@ async def analyze_bid(
             invoke_vendor_analyst(project_id, bid_id, config=config),
             timeout=ANALYZE_BID_SOFT_TIMEOUT_S,
         )
-        # Grounding + upserts are synchronous DBSQL and run outside the timeout
-        # above, so on the loop they are what pushes a big bid past the node
-        # deadline after the analysis itself finished in budget.
-        counts = await asyncio.to_thread(upsert_evidence_bundle, project_id, bundle)
+        # bid_id comes from the fan-out, not from model output: the persist
+        # layer deletes by vendor, so an echoed-back wrong id would delete
+        # another bid's rows.
+        counts = await asyncio.to_thread(
+            upsert_evidence_bundle,
+            project_id,
+            bundle,
+            bid_id=bid_id,
+            unverified_absence=any(
+                INCOMPLETE_RESEARCH_NOTE in (note or "") for note in (bundle.notes or [])
+            ),
+        )
         try:
             pricing_n = (
-                await asyncio.to_thread(upsert_pricing, project_id, pricing)
+                await asyncio.to_thread(
+                    upsert_pricing, project_id, pricing, bid_id=bid_id
+                )
                 if pricing and pricing.lines
                 else 0
             )
             profile_n = (
-                await asyncio.to_thread(upsert_bid_profile, project_id, profile)
+                await asyncio.to_thread(
+                    upsert_bid_profile, project_id, profile, bid_id=bid_id
+                )
                 if profile
                 else 0
             )
@@ -373,6 +394,7 @@ async def invoke_vendor_analyst(
     }
     research: dict[str, Any] = {"messages": payload["messages"]}
     research_t0 = time.monotonic()
+    research_cut = False
     research_deadline = bid_t0 + ANALYZE_BID_SOFT_TIMEOUT_S - EMIT_RESERVE_S
     async with mcp_kb_tools_context() as tools:
         researcher = build_vendor_analyst(tools=tools)
@@ -381,6 +403,7 @@ async def invoke_vendor_analyst(
                 turn_t0 = time.monotonic()
                 remaining = research_deadline - turn_t0
                 if remaining <= 0:
+                    research_cut = True
                     log.warning(
                         "vendor_analyst research budget spent before turn={} project_id={} bid_id={}",
                         turn + 1,
@@ -389,13 +412,32 @@ async def invoke_vendor_analyst(
                     )
                     break
                 try:
-                    research = await asyncio.wait_for(
-                        researcher.ainvoke(state, config=nested), timeout=remaining
+                    # Stream, don't await: wait_for cancelling ainvoke() throws
+                    # away everything the agent read. A 582-chunk bid spent its
+                    # whole 330s budget and still reported zero turns because of
+                    # that. Keeping the last streamed state means a cut-off turn
+                    # still hands emit the chunks it managed to gather.
+                    partial: dict[str, Any] | None = None
+                    async with asyncio.timeout(remaining):
+                        async for step in researcher.astream(
+                            state, config=nested, stream_mode="values"
+                        ):
+                            if isinstance(step, dict) and step.get("messages"):
+                                partial = step
+                    research = partial or research
+                except (TimeoutError, asyncio.TimeoutError):
+                    research_cut = True
+                    salvaged, salvaged_calls = _tool_call_stats(
+                        (partial or {}).get("messages")
                     )
-                except asyncio.TimeoutError:
+                    if partial is not None:
+                        research = partial
                     log.warning(
-                        "vendor_analyst research cut at {:.0f}s, emitting from what was gathered project_id={} bid_id={}",
+                        "vendor_analyst research cut at {:.0f}s, emitting from what was gathered "
+                        "llm_turns={} tool_calls={} project_id={} bid_id={}",
                         time.monotonic() - research_t0,
+                        salvaged,
+                        salvaged_calls,
                         project_id,
                         bid_id,
                     )
@@ -524,8 +566,15 @@ async def invoke_vendor_analyst(
             return None
 
     extract_t0 = time.monotonic()
-    emit_budget = max(
-        EMIT_MIN_BUDGET_S, ANALYZE_BID_SOFT_TIMEOUT_S - (extract_t0 - bid_t0)
+    bid_deadline = bid_t0 + ANALYZE_BID_SOFT_TIMEOUT_S - BID_RETURN_MARGIN_S
+    # Leave the fallback its own room inside the deadline instead of starting it
+    # after the budget is already spent (330 + 150 + 60 overran a 480s cap).
+    emit_budget = min(
+        max(
+            EMIT_MIN_BUDGET_S,
+            bid_deadline - extract_t0 - STRUCTURED_FALLBACK_TIMEOUT_S,
+        ),
+        max(0.0, bid_deadline - extract_t0),
     )
     try:
         result, pricing_result, profile_result = await asyncio.wait_for(
@@ -560,7 +609,10 @@ async def invoke_vendor_analyst(
         )
         try:
             bundle = await _structured_fallback(
-                VendorEvidenceBundle, emit_messages, bid_id
+                VendorEvidenceBundle,
+                emit_messages,
+                bid_id,
+                budget=max(0.0, bid_deadline - time.monotonic()),
             )
         except (TimeoutError, asyncio.TimeoutError):
             # Empty beats raising: the node completes, this bid's requirements
@@ -575,6 +627,12 @@ async def invoke_vendor_analyst(
         notes = list(bundle.notes or [])
         notes.append("unread chunks: " + ", ".join(unread[:40]))
         bundle = bundle.model_copy(update={"notes": notes})
+    if research_cut or total_turns == 0 or unread:
+        # Downstream turns every not_stated in this bundle into "we could not
+        # determine" rather than "the bidder is silent".
+        bundle = bundle.model_copy(
+            update={"notes": list(bundle.notes or []) + [INCOMPLETE_RESEARCH_NOTE]}
+        )
     pricing = (
         pricing_from_result(pricing_result, bid_id)
         or pricing_from_result(result, bid_id)
@@ -590,7 +648,16 @@ async def invoke_vendor_analyst(
     return bundle, pricing, file_count, profile
 
 
-EMIT_TRANSCRIPT_CHARS = 60_000
+# deepagents evicts a single user message over NUM_CHARS_PER_TOKEN(4) *
+# human_message_token_limit_before_evict(50_000) = 200_000 chars, replacing it
+# with a preview. Stay under that with headroom; 60_000 was throwing away 84%
+# of a large bid's transcript before emit ever saw it.
+EMIT_TRANSCRIPT_CHARS = 150_000
+_TRANSCRIPT_MIN_SLICE = 2_000
+_TRUNC_MARK = "\n...[truncated]"
+# Emit must quote chunk text literally to pass the grounding gate, so the
+# analyst's own words get at most half the budget and the source keeps the rest.
+_TRANSCRIPT_SAID_SHARE = 0.5
 
 
 def _packed_corpus_messages(project_id: str, bid_id: str) -> list[dict[str, str]]:
@@ -640,7 +707,10 @@ def _databricks_safe_messages(messages: list[Any]) -> list[dict[str, str]]:
     """
     from ai_brain.core.utils.content import content_text
 
-    parts: list[str] = []
+    # "said" is the analyst's own output; everything else (tool results and the
+    # research prompt, which carries a one-line-per-chunk index) is source the
+    # emit step only needs in order to quote it.
+    parts: list[tuple[bool, str]] = []
     for msg in messages or []:
         role = _message_role(msg)
         if role in {"system", "developer"}:
@@ -651,12 +721,49 @@ def _databricks_safe_messages(messages: list[Any]) -> list[dict[str, str]]:
             continue
         if role in {"tool", "function"}:
             name = _message_name(msg) or "tool"
-            parts.append(f"[{name}]\n{text}")
+            parts.append((False, f"[{name}]\n{text}"))
         else:
-            parts.append(text)
-    body = "\n\n".join(parts).strip() or "(no research notes)"
+            parts.append((role not in {"user", "human"}, text))
+
+    # A flat head-cut dropped the tail, which is where the conclusions are.
+    said_cap = int(EMIT_TRANSCRIPT_CHARS * _TRANSCRIPT_SAID_SHARE)
+    said_keep: dict[int, str] = {}
+    said_used = 0
+    for idx in range(len(parts) - 1, -1, -1):
+        is_said, text = parts[idx]
+        if not is_said:
+            continue
+        free = said_cap - said_used
+        if free <= 0:
+            break
+        if len(text) <= free:
+            said_keep[idx] = text
+            said_used += len(text)
+        elif free > _TRANSCRIPT_MIN_SLICE:
+            # Never drop an oversized analyst message whole; its findings are at
+            # the end of it.
+            head = _TRUNC_MARK.strip() + "\n"
+            said_keep[idx] = head + text[-(free - len(head)) :]
+            said_used = said_cap
+            break
+    room = max(0, EMIT_TRANSCRIPT_CHARS - said_used - 2 * len(parts))
+    out: list[str] = []
+    used = 0
+    for idx, (is_said, text) in enumerate(parts):
+        if is_said:
+            kept = said_keep.get(idx)
+            if kept:
+                out.append(kept)
+        elif used + len(text) <= room:
+            out.append(text)
+            used += len(text)
+        elif room - used > _TRANSCRIPT_MIN_SLICE:
+            out.append(text[: room - used - len(_TRUNC_MARK)] + _TRUNC_MARK)
+            used = room
+    body = "\n\n".join(out).strip() or "(no research notes)"
     if len(body) > EMIT_TRANSCRIPT_CHARS:
-        body = body[:EMIT_TRANSCRIPT_CHARS] + "\n...[truncated]"
+        head = _TRUNC_MARK.strip() + "\n"
+        body = head + body[-(EMIT_TRANSCRIPT_CHARS - len(head)) :]
     return [{"role": "user", "content": body}]
 
 
@@ -750,7 +857,9 @@ async def _optional_structured(
         return None
 
 
-async def _structured_fallback(schema: type, messages: list[Any], bid_id: str) -> Any:
+async def _structured_fallback(
+    schema: type, messages: list[Any], bid_id: str, *, budget: float | None = None
+) -> Any:
     """ChatDatabricks.with_structured_output when the agent skipped ToolStrategy."""
     from ai_brain.core.config.llm import get_extract_model_kind, get_llm
     from ai_brain.core.procurement_ai.packs.matrix_layout import EXTRACT_MAX_TOKENS
@@ -758,7 +867,7 @@ async def _structured_fallback(schema: type, messages: list[Any], bid_id: str) -
     llm = get_llm(get_extract_model_kind(), max_tokens=EXTRACT_MAX_TOKENS)
     out = await asyncio.wait_for(
         llm.with_structured_output(schema).ainvoke(_databricks_safe_messages(messages)),
-        STRUCTURED_FALLBACK_TIMEOUT_S,
+        STRUCTURED_FALLBACK_TIMEOUT_S if budget is None else budget,
     )
     if isinstance(out, schema):
         return out

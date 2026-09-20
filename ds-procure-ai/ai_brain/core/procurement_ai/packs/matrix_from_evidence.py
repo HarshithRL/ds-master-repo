@@ -17,6 +17,7 @@ from sqlalchemy import select
 from ai_brain.core.procurement_ai.packs.matrix_layout import (
     CONFIDENCE_FLOOR,
     EXTRACTION_FAILED,
+    MIXED_RATE_BASIS,
     NOT_OFFERED,
     NOT_STATED,
     REVIEWED_MARK,
@@ -105,6 +106,7 @@ def load_matrix_source(project_id: str) -> MatrixSource:
 def _load_matrix_source(project_id: str) -> MatrixSource:
     from ai_brain.core.kb.store.materialize import list_bid_ids
 
+    sql_bids = list(list_bid_ids(project_id))
     with session_scope() as session:
         vendors = list(
             session.scalars(select(Vendor).where(Vendor.project_id == project_id)).all()
@@ -148,7 +150,6 @@ def _load_matrix_source(project_id: str) -> MatrixSource:
         ):
             session.expunge(row)
 
-    sql_bids = list(list_bid_ids(project_id, artifacts=artifacts))
     extra_bids = sorted(
         {
             (row.vendor_id or "").strip()
@@ -452,11 +453,32 @@ def _facts_from_pricing(
     if not lines:
         return vendor.model_copy(update=updates)
     names = artifact_names or {}
-    currency = next((line.currency for line in lines if line.currency), "EUR")
-    rates = [_as_float(line.rate) for line in lines if line.rate is not None]
-    if rates:
-        unit = next((line.rate_unit for line in lines if line.rate_unit), "day")
-        updates["blended_rate"] = f"{currency} {rates[0]:g}/{unit}"
+    currencies = {
+        (line.currency or "").strip().upper()
+        for line in lines
+        if (line.currency or "").strip()
+    }
+    # Never stamp a default currency onto a quote that did not state one.
+    currency = next(iter(currencies)) if len(currencies) == 1 else ""
+    money = f"{currency} " if currency else ""
+    rate_lines = [line for line in lines if line.rate is not None]
+    if rate_lines:
+        units = {
+            (line.rate_unit or "").strip().lower()
+            for line in rate_lines
+            if (line.rate_unit or "").strip()
+        }
+        values = sorted(_as_float(line.rate) or 0.0 for line in rate_lines)
+        if len(units) == 1 and len(currencies) <= 1:
+            unit = next(iter(units))
+            span = (
+                f"{values[0]:g}"
+                if values[0] == values[-1]
+                else f"{values[0]:g}–{values[-1]:g}"
+            )
+            updates["blended_rate"] = f"{money}{span}/{unit}".strip()
+        else:
+            updates["blended_rate"] = MIXED_RATE_BASIS
     qty = sum(_as_float(line.quantity) or 0 for line in lines if line.quantity is not None)
     if qty:
         updates["vendor_mandays"] = f"{qty:g}"
@@ -480,12 +502,16 @@ def _facts_from_pricing(
         if line.offer_type == "time_and_materials" and line.line_total is not None
     )
     if fp:
-        updates["y1_solution"] = f"{currency} {fp:g}"
+        updates["y1_solution"] = f"{money}{fp:g}".strip()
     if tm:
-        updates["y1_service"] = f"{currency} {tm:g}"
+        updates["y1_service"] = f"{money}{tm:g}".strip()
     total = fp + tm
     if total:
-        updates["y1_tco"] = f"{currency} {total:g}"
+        updates["y1_tco"] = f"{money}{total:g}".strip()
+    if len(currencies) > 1:
+        # Summing across currencies needs an FX rate nobody supplied.
+        for key in ("y1_solution", "y1_service", "y1_tco"):
+            updates.pop(key, None)
     discounts = [line.discount_terms for line in lines if line.discount_terms]
     if discounts:
         updates["indexation"] = discounts[0]
@@ -583,7 +609,10 @@ def _cell_comment(
         lines.append(f"confidence: {row.confidence:g}")
     if pinned and row.reviewed_by:
         lines.append(f"reviewed_by: {row.reviewed_by}")
-    if (row.claim_text or "").strip() and (row.status or "") not in {"not_stated"}:
+    if (row.claim_text or "").strip() and (row.status or "") not in {
+        "not_stated",
+        "extraction_failed",
+    }:
         claim = (row.claim_text or "").strip()
         if len(claim) > 280:
             claim = claim[:277] + "..."
