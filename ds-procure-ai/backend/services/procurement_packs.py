@@ -148,6 +148,17 @@ def _local_pack(project_id: str, owner_id: str, capability: str, thread_id: str)
     from ai_brain.core.procurement_ai.packs.compare_xlsx import build_comparison_xlsx
     from ai_brain.core.procurement_ai.packs.steerco_ppt import build_steerco_ppt
 
+    if capability == "kb_build":
+        # enqueue_kb_build already copies the OBO context onto its own thread.
+        from ai_brain.core.kb.extract.ingest import enqueue_kb_build
+
+        enqueue_kb_build(project_id)
+        return {
+            "route": "procurement",
+            "thread_id": thread_id,
+            "procurement": {"kb_status": "building"},
+        }
+
     project = project_repo.get_for_owner(project_id, owner_id)
     artifacts = artifact_repo.list_for_project(project_id, owner_id)
     chunks = chunk_repo.list_for_project(project_id)

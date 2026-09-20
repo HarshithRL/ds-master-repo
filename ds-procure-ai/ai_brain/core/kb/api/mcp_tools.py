@@ -232,6 +232,7 @@ def list_bid_chunk_rows(project_id: str | None, bid_id: str) -> list[dict[str, A
               FROM {chunk} c
               JOIN {artifact} a ON a.id = c.artifact_id
              WHERE c.project_id = :pid AND lower(coalesce(a.doc_role, '')) = 'rfp'
+               AND a.superseded_by IS NULL
              ORDER BY a.original_name, c.ordinal
         """
         params = {"pid": pid}
@@ -245,13 +246,15 @@ def list_bid_chunk_rows(project_id: str | None, bid_id: str) -> list[dict[str, A
               FROM {chunk} c
               JOIN {artifact} a ON a.id = c.artifact_id
              WHERE c.project_id = :pid AND a.vendor_id = :bid
+               AND a.superseded_by IS NULL
              ORDER BY CASE lower(coalesce(a.doc_role, ''))
-                        WHEN 'pricing' THEN 0
-                        WHEN 'proposal' THEN 1
-                        WHEN 'reference' THEN 3
-                        WHEN 'csr' THEN 4
-                        WHEN 'registry' THEN 5
-                        ELSE 2
+                        WHEN 'note' THEN 0
+                        WHEN 'pricing' THEN 1
+                        WHEN 'proposal' THEN 2
+                        WHEN 'reference' THEN 4
+                        WHEN 'csr' THEN 5
+                        WHEN 'registry' THEN 6
+                        ELSE 3
                       END,
                       a.original_name, c.ordinal
         """

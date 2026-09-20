@@ -144,3 +144,101 @@
     grid-column: 1 / -1;
   }
 }
+
+.req-cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.req-cell {
+  position: relative;
+}
+
+.req-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.req-cell-vendor {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.req-status.is-met { border-color: rgba(74, 222, 128, 0.5); }
+.req-status.is-partial { border-color: rgba(251, 191, 36, 0.5); }
+.req-status.is-not_offered { border-color: rgba(248, 113, 113, 0.5); }
+.req-status.is-unclear { border-color: rgba(96, 165, 250, 0.5); }
+
+/* A human verdict outranks the model's, so it has to look different. */
+.req-status.is-reviewed {
+  border-color: #ff6900;
+  box-shadow: inset 2px 0 0 #ff6900;
+}
+
+.req-review {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 290px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border-strong, var(--border));
+  border-radius: 8px;
+  background: var(--surface-2, var(--bg));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.req-review select,
+.req-review textarea {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.req-review-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.req-review-actions button {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.req-review-save {
+  background: #ff6900;
+  border-color: #ff6900;
+  color: #fff;
+}
+
+.req-review-error {
+  margin: 0;
+  color: #ff6b6b;
+  font-size: 11px;
+}

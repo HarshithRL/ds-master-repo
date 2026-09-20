@@ -148,7 +148,8 @@
   align-items: center;
   gap: 4px;
   width: 100%;
-  margin-top: auto;
+  /* No auto margin here: a second one would split the free space and leave a
+     gap between the theme switcher and the user block. */
   padding: 14px 4px 4px;
   border-top: 1px solid var(--border);
 }

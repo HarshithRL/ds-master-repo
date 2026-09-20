@@ -34,7 +34,11 @@ ANALYZE_BID_TIMEOUT_S = 600.0
 # which bid stalled. Timing out ourselves keeps the failure scoped to one bid.
 # The gap must also cover fill_extraction_failed; at 60s a real run was killed
 # mid-cleanup and left the project with no evidence at all.
-ANALYZE_BID_SOFT_TIMEOUT_S = 420.0
+ANALYZE_BID_SOFT_TIMEOUT_S = 480.0
+# Research is bounded so the emit stage always gets to run. Previously a slow
+# researcher consumed the whole budget and the outer timeout cancelled emit too,
+# so a slow bid produced no evidence at all instead of partial evidence.
+EMIT_RESERVE_S = 150.0
 
 
 def classify_unpinned_artifacts(project_id: str) -> int:
@@ -336,12 +340,33 @@ async def invoke_vendor_analyst(
     }
     research: dict[str, Any] = {"messages": payload["messages"]}
     research_t0 = time.monotonic()
+    research_deadline = bid_t0 + ANALYZE_BID_SOFT_TIMEOUT_S - EMIT_RESERVE_S
     async with mcp_kb_tools_context() as tools:
         researcher = build_vendor_analyst(tools=tools)
         with coverage_scope(coverage):
             for turn in range(1 + MAX_COVERAGE_REFILLS):
                 turn_t0 = time.monotonic()
-                research = await researcher.ainvoke(state, config=nested)
+                remaining = research_deadline - turn_t0
+                if remaining <= 0:
+                    log.warning(
+                        "vendor_analyst research budget spent before turn={} project_id={} bid_id={}",
+                        turn + 1,
+                        project_id,
+                        bid_id,
+                    )
+                    break
+                try:
+                    research = await asyncio.wait_for(
+                        researcher.ainvoke(state, config=nested), timeout=remaining
+                    )
+                except asyncio.TimeoutError:
+                    log.warning(
+                        "vendor_analyst research cut at {:.0f}s, emitting from what was gathered project_id={} bid_id={}",
+                        time.monotonic() - research_t0,
+                        project_id,
+                        bid_id,
+                    )
+                    break
                 turns, tool_calls = _tool_call_stats(research.get("messages"))
                 log.info(
                     "PERF vendor_analyst turn={} elapsed_s={:.1f} llm_turns={} tool_calls={} project_id={} bid_id={}",
@@ -381,6 +406,15 @@ async def invoke_vendor_analyst(
     )
     unread = coverage.unread()
     emit_messages = _databricks_safe_messages(research_messages)
+    if total_turns == 0:
+        # Research never got a turn in. Hand emit the packed corpus directly so
+        # the bid still yields cited evidence instead of nothing.
+        emit_messages = emit_messages + _packed_corpus_messages(project_id, bid_id)
+        log.warning(
+            "vendor_analyst produced no turns, emitting from packed chunks project_id={} bid_id={}",
+            project_id,
+            bid_id,
+        )
     emit = build_vendor_emit()
     pricing_agent = build_pricing_extractor()
     profile_agent = build_profile_extractor()
@@ -499,6 +533,31 @@ async def invoke_vendor_analyst(
 
 
 EMIT_TRANSCRIPT_CHARS = 60_000
+
+
+def _packed_corpus_messages(project_id: str, bid_id: str) -> list[dict[str, str]]:
+    """The bid's chunks as plain text, for when research stalls before any turn."""
+    from ai_brain.core.kb.api.mcp_tools import prefetch_bid_chunks
+
+    try:
+        packed, _ = prefetch_bid_chunks(project_id, bid_id)
+    except Exception:
+        log.exception("packed corpus fallback failed project_id={} bid_id={}", project_id, bid_id)
+        return []
+    parts: list[str] = []
+    total = 0
+    for path in sorted(packed):
+        text = packed[path] or ""
+        if not text:
+            continue
+        parts.append(text)
+        total += len(text)
+        if total > EMIT_TRANSCRIPT_CHARS:
+            break
+    if not parts:
+        return []
+    body = "\n\n".join(parts)[:EMIT_TRANSCRIPT_CHARS]
+    return [{"role": "user", "content": f"Bid corpus for `{bid_id}`:\n\n{body}"}]
 
 
 def _message_role(msg: Any) -> str:
