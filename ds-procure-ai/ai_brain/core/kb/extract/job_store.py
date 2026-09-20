@@ -246,10 +246,57 @@ def is_stalled(job: dict[str, Any] | None) -> bool:
     return age is not None and age > stale_seconds()
 
 
+def _reap_orphan_status(project_id: str) -> dict[str, Any] | None:
+    """Heal a status file left mid-build by a run that recorded no live job row.
+
+    `heartbeat` only touches the DB row, so the file's own age is a liveness
+    signal ONLY when no run is tracking it — otherwise a healthy long build,
+    whose file has not been rewritten since it started, would look stale.
+    """
+    try:
+        from ai_brain.core.procurement_ai.packs.store import read_status
+
+        kb = read_status(project_id).get("kb") or {}
+    except Exception:
+        log.exception("kb orphan status read failed project_id={}", project_id)
+        return None
+
+    status = str(kb.get("status") or "")
+    if status in TERMINAL_STATUSES or status in ("", "idle"):
+        return None
+    age = age_seconds(kb.get("updated_at"))
+    if age is None or age <= stale_seconds():
+        return None
+
+    detail = (
+        f"kb_build reported '{status}' {age:.0f}s ago but no run is tracking it, "
+        "so it cannot finish. The process was very likely restarted mid-build."
+    )
+    log.error(
+        "kb_build orphaned project_id={} status={} age={:.0f}s",
+        project_id,
+        status,
+        age,
+    )
+    message = "Knowledge base build stopped unexpectedly. Start it again."
+    _mirror_status_file(project_id, status="failed", message=message, error=detail)
+    return {
+        "id": "",
+        "project_id": project_id,
+        "status": "failed",
+        "message": message,
+        "error": detail,
+    }
+
+
 def reap_stalled(project_id: str) -> dict[str, Any] | None:
     """Flip a dead run to failed so the UI stops showing it as in-progress."""
     job = latest_job(project_id)
     if not is_stalled(job):
+        # No row, or the newest row already finished: only the status file can
+        # still be claiming a build is running.
+        if job is None or job.get("status") in TERMINAL_STATUSES:
+            return _reap_orphan_status(project_id)
         return None
     assert job is not None
     age = age_seconds(job.get("heartbeat_at") or job.get("created_at")) or 0.0

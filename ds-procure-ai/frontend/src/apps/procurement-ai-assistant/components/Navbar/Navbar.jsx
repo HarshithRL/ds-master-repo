@@ -14,13 +14,6 @@ function displayNameFrom(identity) {
   return user?.display_name || user?.user_name || user?.email || "Loading…";
 }
 
-function subtitleFrom(identity) {
-  if (!identity) {
-    return "";
-  }
-  return identity.env || "";
-}
-
 function initialFrom(name) {
   const trimmed = (name || "").trim();
   if (!trimmed || trimmed === "Loading…") {
@@ -53,7 +46,6 @@ function Navbar() {
   const togglePopup = useCallback(() => setOpen((current) => !current), []);
 
   const name = displayNameFrom(identity);
-  const subtitle = subtitleFrom(identity);
 
   return (
     <>
@@ -141,11 +133,6 @@ function Navbar() {
               <span className="navbar-user-name">
                 {name}
               </span>
-              {subtitle ? (
-                <span className="navbar-user-role">
-                  {subtitle}
-                </span>
-              ) : null}
             </div>
           </button>
 
