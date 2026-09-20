@@ -52,3 +52,16 @@ html:has(.procurement-main.is-workspace)::-webkit-scrollbar {
     overflow: visible;
   }
 }
+
+/* KbStatusBanner is shared across tabs, so the building layout lives here
+   rather than in each tab's stylesheet. */
+.kb-status-banner.is-building {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.kb-status-banner.is-building [data-slot="spinner"] {
+  flex-shrink: 0;
+  color: var(--accent, #ff6900);
+}

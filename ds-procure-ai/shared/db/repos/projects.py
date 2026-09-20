@@ -8,11 +8,11 @@ import uuid
 from datetime import date
 from typing import Any
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from shared.db.connection import session_scope
-from shared.db.models import AppUser, Project, utc_now_iso
+from shared.db.models import AppUser, Evidence, Project, Requirement, utc_now_iso
 from shared.db.paths import project_root
 from shared.db.volume_fs import ensure_dir
 from shared.db.seed import PROCUREMENT_MODULE_ID
@@ -367,6 +367,42 @@ def delete_for_owner(
         delete_dir(project_root(project_id))
     except Exception as exc:  # noqa: BLE001
         log.warning("project delete: volume cleanup failed project_id={}: {}", project_id, exc)
+
+
+COVERED_EVIDENCE_STATUSES = ("met", "partial")
+
+
+def mandatory_progress_map(project_ids: list[str]) -> dict[str, int]:
+    """Percent of each project's mandatory requirements that a vendor has answered."""
+    ids = [pid for pid in project_ids if pid]
+    if not ids:
+        return {}
+    answered = func.max(
+        case((Evidence.status.in_(COVERED_EVIDENCE_STATUSES), 1), else_=0)
+    )
+    with session_scope() as session:
+        rows = session.execute(
+            select(Requirement.project_id, Requirement.id, answered)
+            .join(
+                Evidence,
+                (Evidence.project_id == Requirement.project_id)
+                & (Evidence.requirement_id == Requirement.id),
+                isouter=True,
+            )
+            .where(Requirement.project_id.in_(ids), Requirement.mandatory == 1)
+            .group_by(Requirement.project_id, Requirement.id)
+        ).all()
+
+    tally: dict[str, list[int]] = {}
+    for project_id, _requirement_id, is_answered in rows:
+        counts = tally.setdefault(project_id, [0, 0])
+        counts[0] += 1
+        counts[1] += 1 if is_answered else 0
+    return {
+        project_id: int(round(done / total * 100))
+        for project_id, (total, done) in tally.items()
+        if total
+    }
 
 
 def project_to_dict(project: Project) -> dict[str, Any]:

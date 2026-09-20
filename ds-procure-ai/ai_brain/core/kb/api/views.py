@@ -383,7 +383,7 @@ def build_vendors_view(project_id: str) -> dict[str, Any]:
                 "timeline": _profile_text(profile, "timeline"),
                 "ecovadis": _profile_text(profile, "ecovadis"),
                 "delivery_model": _profile_text(profile, "delivery_model"),
-                "headline": tco or _profile_text(profile, "y1_solution") or "; ".join(files),
+                "headline": tco or _profile_text(profile, "y1_solution") or "",
             }
         )
     return {

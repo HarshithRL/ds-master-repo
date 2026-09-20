@@ -208,15 +208,6 @@ function AnalysisRail({
           onAddFile={onAddFile}
           downloadPath={downloadPath}
         />
-        {(insights?.vendors || []).map((vendor) => (
-          <article key={vendor.vendor_id} className="ws-insight-card">
-            <header>
-              <span>Vendor</span>
-              <strong>{vendor.name}</strong>
-            </header>
-            <p>{vendor.headline}</p>
-          </article>
-        ))}
     </div>
   );
 }

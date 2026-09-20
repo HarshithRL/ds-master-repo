@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from shared.db.connection import session_scope
 from shared.db.models import KbBuildJob, utc_now_iso
@@ -175,6 +175,56 @@ def latest_job(project_id: str) -> dict[str, Any] | None:
     except Exception:
         log.exception("kb job read failed project_id={}", project_id)
         return None
+
+
+def latest_status_map(project_ids: list[str]) -> dict[str, str]:
+    """Newest run state per project, in one query for the whole list.
+
+    A non-terminal run with a dead heartbeat reports "failed", not "building",
+    so a list row cannot spin forever on a run that died.
+    """
+    ids = [pid for pid in project_ids if pid]
+    if not ids:
+        return {}
+    ranked = (
+        select(
+            KbBuildJob.project_id,
+            KbBuildJob.status,
+            KbBuildJob.heartbeat_at,
+            KbBuildJob.created_at,
+            func.row_number()
+            .over(
+                partition_by=KbBuildJob.project_id,
+                order_by=KbBuildJob.created_at.desc(),
+            )
+            .label("rn"),
+        )
+        .where(KbBuildJob.project_id.in_(ids))
+        .subquery()
+    )
+    try:
+        with session_scope() as session:
+            rows = session.execute(
+                select(
+                    ranked.c.project_id,
+                    ranked.c.status,
+                    ranked.c.heartbeat_at,
+                    ranked.c.created_at,
+                ).where(ranked.c.rn == 1)
+            ).all()
+    except Exception:
+        log.exception("kb job bulk read failed")
+        return {}
+
+    limit = stale_seconds()
+    out: dict[str, str] = {}
+    for project_id, status, heartbeat_at, created_at in rows:
+        if status in TERMINAL_STATUSES:
+            out[project_id] = status
+            continue
+        age = age_seconds(heartbeat_at or created_at)
+        out[project_id] = "failed" if age is not None and age > limit else "building"
+    return out
 
 
 def stale_seconds() -> float:
