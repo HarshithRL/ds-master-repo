@@ -13,6 +13,7 @@ from ai_brain.core.kb.extract.ingest import enqueue_ingest
 from services import chat_sessions
 from services import procurement_chat
 from services.procurement_serializers import (
+    _display_name,
     dashboard_payload,
     documents_payload,
     nav_payload,
@@ -380,6 +381,45 @@ def update_project_vendor(project_id, bid_id):
     shortlisted = bool(body.get("shortlisted"))
     vendor_repo.set_shortlisted(project_id, bid_id, shortlisted)
     return jsonify({"bid_id": bid_id, "shortlisted": shortlisted})
+
+
+@procurement_bp.route(
+    "/api/procurement/projects/<project_id>/requirements/<requirement_id>/vendors/<bid_id>",
+    methods=["PATCH", "DELETE"],
+)
+def review_project_evidence(project_id, requirement_id, bid_id):
+    try:
+        owner_id = require_workspace_id()
+    except AuthRequiredError as exc:
+        return auth_error_response(exc)
+
+    if not _load_project_or_404(project_id, owner_id):
+        return jsonify({"error": "not_found"}), 404
+
+    from shared.db.repos import evidence as evidence_repo
+
+    try:
+        if request.method == "DELETE":
+            evidence_repo.clear_review(project_id, requirement_id, bid_id)
+            return jsonify({"cleared": True})
+
+        body = request.get_json(silent=True) or {}
+        user = get_user(owner_id)
+        reviewer = _display_name(user, get_or_resolve_identity())
+        return jsonify(
+            evidence_repo.set_review(
+                project_id,
+                requirement_id,
+                bid_id,
+                status=str(body.get("status") or ""),
+                note=str(body.get("note") or ""),
+                reviewed_by=reviewer,
+            )
+        )
+    except evidence_repo.EvidenceNotFoundError:
+        return jsonify({"error": "not_found"}), 404
+    except ValueError as exc:
+        return jsonify({"error": "bad_request", "detail": str(exc)}), 400
 
 
 @procurement_bp.route(

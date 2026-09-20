@@ -323,6 +323,19 @@ def build_requirements_view(project_id: str) -> dict[str, Any]:
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in source.requirements:
         statuses = _req_statuses(source, row.id)
+        bids = []
+        for bid in source.bids:
+            cell = source.cells.get((row.id, bid))
+            bids.append(
+                {
+                    # bid_id, not the label: the review endpoint is keyed on it.
+                    "bid_id": bid,
+                    "label": source.bid_labels.get(bid, bid),
+                    "status": cell.status if cell else "not_stated",
+                    "reviewed": bool(cell.pinned) if cell else False,
+                    "citation": (cell.citation if cell else None) or "",
+                }
+            )
         grouped[row.category or "other"].append(
             {
                 "id": row.id,
@@ -331,14 +344,7 @@ def build_requirements_view(project_id: str) -> dict[str, Any]:
                 "category": row.category or "other",
                 "mandatory": bool(int(row.mandatory or 0)),
                 "coverage": _coverage_chip(statuses),
-                "bid_statuses": {
-                    source.bid_labels.get(bid, bid): (
-                        source.cells[(row.id, bid)].status
-                        if (row.id, bid) in source.cells
-                        else "not_stated"
-                    )
-                    for bid in source.bids
-                },
+                "bids": bids,
             }
         )
     groups = [

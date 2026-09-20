@@ -50,15 +50,25 @@ function FileExplorer({ files, storage, onAddFile, onIndex, indexing = false, up
           {files.inputs.map((group) => (
             <div key={group.folder} className="ws-file-folder-block">
               <div className="ws-file-folder">📁 {group.folder}</div>
-              {group.files.map((name) => {
-                const status = fileStatusLabel(fileStatus[name] || files.statuses?.[name]);
-                return (
-                <button key={name} type="button" className="ws-file-item">
-                  <span className="ws-file-name">{name}</span>
-                  {status ? <span className={"ws-file-status is-" + status}>{status}</span> : null}
-                </button>
-                );
-              })}
+              {(group.groups?.length
+                ? group.groups
+                : [{ label: null, files: group.files }]
+              ).map((sub) => (
+                <div key={sub.label ?? group.folder} className="ws-file-subgroup">
+                  {sub.label ? (
+                    <div className="ws-file-vendor">{sub.label}</div>
+                  ) : null}
+                  {sub.files.map((name) => {
+                    const status = fileStatusLabel(fileStatus[name] || files.statuses?.[name]);
+                    return (
+                      <button key={name} type="button" className="ws-file-item">
+                        <span className="ws-file-name">{name}</span>
+                        {status ? <span className={"ws-file-status is-" + status}>{status}</span> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           ))}
         </div>

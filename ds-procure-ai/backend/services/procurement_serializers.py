@@ -38,6 +38,8 @@ def nav_payload(user: AppUser | None, identity: dict[str, Any]) -> dict[str, Any
 def dashboard_payload(projects: list[Project]) -> dict[str, Any]:
     status_counts = Counter(p.status.lower().replace(" ", "-") for p in projects)
     active = sum(1 for p in projects if p.status.lower() == "active")
+    on_hold = sum(1 for p in projects if p.status.lower() == "on hold")
+    completed = sum(1 for p in projects if p.status.lower() == "completed")
     total = len(projects)
     total_budget = sum(_parse_budget(p.budget) for p in projects)
 
@@ -52,6 +54,18 @@ def dashboard_payload(projects: list[Project]) -> dict[str, Any]:
             {
                 "label": "Active Projects",
                 "value": str(active),
+                "change": "—",
+                "positive": True,
+            },
+            {
+                "label": "On Hold",
+                "value": str(on_hold),
+                "change": "—",
+                "positive": True,
+            },
+            {
+                "label": "Completed",
+                "value": str(completed),
                 "change": "—",
                 "positive": True,
             },
@@ -176,15 +190,18 @@ def _generated_group(packs: dict[str, Any] | None) -> dict[str, Any] | None:
     for kind, (fallback_name, file_type) in _PACK_LABELS.items():
         pack = packs.get(kind) or {}
         href = str(pack.get("href") or "").strip()
-        if str(pack.get("status") or "") != "ready" or not href:
+        status = str(pack.get("status") or "")
+        # `template` is still a real, downloadable file — only idle/failed are not.
+        if status not in {"ready", "template"} or not href:
             continue
         updated = str(pack.get("updated_at") or "")[:10]
+        label = "Template" if status == "template" else "Generated"
         files.append(
             {
                 "id": f"pack-{kind}",
                 "name": str(pack.get("filename") or fallback_name),
                 "type": file_type,
-                "meta": f"Generated{' ' + updated if updated else ''}",
+                "meta": f"{label}{' ' + updated if updated else ''}",
                 "href": href,
             }
         )
@@ -302,9 +319,14 @@ def _document_type_counts(artifacts: list[Artifact]) -> dict[str, int]:
     }
 
 
+def _current_only(artifacts: list[Artifact]) -> list[Artifact]:
+    """Retired revisions stay in the table for audit but must not be listed twice."""
+    return [a for a in artifacts if not getattr(a, "superseded_by", None)]
+
+
 def _file_groups(artifacts: list[Artifact]) -> list[dict[str, Any]]:
     grouped: dict[str, list[dict[str, Any]]] = {}
-    for artifact in artifacts:
+    for artifact in _current_only(artifacts):
         folder = artifact.folder or artifact_repo.FOLDER_VENDOR
         grouped.setdefault(folder, []).append(
             {
@@ -323,19 +345,44 @@ def _file_groups(artifacts: list[Artifact]) -> list[dict[str, Any]]:
     return groups
 
 
+def _vendor_label(vendor_id: str | None) -> str:
+    slug = (vendor_id or "").strip()
+    if not slug:
+        return "Others"
+    # Short slugs are acronyms (ey, pwc); longer ones are already readable.
+    return slug.upper() if len(slug) <= 3 else slug
+
+
+def _vendor_subgroups(artifacts: list[Artifact]) -> list[dict[str, Any]]:
+    """Vendor folder split by bid so the tree mirrors how extraction sees the files."""
+    buckets: dict[str, list[str]] = {}
+    for artifact in artifacts:
+        if not artifact.original_name:
+            continue
+        buckets.setdefault(_vendor_label(artifact.vendor_id), []).append(
+            artifact.original_name
+        )
+    named = sorted((k for k in buckets if k != "Others"), key=str.lower)
+    ordered = named + (["Others"] if "Others" in buckets else [])
+    return [{"label": label, "files": buckets[label]} for label in ordered]
+
+
 def _workspace_files(artifacts: list[Artifact]) -> dict[str, Any]:
+    artifacts = _current_only(artifacts)
     inputs: list[dict[str, Any]] = []
     generated: list[str] = []
     for folder, title in artifact_repo.FOLDER_TITLES.items():
-        names = [
-            a.original_name
-            for a in artifacts
-            if (a.folder or artifact_repo.FOLDER_VENDOR) == folder
+        in_folder = [
+            a for a in artifacts if (a.folder or artifact_repo.FOLDER_VENDOR) == folder
         ]
+        names = [a.original_name for a in in_folder]
         if folder == artifact_repo.FOLDER_AI_GENERATED:
             generated = names
         elif names:
-            inputs.append({"folder": title, "files": names})
+            entry: dict[str, Any] = {"folder": title, "files": names}
+            if folder == artifact_repo.FOLDER_VENDOR:
+                entry["groups"] = _vendor_subgroups(in_folder)
+            inputs.append(entry)
 
     upload_count = sum(
         1 for a in artifacts if a.kind == "upload"

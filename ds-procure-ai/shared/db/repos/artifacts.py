@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 import mimetypes
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, BinaryIO
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from shared.db.connection import session_scope
@@ -17,6 +18,9 @@ from shared.db.paths import artifact_absolute_path, artifact_storage_relpath
 from shared.db.volume_fs import write_bytes
 from shared.db.repos.projects import ProjectNotFoundError, _get_for_owner
 from shared.db.seed import PROCUREMENT_MODULE_ID
+from shared.logger_global import get_logger
+
+log = get_logger(__name__)
 
 FOLDER_VENDOR = "vendor_documents"
 FOLDER_REQUIREMENTS = "requirements"
@@ -59,12 +63,26 @@ def create_upload(
     data = upload.stream.read()
     write_bytes(absolute, data)
     size_bytes = len(data)
+    content_hash = hashlib.sha256(data).hexdigest()
     content_type = upload.content_type or mimetypes.guess_type(original_name)[0]
 
     with session_scope() as session:
         project = _get_for_owner(session, project_id, owner_id, module_id=module_id)
         if project is None:
             raise ProjectNotFoundError(project_id)
+
+        # A re-upload of the same document is a new revision: retire the old one
+        # so extraction never sees last round's prices next to this round's.
+        previous = session.scalars(
+            select(Artifact).where(
+                Artifact.project_id == project_id,
+                Artifact.superseded_by.is_(None),
+                or_(
+                    Artifact.original_name == original_name,
+                    Artifact.content_hash == content_hash,
+                ),
+            )
+        ).all()
 
         artifact = Artifact(
             id=artifact_id,
@@ -76,10 +94,20 @@ def create_upload(
             content_type=content_type,
             size_bytes=size_bytes,
             storage_relpath=relpath,
+            content_hash=content_hash,
             parse_status="pending",
             created_at=utc_now_iso(),
         )
         session.add(artifact)
+        for old in previous:
+            old.superseded_by = artifact_id
+            log.info(
+                "artifact superseded project_id={} old={} by={} name={}",
+                project_id,
+                old.id,
+                artifact_id,
+                original_name,
+            )
         session.flush()
         session.expunge(artifact)
         return artifact
