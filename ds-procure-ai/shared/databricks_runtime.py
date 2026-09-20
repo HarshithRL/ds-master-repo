@@ -112,6 +112,15 @@ def bind_obo_from_headers(headers: Any) -> None:
     _obo_host.set(host)
 
 
+def headers_carry_obo(headers: Any) -> bool:
+    """True when ``headers`` actually carry a visitor access token.
+
+    Callers use this to avoid rebinding from a header set that has no token,
+    which would clear an OBO token bound earlier in the same request.
+    """
+    return bool(_lowered_headers(headers).get(ACCESS_TOKEN_HEADER))
+
+
 def clear_obo() -> None:
     _obo_token.set(None)
     _obo_host.set(None)

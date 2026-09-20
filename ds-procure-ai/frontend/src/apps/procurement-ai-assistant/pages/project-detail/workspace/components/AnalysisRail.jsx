@@ -163,7 +163,7 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
           </header>
           <p>
             {packs.xlsx?.error ||
-              "Workbook written, but vendor evidence was not persisted. Review the template or rebuild after the knowledge base is ready."}
+              "Workbook written, but vendor evidence was not persisted. Download the template, or build the comparison once the knowledge base is ready."}
           </p>
           <div className="ws-pack-actions">
             {xlsxHref ? (
@@ -172,7 +172,7 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
               </a>
             ) : null}
             <button type="button" className="ws-pack-btn" disabled={busy === "xlsx"} onClick={() => onBuild("xlsx")}>
-              {busy === "xlsx" ? "Building..." : "Rebuild comparison"}
+              {busy === "xlsx" ? "Building..." : "Build comparison"}
             </button>
           </div>
         </article>
