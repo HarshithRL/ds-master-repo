@@ -9,6 +9,7 @@ function VendorsTab({ projectId }) {
   const [picked, setPicked] = useState({});
   const [busyBid, setBusyBid] = useState("");
   const [noteDraft, setNoteDraft] = useState({});
+  const [noteKind, setNoteKind] = useState({});
   const [savingNote, setSavingNote] = useState("");
 
   async function addVendorNote(bidId) {
@@ -19,8 +20,10 @@ function VendorsTab({ projectId }) {
       await apiPost(`/api/procurement/projects/${projectId}/notes`, {
         body: text,
         bid_id: bidId,
+        kind: noteKind[bidId] || "note",
       });
       setNoteDraft((prev) => ({ ...prev, [bidId]: "" }));
+      setNoteKind((prev) => ({ ...prev, [bidId]: "note" }));
     } catch (err) {
       window.alert(err?.message || "Could not save note.");
     } finally {
@@ -137,7 +140,11 @@ function VendorsTab({ projectId }) {
               <textarea
                 rows={2}
                 value={noteDraft[vendor.bid_id] || ""}
-                placeholder={`Note on ${vendor.name} — e.g. reference call, risk, why shortlisted`}
+                placeholder={
+                  (noteKind[vendor.bid_id] || "note") === "vendor_statement"
+                    ? `Paste what ${vendor.name} sent — clarification email, call minutes`
+                    : `Note on ${vendor.name} — e.g. reference call, risk, why shortlisted`
+                }
                 onChange={(event) =>
                   setNoteDraft((prev) => ({
                     ...prev,
@@ -145,6 +152,20 @@ function VendorsTab({ projectId }) {
                   }))
                 }
               />
+              <select
+                className="vendor-note-kind"
+                value={noteKind[vendor.bid_id] || "note"}
+                aria-label="Who said this"
+                onChange={(event) =>
+                  setNoteKind((prev) => ({
+                    ...prev,
+                    [vendor.bid_id]: event.target.value,
+                  }))
+                }
+              >
+                <option value="note">Our note</option>
+                <option value="vendor_statement">{vendor.name} said this</option>
+              </select>
               <button
                 type="button"
                 className="vendor-note-btn"

@@ -185,6 +185,41 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
       )}
 
 
+      {xlsxReady && !pptReady && (
+        <article className="ws-insight-card pack">
+          <header>
+            <span>Ready</span>
+            <strong>Excel</strong>
+          </header>
+          <p>
+            Comparison matrix built from cited evidence. Draft workbook — humans award.
+          </p>
+          <div className="ws-pack-actions">
+            {xlsxHref ? (
+              <a className="ws-pack-link" href={xlsxHref}>
+                Download comparison
+              </a>
+            ) : null}
+            <button
+              type="button"
+              className="ws-pack-btn"
+              disabled={xlsxBusy}
+              onClick={() => onBuild("xlsx")}
+            >
+              {xlsxBusy ? "Building..." : "Rebuild comparison"}
+            </button>
+            <button
+              type="button"
+              className="ws-pack-link"
+              disabled={building || busy === "kb"}
+              onClick={() => onBuild("kb")}
+            >
+              {building ? "Rebuilding knowledge base..." : "Rebuild knowledge base"}
+            </button>
+          </div>
+        </article>
+      )}
+
       {pptReady && pptHref && (
         <article className="ws-insight-card pack">
           <header>
