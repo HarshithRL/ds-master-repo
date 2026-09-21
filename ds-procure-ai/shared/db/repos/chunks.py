@@ -9,7 +9,7 @@ from typing import Any, Sequence
 from sqlalchemy import delete, select
 
 from shared.db.connection import session_scope
-from shared.db.models import Chunk, utc_now_iso
+from shared.db.models import Artifact, Chunk, utc_now_iso
 
 
 def replace_for_artifact(
@@ -42,9 +42,18 @@ def replace_for_artifact(
 
 def list_for_project(project_id: str) -> list[Chunk]:
     with session_scope() as session:
+        superseded = select(Artifact.id).where(
+            Artifact.project_id == project_id,
+            Artifact.superseded_by.is_not(None),
+        )
         rows = session.scalars(
             select(Chunk)
-            .where(Chunk.project_id == project_id)
+            .where(
+                Chunk.project_id == project_id,
+                # Retired revisions stay on disk for audit; retrieval must not
+                # quote them back as current.
+                Chunk.artifact_id.not_in(superseded),
+            )
             .order_by(Chunk.artifact_id, Chunk.ordinal)
         ).all()
         for row in rows:
