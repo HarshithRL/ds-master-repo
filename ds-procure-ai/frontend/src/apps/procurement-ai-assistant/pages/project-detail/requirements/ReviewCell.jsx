@@ -36,7 +36,9 @@ function ReviewCell({ projectId, requirementId, bid, onSaved }) {
         onClick={() => setOpen((v) => !v)}
         title={bid.reviewed ? "Reviewed by a human — click to change" : "Click to override"}
       >
-        <span className="req-cell-vendor">{bid.label}</span>
+        <span className="req-cell-vendor" title={bid.label}>
+          {bid.label}
+        </span>
         <span className="req-cell-value">
           {bid.status || "not_stated"}
           {bid.reviewed ? " ✓" : ""}
