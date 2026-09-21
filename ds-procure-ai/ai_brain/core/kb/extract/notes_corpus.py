@@ -9,6 +9,7 @@ back as something the vendor itself claimed.
 
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Any
 
@@ -115,11 +116,16 @@ def materialize_notes(project_id: str) -> int:
             artifact.doc_role = NOTE_DOC_ROLE
             artifact.parse_status = "ok"
             artifact.parse_error = None
+            # This mirror is rewritten on every note edit, and staleness checks
+            # compare input timestamps against the last build.
+            artifact.created_at = now
 
             # Rewritten wholesale: notes are edited and deleted in place.
             session.execute(sa_delete(Chunk).where(Chunk.artifact_id == aid))
+            texts: list[str] = []
             for ordinal, note in enumerate(sorted(bid_notes, key=lambda n: n.get("created_at") or "")):
                 text = _chunk_text(note)
+                texts.append(text)
                 session.add(
                     Chunk(
                         id=str(uuid.uuid4()),
@@ -132,6 +138,10 @@ def materialize_notes(project_id: str) -> int:
                     )
                 )
                 written += 1
+            # The extraction corpus is rendered from parsed_json. Without it the
+            # note lands in _quality/ as "no usable markdown" and the vendor
+            # analyst never reads it.
+            artifact.parsed_json = json.dumps({"markdown": "\n\n---\n\n".join(texts)})
         session.flush()
 
     log.info("notes materialized project_id={} chunks={}", project_id, written)
