@@ -10,6 +10,8 @@ https://docs.langchain.com/oss/python/deepagents/subagents
 
 from __future__ import annotations
 
+import asyncio
+import time
 from typing import Any
 
 from ai_brain.core.kb.extract.agents import (
@@ -26,6 +28,17 @@ from ai_brain.core.procurement_ai.process_type import IT_SERVICES
 from shared.logger_global import get_logger
 
 log = get_logger(__name__, service="ai_brain")
+
+# This path was unbounded: research ran until the caller gave up, so a slow run
+# produced no matrix at all rather than a partial one. Mirrors the vendor_analyst
+# budget chain in kb/build/pipeline.py.
+# A measured 5-bid run took 1324s end to end and returned a fully cited matrix,
+# so the ceiling sits well above it — this bounds runaway runs, it must not
+# truncate a healthy one.
+COMPARE_TIMEOUT_S = 1800.0
+# Research must stop this far before the ceiling so emit still gets to run.
+COMPARE_EMIT_RESERVE_S = 240.0
+COMPARE_EMIT_MIN_BUDGET_S = 45.0
 
 ORCHESTRATOR_PROMPT = (
     "You are the procurement comparison orchestrator. "
@@ -118,6 +131,8 @@ async def _research_with_coverage(
     files: dict[str, dict[str, str]],
     packed_ids: list[str],
     nested: dict[str, Any] | None,
+    *,
+    deadline: float,
 ) -> dict[str, Any]:
     from ai_brain.core.kb.api.mcp_tools import list_bid_chunk_ids
     from ai_brain.core.kb.build.coverage import CoverageState, coverage_scope
@@ -134,9 +149,38 @@ async def _research_with_coverage(
         "files": files,
     }
     research: dict[str, Any] = {"messages": state["messages"]}
+    research_t0 = time.monotonic()
     with coverage_scope(coverage):
         for turn in range(1 + MAX_COVERAGE_REFILLS):
-            research = await orchestrator.ainvoke(state, config=nested)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                log.warning(
+                    "comparison research budget spent before turn={} project_id={}",
+                    turn + 1,
+                    project_id,
+                )
+                break
+            partial: dict[str, Any] | None = None
+            try:
+                # Stream, don't await: cancelling ainvoke() discards everything
+                # the agent read, leaving emit with nothing to work from.
+                async with asyncio.timeout(remaining):
+                    async for step in orchestrator.astream(
+                        state, config=nested, stream_mode="values"
+                    ):
+                        if isinstance(step, dict) and step.get("messages"):
+                            partial = step
+                research = partial or research
+            except (TimeoutError, asyncio.TimeoutError):
+                if partial is not None:
+                    research = partial
+                log.warning(
+                    "comparison research cut at {:.0f}s, emitting from what was gathered "
+                    "project_id={}",
+                    time.monotonic() - research_t0,
+                    project_id,
+                )
+                break
             unread = coverage.unread()
             if not unread:
                 break
@@ -249,6 +293,7 @@ async def extract_comparison_matrix(
     nested = child_runnable_config(dict(config or {}))
     set_current_project_id(project_id)
     files, packed_ids = comparison_files(project_id)
+    run_t0 = time.monotonic()
     try:
         async with mcp_kb_tools_context() as tools:
             orchestrator = build_comparison_orchestrator(tools=tools)
@@ -260,24 +305,30 @@ async def extract_comparison_matrix(
                 files,
                 packed_ids,
                 nested,
+                deadline=run_t0 + COMPARE_TIMEOUT_S - COMPARE_EMIT_RESERVE_S,
             )
         messages = list(research.get("messages") or [])
         emit = build_comparison_emit()
-        result = await emit.ainvoke(
-            {
-                "messages": messages
-                + [
-                    {
-                        "role": "user",
-                        "content": (
-                            f"Call ComparisonMatrix now for project `{project_id}` "
-                            f"process_type={process or 'unset'}."
-                        ),
-                    }
-                ]
-            },
-            config=nested,
+        emit_budget = max(
+            COMPARE_EMIT_MIN_BUDGET_S,
+            run_t0 + COMPARE_TIMEOUT_S - time.monotonic(),
         )
+        async with asyncio.timeout(emit_budget):
+            result = await emit.ainvoke(
+                {
+                    "messages": messages
+                    + [
+                        {
+                            "role": "user",
+                            "content": (
+                                f"Call ComparisonMatrix now for project `{project_id}` "
+                                f"process_type={process or 'unset'}."
+                            ),
+                        }
+                    ]
+                },
+                config=nested,
+            )
     except Exception as exc:  # noqa: BLE001
         if is_checkpoint_sync_error(exc):
             raise
