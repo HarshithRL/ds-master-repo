@@ -53,11 +53,18 @@ async def arun_kb_build(project_id: str, *, write_xlsx: bool = False) -> dict:
         )
         raise
     procurement = state.get("procurement") or {}
-    kb_status = str(procurement.get("kb_status") or "ready")
-    audit = procurement.get("kb_audit") or {}
+    kb_status = str(procurement.get("kb_status") or "").strip()
+    audit = dict(procurement.get("kb_audit") or {})
+    # Trust the stored rows, not the state hand-off: nodes after audit_kb can
+    # drop kb_status, and "absent" must never be read as "ready".
+    failed_bids = _failed_bid_count(project_id)
+    if failed_bids:
+        audit["failed"] = max(int(audit.get("failed") or 0), failed_bids)
     failed = int(audit.get("failed") or 0)
     if kb_status not in {"ready", "needs_review", "staged"}:
         kb_status = "needs_review" if failed else "ready"
+    if failed and kb_status == "ready":
+        kb_status = "needs_review"
     pack_store.write_kb_job(
         project_id,
         status=kb_status,
@@ -84,6 +91,17 @@ def run_kb_build(project_id: str, *, write_xlsx: bool = False) -> dict:
 
     materialize_notes(project_id)
     return asyncio.run(arun_kb_build(project_id, write_xlsx=write_xlsx))
+
+
+def _failed_bid_count(project_id: str) -> int:
+    """Bids whose evidence is extraction_failed, straight from the rows."""
+    try:
+        from ai_brain.core.kb.store.persist import kb_counts
+
+        return int(kb_counts(project_id).get("failed_bids") or 0)
+    except Exception:  # noqa: BLE001
+        log.exception("failed-bid count unavailable project_id={}", project_id)
+        return 0
 
 
 def _finish_message(status: str, audit: dict) -> str:

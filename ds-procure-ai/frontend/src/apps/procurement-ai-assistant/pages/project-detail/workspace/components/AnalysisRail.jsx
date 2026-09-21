@@ -239,7 +239,8 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
             <strong>Excel</strong>
           </header>
           <p>
-            Comparison matrix built from cited evidence. Draft workbook — humans award.
+            {packs.xlsx?.error ||
+              "Comparison matrix built from cited evidence. Draft workbook — humans award."}
           </p>
           <div className="ws-pack-actions">
             {xlsxHref ? (
