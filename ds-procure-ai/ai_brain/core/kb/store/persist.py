@@ -454,6 +454,16 @@ def kb_counts(project_id: str) -> dict[str, Any]:
             "vendors": _count(Vendor),
             "requirements": _count(Requirement),
             "evidence": _count(Evidence),
+            "extraction_failed": _count(Evidence, Evidence.status == "extraction_failed"),
+            "failed_bids": int(
+                session.scalar(
+                    select(func.count(func.distinct(Evidence.vendor_id))).where(
+                        Evidence.project_id == project_id,
+                        Evidence.status == "extraction_failed",
+                    )
+                )
+                or 0
+            ),
             "pricing_line": _count(PricingLine),
             "bid_profile": _count(BidProfileRow),
         }

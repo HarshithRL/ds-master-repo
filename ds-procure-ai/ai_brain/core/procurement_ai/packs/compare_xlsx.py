@@ -48,7 +48,7 @@ def build_comparison_xlsx(
         # the cited extraction, so render that rather than a grid of "not stated".
         if matrix is not None:
             insights = _insights_from_matrix(insights, matrix)
-        indirect, direct = _from_knowledge_base(project_id, process)
+        indirect, direct, insights = _from_knowledge_base(project_id, process, insights)
         if indirect is None:
             indirect = empty_indirect(insights)
             direct = empty_direct(insights) if process == DIRECT_TG else None
@@ -132,9 +132,12 @@ def _grid_has_marks(indirect: Any) -> bool:
     return any(cell.vendor_marks for cell in indirect.requirements)
 
 
-def _from_knowledge_base(project_id: str, process: str) -> tuple[Any, Any]:
+def _from_knowledge_base(
+    project_id: str, process: str, insights: dict[str, Any]
+) -> tuple[Any, Any, dict[str, Any]]:
     """Requirement grid from the stored KB extraction. (None, None) if unavailable."""
     from ai_brain.core.procurement_ai.packs.matrix_from_evidence import (
+        insights_from_source,
         load_matrix_source,
         matrix_from_source,
     )
@@ -143,10 +146,12 @@ def _from_knowledge_base(project_id: str, process: str) -> tuple[Any, Any]:
         source = load_matrix_source(project_id)
     except Exception:  # noqa: BLE001
         log.exception("kb matrix source unavailable project_id={}", project_id)
-        return None, None
+        return None, None, insights
     indirect = matrix_from_source(source, "")
     direct = matrix_from_source(source, DIRECT_TG) if process == DIRECT_TG else None
-    return indirect, direct
+    # A long run computes insights at the start and the evidence can change
+    # underneath it, so the cover must be recounted from the rows just used.
+    return indirect, direct, insights_from_source(insights, source)
 
 
 def _insights_from_matrix(insights: dict[str, Any], matrix: ComparisonMatrix) -> dict[str, Any]:
