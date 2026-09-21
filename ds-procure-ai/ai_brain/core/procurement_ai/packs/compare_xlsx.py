@@ -15,7 +15,6 @@ from ai_brain.core.procurement_ai.packs.matrix_extract import empty_direct, empt
 from ai_brain.core.procurement_ai.packs.matrix_from_ontology import (
     direct_from_ontology,
     indirect_from_ontology,
-    matrix_is_rich,
 )
 from ai_brain.core.procurement_ai.packs.matrix_indirect import write_indirect
 from ai_brain.core.procurement_ai.packs.matrix_schema import DirectMatrix, IndirectMatrix
@@ -40,19 +39,22 @@ def build_comparison_xlsx(
     filename = "comparison_matrix.xlsx"
     path = store.pack_file(project_id, filename)
     process = (matrix.process_type if matrix else "") or insights.get("process_type") or ""
-    rich = matrix_is_rich(matrix)
-    if matrix is not None:
+    if matrix is not None and matrix.offerings:
         insights = _insights_from_matrix(insights, matrix)
         indirect = indirect_from_ontology(matrix, insights)
         direct = direct_from_ontology(matrix, insights) if process == DIRECT_TG else None
-    elif process == DIRECT_TG:
-        indirect = empty_indirect(insights)
-        direct = empty_direct(insights)
     else:
-        indirect = empty_indirect(insights)
-        direct = None
+        # No per-requirement marks from the agent. The knowledge base already holds
+        # the cited extraction, so render that rather than a grid of "not stated".
+        if matrix is not None:
+            insights = _insights_from_matrix(insights, matrix)
+        indirect, direct = _from_knowledge_base(project_id, process)
+        if indirect is None:
+            indirect = empty_indirect(insights)
+            direct = empty_direct(insights) if process == DIRECT_TG else None
     if not isinstance(indirect, IndirectMatrix):
         indirect = empty_indirect(insights)
+    rich = _grid_has_marks(indirect)
     wb = Workbook()
     cover = wb.active
     cover.title = "Cover"
@@ -111,22 +113,54 @@ def build_comparison_xlsx(
     }
 
 
+def _grid_has_marks(indirect: Any) -> bool:
+    """"Ready" has to mean the requirement grid actually carries vendor answers."""
+    if not isinstance(indirect, IndirectMatrix):
+        return False
+    return any(cell.vendor_marks for cell in indirect.requirements)
+
+
+def _from_knowledge_base(project_id: str, process: str) -> tuple[Any, Any]:
+    """Requirement grid from the stored KB extraction. (None, None) if unavailable."""
+    from ai_brain.core.procurement_ai.packs.matrix_from_evidence import (
+        load_matrix_source,
+        matrix_from_source,
+    )
+
+    try:
+        source = load_matrix_source(project_id)
+    except Exception:  # noqa: BLE001
+        log.exception("kb matrix source unavailable project_id={}", project_id)
+        return None, None
+    indirect = matrix_from_source(source, "")
+    direct = matrix_from_source(source, DIRECT_TG) if process == DIRECT_TG else None
+    return indirect, direct
+
+
 def _insights_from_matrix(insights: dict[str, Any], matrix: ComparisonMatrix) -> dict[str, Any]:
     out = dict(insights)
     out["process_type"] = matrix.process_type or out.get("process_type") or ""
+    # The agent payload carries no coverage or evidence figures, so keep the
+    # measured ones instead of overwriting the sheet with zeros.
+    known = {
+        str(row.get("bid_id") or "").strip(): row
+        for row in (insights.get("vendors") or [])
+        if isinstance(row, dict)
+    }
     vendors = []
     for row in matrix.vendors:
         files = (row.source_files or "").split(";") if row.source_files else []
         files = [part.strip() for part in files if part.strip()]
+        prior = known.get(str(row.vendor_id or "").strip()) or {}
         vendors.append(
             {
                 "name": row.legal_name or row.vendor_id,
                 "bid_id": row.vendor_id,
-                "role": "bidder",
-                "artifact_count": len(files),
-                "coverage_pct": 0,
-                "headline": row.source_files or "",
-                "evidence": [],
+                "role": prior.get("role") or "bidder",
+                "artifact_count": len(files) or prior.get("artifact_count") or 0,
+                "coverage_pct": prior.get("coverage_pct") or 0,
+                "headline": row.source_files or prior.get("headline") or "",
+                "evidence": prior.get("evidence") or [],
             }
         )
     if vendors:
@@ -139,7 +173,7 @@ def _insights_from_matrix(insights: dict[str, Any], matrix: ComparisonMatrix) ->
 
 
 def _write_cover(ws, insights: dict[str, Any], *, evidence_used: bool) -> None:
-    ws["A1"] = "Mate comparison pack"
+    ws["A1"] = "Procurement Comparison Pack"
     ws["A1"].font = Font(bold=True, size=16, color="FF6900")
     origin = (
         "Cells filled from request-time comparison agent (cited chunks). No invented numbers."
