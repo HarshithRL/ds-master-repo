@@ -159,7 +159,7 @@ def list_for_owner(
         query = (
             select(Project)
             .options(joinedload(Project.owner))
-            .where(Project.owner_id == owner_id, Project.module_id == module_id)
+            .where(Project.module_id == module_id)
             .order_by(Project.created_at.desc())
         )
         if status and status.lower() != "all":
@@ -439,12 +439,18 @@ def _get_for_owner(
     *,
     module_id: str,
 ) -> Project | None:
+    """Team gate: any app user reaches any project in the module.
+
+    Using the app already requires the Unity Catalog grants that expose this
+    data, so scoping by creator blocked collaboration without adding
+    protection. `owner_id` stays in the signature to record who did what.
+    """
+    del owner_id
     return session.scalar(
         select(Project)
         .options(joinedload(Project.owner))
         .where(
             Project.id == project_id,
-            Project.owner_id == owner_id,
             Project.module_id == module_id,
         )
     )
