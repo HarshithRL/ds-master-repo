@@ -345,8 +345,23 @@ def list_bid_chunks(bid_id: str, project_id: str | None = None) -> str:
     return "\n".join(lines)
 
 
-def list_bid_chunk_ids(project_id: str, bid_id: str) -> list[str]:
-    return [row["chunk_id"] for row in list_bid_chunk_rows(project_id, bid_id)]
+# A company-registry extract answered no requirement in a measured 5-bid run
+# (99 of 177 chunks, zero deliverable signals), yet coverage kept feeding it
+# back as unread and spent the refill turns the proposal needed.
+COVERAGE_SKIP_ROLES = frozenset({"registry"})
+
+
+def list_bid_chunk_ids(
+    project_id: str, bid_id: str, *, for_coverage: bool = False
+) -> list[str]:
+    rows = list_bid_chunk_rows(project_id, bid_id)
+    if for_coverage:
+        return [
+            row["chunk_id"]
+            for row in rows
+            if row.get("doc_role") not in COVERAGE_SKIP_ROLES
+        ]
+    return [row["chunk_id"] for row in rows]
 
 
 def list_bid_chunk_rows(project_id: str | None, bid_id: str) -> list[dict[str, Any]]:
@@ -362,7 +377,8 @@ def list_bid_chunk_rows(project_id: str | None, bid_id: str) -> list[dict[str, A
     if bid.lower() == "rfp":
         sql = f"""
             SELECT c.id AS chunk_id, c.artifact_id, c.ordinal, c.token_count,
-                   c.heading_path_json, c.location_json, a.original_name, a.vendor_id
+                   c.heading_path_json, c.location_json, a.original_name, a.vendor_id,
+                   a.doc_role
               FROM {chunk} c
               JOIN {artifact} a ON a.id = c.artifact_id
              WHERE c.project_id = :pid AND lower(coalesce(a.doc_role, '')) = 'rfp'
@@ -376,7 +392,8 @@ def list_bid_chunk_rows(project_id: str | None, bid_id: str) -> list[dict[str, A
         # reach the priced proposal before its turn budget runs out.
         sql = f"""
             SELECT c.id AS chunk_id, c.artifact_id, c.ordinal, c.token_count,
-                   c.heading_path_json, c.location_json, a.original_name, a.vendor_id
+                   c.heading_path_json, c.location_json, a.original_name, a.vendor_id,
+                   a.doc_role
               FROM {chunk} c
               JOIN {artifact} a ON a.id = c.artifact_id
              WHERE c.project_id = :pid AND a.vendor_id = :bid
@@ -407,6 +424,7 @@ def list_bid_chunk_rows(project_id: str | None, bid_id: str) -> list[dict[str, A
                 "token_count": int(row["token_count"] or 0),
                 "locator": locator,
                 "heading": _heading_from_json(row["heading_path_json"]),
+                "doc_role": str(row["doc_role"] or "").lower(),
                 "path": _virtual_path(pid, bid, row["original_name"] or ""),
             }
         )

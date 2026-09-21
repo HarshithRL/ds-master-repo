@@ -377,7 +377,7 @@ async def invoke_vendor_analyst(
 
     def _load_inputs() -> tuple[dict[str, Any], set[str], dict[str, str]]:
         data = bid_invoke_payload(project_id, bid_id)
-        ids = set(list_bid_chunk_ids(project_id, bid_id))
+        ids = set(list_bid_chunk_ids(project_id, bid_id, for_coverage=True))
         paths = {
             row["chunk_id"]: row.get("path") or ""
             for row in list_bid_chunk_rows(project_id, bid_id)
