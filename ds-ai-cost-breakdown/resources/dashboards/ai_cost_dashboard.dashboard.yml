@@ -1,6 +1,6 @@
 resources:
   dashboards:
     ai_cost_dashboard:
-      display_name: "AI Cost Dashboard"
+      display_name: "AI Usage Costs (Enriched)"
       file_path: ../../src/dashboards/AI_Cost_Dashboard.lvdash.json
       warehouse_id: ${var.warehouse_id}
