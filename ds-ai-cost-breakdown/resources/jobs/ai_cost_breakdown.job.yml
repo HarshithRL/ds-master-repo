@@ -1,7 +1,7 @@
 resources:
   jobs:
     ai_cost_breakdown_enrichment:
-      name: ai_cost_breakdown_enrichment
+      name: "ai_cost_breakdown_enrichment"
 
       schedule:
         quartz_cron_expression: 0 0 6 * * ?
