@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import contextvars
 from pathlib import Path
-from threading import Event, RLock
+from threading import Event, RLock, Thread
 from time import monotonic
 from typing import Any
 
@@ -21,6 +22,13 @@ _INSIGHT_TTL_S = 30.0
 _INSIGHT_LOCK = RLock()
 _INSIGHT_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 _INSIGHT_IN_FLIGHT: dict[str, Event] = {}
+
+# Pack agents read every vendor file and can run for many minutes. Nobody waits
+# on the HTTP request once the run is backgrounded, so the ceiling only has to
+# stop a wedged run from living forever.
+_PACK_RUN_TIMEOUT_S = 1800.0
+_PACK_LOCK = RLock()
+_PACK_THREADS: dict[str, Thread] = {}
 
 
 def insights_for_owner(project_id: str, owner_id: str) -> dict[str, Any] | None:
@@ -119,6 +127,8 @@ def start_pack(project_id: str, owner_id: str, capability: str) -> dict[str, Any
     if project_repo.get_for_owner_or_none(project_id, owner_id) is None:
         return None
     thread_id = f"{project_id}:{capability}"
+    if capability == "compare_xlsx":
+        return _start_pack_background(project_id, owner_id, capability, thread_id, "xlsx")
     try:
         return _brain_post(
             f"/v1/projects/{project_id}/runs",
@@ -127,6 +137,83 @@ def start_pack(project_id: str, owner_id: str, capability: str) -> dict[str, Any
     except Exception as exc:  # noqa: BLE001
         log.warning("brain run fallback capability={}: {}", capability, exc)
         return _local_pack(project_id, owner_id, capability, thread_id)
+
+
+def _start_pack_background(
+    project_id: str,
+    owner_id: str,
+    capability: str,
+    thread_id: str,
+    kind: str,
+) -> dict[str, Any]:
+    """Kick the pack agent onto a thread and return the polled status right away."""
+    from ai_brain.core.procurement_ai.packs import store as pack_store
+
+    key = f"{project_id}:{kind}"
+    with _PACK_LOCK:
+        running = _PACK_THREADS.get(key)
+        if running is not None and running.is_alive():
+            # A second run would race the first onto the same workbook path.
+            log.info("pack run already in flight capability={} project_id={}", capability, project_id)
+            return pack_store.read_status(project_id)
+
+        # The worker has no Flask request to read OBO headers from, so capture
+        # them here and hand them over explicitly.
+        headers = brain_request_headers()
+        pack_store.write_status(
+            project_id, kind, status="running", thread_id=thread_id, error=None
+        )
+        _invalidate_insights(project_id, owner_id)
+        ctx = contextvars.copy_context()
+        worker = Thread(
+            target=ctx.run,
+            args=(_run_pack, project_id, owner_id, capability, thread_id, kind, headers),
+            daemon=True,
+            name=f"pack-{kind}-{project_id[:12]}",
+        )
+        _PACK_THREADS[key] = worker
+        worker.start()
+    return pack_store.read_status(project_id)
+
+
+def _invalidate_insights(project_id: str, owner_id: str) -> None:
+    """Drop the cached payload so a pack status change is visible on the next poll."""
+    with _INSIGHT_LOCK:
+        _INSIGHT_CACHE.pop(f"{owner_id}:{project_id}", None)
+
+
+def _run_pack(
+    project_id: str,
+    owner_id: str,
+    capability: str,
+    thread_id: str,
+    kind: str,
+    headers: dict[str, str],
+) -> None:
+    from ai_brain.core.procurement_ai.packs import store as pack_store
+
+    try:
+        _brain_post(
+            f"/v1/projects/{project_id}/runs",
+            {"capability": capability, "message": capability, "thread_id": thread_id},
+            headers=headers,
+            timeout=_PACK_RUN_TIMEOUT_S,
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("brain run fallback capability={}: {}", capability, exc)
+        try:
+            _local_pack(project_id, owner_id, capability, thread_id)
+        except Exception:
+            log.exception("pack run failed capability={} project_id={}", capability, project_id)
+            pack_store.write_status(
+                project_id,
+                kind,
+                status="failed",
+                error=f"{type(exc).__name__}: {exc}"[:500],
+                thread_id=thread_id,
+            )
+    finally:
+        _invalidate_insights(project_id, owner_id)
 
 
 def pack_download_path(project_id: str, owner_id: str, kind: str) -> Path | None:
@@ -218,10 +305,16 @@ def _brain_get(path: str) -> dict[str, Any]:
         return body
 
 
-def _brain_post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
+def _brain_post(
+    path: str,
+    payload: dict[str, Any],
+    *,
+    headers: dict[str, str] | None = None,
+    timeout: float = 180.0,
+) -> dict[str, Any]:
     url = f"{brain_base_url()}{path}"
-    with httpx.Client(timeout=180.0) as client:
-        response = client.post(url, json=payload, headers=brain_request_headers())
+    with httpx.Client(timeout=timeout) as client:
+        response = client.post(url, json=payload, headers=headers or brain_request_headers())
         response.raise_for_status()
         body = response.json()
         if not isinstance(body, dict):

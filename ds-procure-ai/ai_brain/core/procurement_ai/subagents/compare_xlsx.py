@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Optional
 
 import mlflow
@@ -32,7 +33,7 @@ async def compare_xlsx(
             }
         }
     await _ensure_corpus(project_id)
-    project, artifacts, chunks = load_context(project_id)
+    project, artifacts, chunks = await asyncio.to_thread(load_context, project_id)
     if project is None:
         return {
             "procurement": {
@@ -57,8 +58,8 @@ async def compare_xlsx(
         extract_comparison_matrix,
     )
 
-    ensure_vendor_bids(project_id)
-    insights = build_insight_payload(project, artifacts, chunks)
+    await asyncio.to_thread(ensure_vendor_bids, project_id)
+    insights = await asyncio.to_thread(build_insight_payload, project, artifacts, chunks)
     thread_id = ""
     if isinstance(config, dict):
         thread_id = str((config.get("configurable") or {}).get("thread_id") or "")
@@ -70,7 +71,13 @@ async def compare_xlsx(
         if is_checkpoint_sync_error(exc):
             # Still attempt a template workbook before re-raising checkpoint sync.
             try:
-                build_comparison_xlsx(project_id, insights, thread_id=thread_id, matrix=None)
+                await asyncio.to_thread(
+                    build_comparison_xlsx,
+                    project_id,
+                    insights,
+                    thread_id=thread_id,
+                    matrix=None,
+                )
             except Exception:
                 log.exception("template xlsx after checkpoint sync failed project_id={}", project_id)
             pack_store.write_status(
@@ -86,7 +93,8 @@ async def compare_xlsx(
         log.exception("comparison matrix agent failed project_id={}", project_id)
         agent_error = str(exc) or exc.__class__.__name__
     try:
-        result = build_comparison_xlsx(
+        result = await asyncio.to_thread(
+            build_comparison_xlsx,
             project_id,
             insights,
             thread_id=thread_id,

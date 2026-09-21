@@ -10,7 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 import { API_BASE } from "../../../../../../services/api";
 import { kbIsBuilding, kbStatusCopy } from "../kbStatus";
-import { xlsxIsFilled, xlsxIsWritten } from "../packStatus";
+import { xlsxIsBuilding, xlsxIsFilled, xlsxIsWritten } from "../packStatus";
 
 function packHref(kind, packs, downloadPath) {
   const fromRoute = downloadPath?.(kind);
@@ -26,7 +26,13 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
   const blockingMissing = missing.filter((item) => item.severity === "blocking");
   const optionalMissing = missing.filter((item) => item.severity !== "blocking");
   const xlsxReady = xlsxIsFilled(packs.xlsx?.status);
-  const xlsxWritten = xlsxIsWritten(packs.xlsx?.status);
+  // The run outlives the POST that starts it, so the button follows the polled
+  // status rather than local click state.
+  const xlsxBuilding = xlsxIsBuilding(packs.xlsx?.status);
+  const xlsxBusy = busy === "xlsx" || xlsxBuilding;
+  // Keep an earlier workbook downloadable while the next run is in flight.
+  const xlsxWritten =
+    xlsxIsWritten(packs.xlsx?.status) || (xlsxBuilding && Boolean(packs.xlsx?.filename));
   const pptReady = packs.ppt?.status === "ready";
   const fileCount = insights?.file_count || 0;
   const xlsxHref = packHref("xlsx", packs, downloadPath);
@@ -148,8 +154,8 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
             </ul>
           ) : null}
           <div className="ws-pack-actions">
-            <button type="button" className="ws-pack-btn" disabled={busy === "xlsx"} onClick={() => onBuild("xlsx")}>
-              {busy === "xlsx" ? "Building..." : "Yes, build comparison"}
+            <button type="button" className="ws-pack-btn" disabled={xlsxBusy} onClick={() => onBuild("xlsx")}>
+              {xlsxBusy ? "Building..." : "Yes, build comparison"}
             </button>
           </div>
         </article>
@@ -171,8 +177,8 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
                 Download template
               </a>
             ) : null}
-            <button type="button" className="ws-pack-btn" disabled={busy === "xlsx"} onClick={() => onBuild("xlsx")}>
-              {busy === "xlsx" ? "Building..." : "Build comparison"}
+            <button type="button" className="ws-pack-btn" disabled={xlsxBusy} onClick={() => onBuild("xlsx")}>
+              {xlsxBusy ? "Building..." : "Build comparison"}
             </button>
           </div>
         </article>
