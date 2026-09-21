@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/empty";
 import { Spinner } from "@/components/ui/spinner";
 
-import { API_BASE } from "../../../../../../services/api";
+import { API_BASE, apiPost } from "../../../../../../services/api";
 import { kbIsBuilding, kbStatusCopy } from "../kbStatus";
 import AnalysisRail from "./AnalysisRail";
 import ChatMarkdown from "./ChatMarkdown";
@@ -54,6 +54,8 @@ function ChatAiBody({
   durationMs = null,
   points,
   sources,
+  onSave,
+  saveState,
 }) {
   const pack = packDownload(text);
   const visible = replyWithoutDownload(text);
@@ -69,6 +71,20 @@ function ChatAiBody({
         <a className="ws-pack-card" href={pack.href}>
           {pack.label}
         </a>
+      ) : null}
+      {onSave && visible.trim() ? (
+        <button
+          type="button"
+          className="ws-chat-save"
+          disabled={saveState === "saving" || saveState === "saved"}
+          onClick={onSave}
+        >
+          {saveState === "saved"
+            ? "Saved to notes"
+            : saveState === "saving"
+              ? "Saving…"
+              : "Save to notes"}
+        </button>
       ) : null}
       {points ? (
         <ul>
@@ -257,7 +273,7 @@ function ChatComposer({
         <input
           id="ws-chat-input"
           type="text"
-          placeholder={picked ? "Add a note, or Generate" : "Ask about this project, or type @"}
+          placeholder={picked ? "Add a note, or Generate" : "Ask about this project"}
           value={draft}
           onChange={(e) => onDraftChange(e.target.value)}
           onKeyDown={(e) => {
@@ -316,6 +332,25 @@ function ChatPanel({
   const insights = analysis.insights;
   const kbStatus = insights?.kb_status;
   const kbMessage = insights?.kb_message;
+  const [savedReplies, setSavedReplies] = useState({});
+
+  async function saveReplyToNotes(key, text) {
+    const body = replyWithoutDownload(text || "").trim();
+    if (!body) return;
+    setSavedReplies((prev) => ({ ...prev, [key]: "saving" }));
+    try {
+      // source=chat keeps a captured answer distinguishable from an assertion
+      // the analyst typed themselves.
+      await apiPost(`/api/procurement/projects/${projectId}/notes`, {
+        body,
+        source: "chat",
+      });
+      setSavedReplies((prev) => ({ ...prev, [key]: "saved" }));
+    } catch (err) {
+      setSavedReplies((prev) => ({ ...prev, [key]: "" }));
+      window.alert(err?.message || "Could not save note.");
+    }
+  }
 
   const hasMessages = (messages ?? []).length > 0;
   const buildingKb = kbIsBuilding(kbStatus) || uploading;
@@ -387,6 +422,8 @@ function ChatPanel({
                   durationMs={msg.thoughtMs}
                   points={msg.points}
                   sources={msg.sources}
+                  saveState={savedReplies[messageKey(msg, index)]}
+                  onSave={() => saveReplyToNotes(messageKey(msg, index), msg.text)}
                 />
               </div>
             ),

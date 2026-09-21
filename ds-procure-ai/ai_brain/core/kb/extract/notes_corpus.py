@@ -17,6 +17,7 @@ from sqlalchemy import select
 
 from shared.db.connection import session_scope
 from shared.db.models import Artifact, Chunk, Project, utc_now_iso
+from shared.db.repos.notes import VENDOR_STATEMENT
 from shared.logger_global import get_logger
 
 log = get_logger(__name__, service="ai_brain")
@@ -37,11 +38,22 @@ def _chunk_text(note: dict[str, Any]) -> str:
     who = (note.get("author") or "").strip() or "an analyst"
     when = (note.get("created_at") or "")[:10]
     scope = note.get("bid_id") or "the project"
+    stamp = f" on {when}" if when else ""
+    body = (note.get("body") or "").strip()
+    # Relayed vendor correspondence must not be read back as our own judgement,
+    # and our judgement must never be read back as a vendor commitment.
+    if (note.get("kind") or "") == VENDOR_STATEMENT and note.get("bid_id"):
+        return (
+            f"VENDOR STATEMENT from {scope}, relayed by {who}{stamp}.\n"
+            "Correspondence the buying team received from this vendor, such as an "
+            "email or call minutes. Treat it as the vendor's own words.\n\n"
+            f"{body}"
+        )
     return (
         f"ANALYST NOTE ({note.get('kind') or 'note'}) about {scope}, "
-        f"recorded by {who}{' on ' + when if when else ''}.\n"
+        f"recorded by {who}{stamp}.\n"
         "This is the buying team's own judgement, not a statement made by the vendor.\n\n"
-        f"{(note.get('body') or '').strip()}"
+        f"{body}"
     )
 
 

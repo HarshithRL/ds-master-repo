@@ -328,7 +328,19 @@ def create_project_note(project_id):
         )
     except ValueError as exc:
         return jsonify({"error": "bad_request", "detail": str(exc)}), 400
+    _sync_notes_corpus(project_id)
     return jsonify(note), 201
+
+
+def _sync_notes_corpus(project_id: str) -> None:
+    """Notes reach chat only as chunks, and kb_build is far too slow to be the
+    only thing that puts them there."""
+    try:
+        from ai_brain.core.kb.extract.notes_corpus import materialize_notes
+
+        materialize_notes(project_id)
+    except Exception:  # noqa: BLE001
+        log.exception("notes corpus sync failed project_id={}", project_id)
 
 
 @procurement_bp.route(
@@ -349,13 +361,16 @@ def modify_project_note(project_id, note_id):
     try:
         if request.method == "DELETE":
             note_repo.delete(project_id, note_id)
+            _sync_notes_corpus(project_id)
             return jsonify({"deleted": True, "id": note_id})
         body = request.get_json(silent=True) or {}
-        return jsonify(note_repo.update(project_id, note_id, str(body.get("body") or "")))
+        updated = note_repo.update(project_id, note_id, str(body.get("body") or ""))
     except note_repo.NoteNotFoundError:
         return jsonify({"error": "not_found"}), 404
     except ValueError as exc:
         return jsonify({"error": "bad_request", "detail": str(exc)}), 400
+    _sync_notes_corpus(project_id)
+    return jsonify(updated)
 
 
 @procurement_bp.route(

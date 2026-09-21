@@ -55,6 +55,7 @@ def build_comparison_xlsx(
     if not isinstance(indirect, IndirectMatrix):
         indirect = empty_indirect(insights)
     rich = _grid_has_marks(indirect)
+    insights = {**insights, "analyst_notes": _analyst_notes(project_id)}
     wb = Workbook()
     cover = wb.active
     cover.title = "Cover"
@@ -111,6 +112,17 @@ def build_comparison_xlsx(
         "sheets": list(wb.sheetnames),
         "error": pack_error,
     }
+
+
+def _analyst_notes(project_id: str) -> list[dict[str, Any]]:
+    """Human input for the workbook. Never blocks the pack if the read fails."""
+    try:
+        from shared.db.repos import notes as note_repo
+
+        return note_repo.list_for_project(project_id)
+    except Exception:  # noqa: BLE001
+        log.exception("analyst notes unavailable project_id={}", project_id)
+        return []
 
 
 def _grid_has_marks(indirect: Any) -> bool:
