@@ -1,8 +1,0 @@
-resources:
-  dashboards:
-    ai_cost_dashboard:
-      display_name: AI Cost Dashboard
-      file_path: ../src/dashboards/AI Cost Dashboard.lvdash.json
-      warehouse_id: ${var.warehouse_id}
-      dataset_catalog: ${var.catalog}
-      dataset_schema: gold
