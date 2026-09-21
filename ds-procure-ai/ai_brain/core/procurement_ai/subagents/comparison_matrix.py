@@ -139,7 +139,7 @@ async def _research_with_coverage(
 
     required: set[str] = set()
     for bid in bids:
-        required.update(list_bid_chunk_ids(project_id, bid))
+        required.update(list_bid_chunk_ids(project_id, bid, for_coverage=True))
     coverage = CoverageState(required=required)
     coverage.read.update(packed_ids)
     state: dict[str, Any] = {

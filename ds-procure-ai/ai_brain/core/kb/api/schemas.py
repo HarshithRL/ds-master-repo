@@ -19,6 +19,12 @@ from shared.db.models import Chunk, QualityFlag, utc_now_iso
 
 EvidenceStatus = Literal["met", "partial", "not_offered", "not_stated", "unclear"]
 UNGROUNDED_KIND = "ungrounded_claim"
+# Grounding proves the quote is in the document, not that it answers the
+# requirement: "€ 1.600" really was cited for "Certification published by
+# 30 Nov". A fragment this short cannot carry a compliance verdict, so it goes
+# to a human as unclear instead of crediting the vendor.
+THIN_CLAIM_KIND = "thin_met_claim"
+MIN_MET_CLAIM_CHARS = 25
 # not_stated asserts the document is silent, which only holds if the analyst read
 # it all. When research is cut short the absence is ours, not the bidder's.
 INCOMPLETE_RESEARCH_NOTE = "research incomplete: absence not verified"
@@ -214,11 +220,27 @@ def apply_grounding_gate(
         chunk_lookup=chunk_lookup,
         artifact_lookup=artifact_lookup,
     ):
-        return item
+        return _gate_thin_met(item, project_id=project_id, flag_sink=flag_sink)
     flagged = item.model_copy(update={"status": "unclear", "confidence": 0.0})
     if project_id:
         record_ungrounded_claim(project_id, item, sink=flag_sink)
     return flagged
+
+
+def _gate_thin_met(
+    item: EvidenceItem,
+    *,
+    project_id: str | None,
+    flag_sink: list[QualityFlag] | None,
+) -> EvidenceItem:
+    """Downgrade a `met` backed by too little text to carry the verdict."""
+    if item.status != "met":
+        return item
+    if len((item.claim_text or "").strip()) >= MIN_MET_CLAIM_CHARS:
+        return item
+    if project_id:
+        record_thin_claim(project_id, item, sink=flag_sink)
+    return item.model_copy(update={"status": "unclear", "confidence": 0.0})
 
 
 def load_chunk_text(chunk_id: str) -> str | None:
@@ -252,6 +274,32 @@ def load_chunk_texts(chunk_ids: Iterable[str]) -> dict[str, str]:
             ).all()
             out.update({str(cid): (text or "") for cid, text in rows})
     return out
+
+
+def record_thin_claim(
+    project_id: str, item: EvidenceItem, *, sink: list[QualityFlag] | None = None
+) -> QualityFlag:
+    """Flag a `met` whose quote is too short to evidence the requirement."""
+    flag = QualityFlag(
+        id=str(uuid.uuid4()),
+        project_id=project_id,
+        artifact_id=item.artifact_id,
+        kind=THIN_CLAIM_KIND,
+        detail=(
+            f"requirement={item.requirement_id} chunk={item.chunk_id or ''} "
+            f"claim={normalize(item.claim_text)[:240]}"
+        ),
+        severity="high",
+        created_at=utc_now_iso(),
+    )
+    if sink is not None:
+        sink.append(flag)
+        return flag
+    with session_scope() as session:
+        session.add(flag)
+        session.flush()
+        session.expunge(flag)
+    return flag
 
 
 def record_ungrounded_claim(
