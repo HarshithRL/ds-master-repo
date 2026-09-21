@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 
 from ai_brain.core.procurement_ai.insights import build_insight_payload
 from ai_brain.core.procurement_ai.packs import store as pack_store
@@ -12,6 +13,11 @@ from ai_brain.core.procurement_ai.project_context import load_context
 from shared.logger_global import get_logger
 
 log = get_logger(__name__, service="ai_brain")
+
+# All bids fan out at once, and a 5-bid project shares one workspace tokens-per-
+# minute quota: a whole vendor came back as 40 extraction_failed 429s. Bounded
+# fan-out trades build time for completeness.
+KB_BID_CONCURRENCY = max(1, int(os.getenv("MATE_KB_BID_CONCURRENCY", "3")))
 
 _KB_BUILD_INPUT = {
     "request": "kb_build",
@@ -35,7 +41,8 @@ async def arun_kb_build(project_id: str, *, write_xlsx: bool = False) -> dict:
                 **_KB_BUILD_INPUT,
                 "project_id": project_id,
                 "procurement": {"capability": "kb_build", "project_id": project_id},
-            }
+            },
+            config={"max_concurrency": KB_BID_CONCURRENCY},
         )
     except Exception as exc:
         pack_store.write_kb_job(
