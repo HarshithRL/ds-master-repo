@@ -14,7 +14,7 @@
 # The source is always the prod ingestion table, in every environment.
 dbutils.widgets.text("CATALOG", "automation_d")
 CATALOG = dbutils.widgets.get("CATALOG")
-SOURCE_TABLE = "ingestion_azure_p.costs.azure_actual_cost"
+SOURCE_TABLE = f"ingestion_azure_{CATALOG[-1]}.costs.azure_actual_cost"
 BRONZE_VIEW = f"{CATALOG}.bronze.azure_actual_cost"
 MAPPING_VIEW = f"{CATALOG}.gold.rg_tag_mapping_v"
 GOLD_TABLE = f"{CATALOG}.gold.ai_foundry_costs_enriched"
