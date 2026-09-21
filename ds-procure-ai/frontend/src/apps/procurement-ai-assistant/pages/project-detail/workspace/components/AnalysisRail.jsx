@@ -12,6 +12,15 @@ import { API_BASE } from "../../../../../../services/api";
 import { kbIsBuilding, kbStatusCopy } from "../kbStatus";
 import { xlsxIsBuilding, xlsxIsFilled, xlsxIsWritten } from "../packStatus";
 
+function staleInputs(stale) {
+  const parts = [];
+  const files = stale.kb_new_files || 0;
+  const notes = stale.kb_new_notes || 0;
+  if (files) parts.push(`${files} new file${files === 1 ? "" : "s"}`);
+  if (notes) parts.push(`${notes} new note${notes === 1 ? "" : "s"}`);
+  return parts.join(" and ") || "New input";
+}
+
 function packHref(kind, packs, downloadPath) {
   const fromRoute = downloadPath?.(kind);
   if (fromRoute) return `${API_BASE}${fromRoute}`;
@@ -40,6 +49,9 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
   const kbStatus = insights?.kb_status || "empty";
   const building = kbIsBuilding(kbStatus);
   const failed = kbStatus === "failed";
+  const stale = insights?.stale || {};
+  const staleKb = Boolean(stale.kb) && !building;
+  const staleXlsx = Boolean(stale.xlsx) && !building && !staleKb && !xlsxBuilding;
 
   let step = "upload";
   if (fileCount > 0) step = "kb";
@@ -79,6 +91,41 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
           );
         })}
       </ol>
+
+      {staleKb || staleXlsx ? (
+        <article className="ws-insight-card pack">
+          <header>
+            <span>Out of date</span>
+            <strong>{staleKb ? "Knowledge base" : "Excel"}</strong>
+          </header>
+          <p>
+            {staleKb
+              ? `${staleInputs(stale)} since the knowledge base was built. Vendor evidence does not cover that yet.`
+              : "The knowledge base changed after this workbook was built, so the cells describe the earlier evidence."}
+          </p>
+          <div className="ws-pack-actions">
+            {staleKb ? (
+              <button
+                type="button"
+                className="ws-pack-btn"
+                disabled={busy === "kb"}
+                onClick={() => onBuild("kb")}
+              >
+                Rebuild knowledge base
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="ws-pack-btn"
+                disabled={xlsxBusy}
+                onClick={() => onBuild("xlsx")}
+              >
+                {xlsxBusy ? "Building..." : "Rebuild comparison"}
+              </button>
+            )}
+          </div>
+        </article>
+      ) : null}
 
       {step === "kb" && (building || failed) ? (
         <Card size="sm">

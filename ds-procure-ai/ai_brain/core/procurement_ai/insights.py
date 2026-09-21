@@ -97,6 +97,7 @@ def build_insight_payload(project: Any, artifacts: list[Any], chunks: list[Any] 
             "xlsx": _pack_card(packs.get("xlsx"), xlsx_status),
             "ppt": _pack_card(packs.get("ppt"), ppt_status),
         },
+        "stale": _staleness(artifacts, packs),
     }
     try:
         from ai_brain.core.procurement_ai.packs.matrix_from_evidence import (
@@ -110,6 +111,38 @@ def build_insight_payload(project: Any, artifacts: list[Any], chunks: list[Any] 
     except Exception as exc:
         log.warning("insights_from_source failed project_id={}: {}", getattr(project, "id", ""), exc)
     return payload
+
+
+def _staleness(artifacts: list[Any], packs: dict[str, Any]) -> dict[str, Any]:
+    """Flag outputs that no longer describe the inputs.
+
+    Timestamps are ISO-8601 UTC, so string order is chronological order.
+    """
+    kb_at = str((packs.get("kb") or {}).get("updated_at") or "")
+    xlsx_at = str((packs.get("xlsx") or {}).get("updated_at") or "")
+    kb_ready = str((packs.get("kb") or {}).get("status") or "") == "ready"
+    xlsx_written = str((packs.get("xlsx") or {}).get("status") or "") in {"ready", "template"}
+
+    new_files = 0
+    new_notes = 0
+    if kb_at:
+        for item in artifacts:
+            if str(getattr(item, "created_at", "") or "") <= kb_at:
+                continue
+            if (getattr(item, "kind", "") or "") == "note":
+                new_notes += 1
+            else:
+                new_files += 1
+
+    kb_stale = bool(kb_ready and (new_files or new_notes))
+    # A rebuilt knowledge base makes the workbook describe the previous one.
+    xlsx_stale = bool(xlsx_written and (kb_stale or (kb_at and xlsx_at and kb_at > xlsx_at)))
+    return {
+        "kb": kb_stale,
+        "kb_new_files": new_files,
+        "kb_new_notes": new_notes,
+        "xlsx": xlsx_stale,
+    }
 
 
 def _kb_status(project_id: str, file_count: int, packs: dict[str, Any]) -> tuple[str, str | None]:
