@@ -117,6 +117,16 @@ async def compare_xlsx(
         # Keep workbook downloadable: template + Download href, surface agent error in message.
         status = result.get("status") or "template"
         pack_error = agent_error
+        # The workbook is written from SQL evidence before the agent runs, so a
+        # `ready` one is complete. Reporting that as a failure sent people
+        # looking for a broken file that was sitting there fully populated.
+        evidenced = status == "ready"
+        detail = (
+            f"AI summary skipped ({agent_error}). The workbook is complete from "
+            "SQL evidence."
+            if evidenced
+            else f"Comparison agent failed: {agent_error}"
+        )
         pack_store.write_status(
             project_id,
             "xlsx",
@@ -124,12 +134,13 @@ async def compare_xlsx(
             href=href or None,
             filename=result.get("filename") or "comparison_matrix.xlsx",
             thread_id=thread_id or None,
-            error=f"Comparison agent failed: {agent_error}",
+            error=detail,
         )
         reply = (
-            f"Comparison agent failed: {agent_error}. "
+            f"{detail} "
             + (
-                f"A template workbook was written (extraction_failed / unevidenced cells). Download: {href}"
+                (f"Download: {href}" if evidenced else
+                 f"A template workbook was written (extraction_failed / unevidenced cells). Download: {href}")
                 if href
                 else "No comparison workbook was produced."
             )

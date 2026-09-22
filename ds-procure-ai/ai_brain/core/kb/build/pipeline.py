@@ -236,7 +236,11 @@ def plan_kb_build(state: dict[str, Any]) -> list[Send] | str:
     _drop_orphan_evidence(project_id, bids)
     if not targets:
         log.info("kb_build nothing changed project_id={} bids={}", project_id, len(bids))
+        # Routing returns an edge, not state, so the one fact the finish message
+        # needs is parked here for `audit_kb` to pick up in the same run.
+        _SKIPPED_EXTRACTION.add(project_id)
         return "audit_kb"
+    _SKIPPED_EXTRACTION.discard(project_id)
     log.info(
         "kb_build extracting project_id={} bids={}/{} skipped={}",
         project_id,
@@ -256,6 +260,11 @@ def plan_kb_build(state: dict[str, Any]) -> list[Send] | str:
         )
         for bid_id in targets
     ]
+
+
+# Set by routing, read by `audit_kb` in the same run: a build that re-extracted
+# nothing still has to tell the user why the screen did not change.
+_SKIPPED_EXTRACTION: set[str] = set()
 
 
 def _incremental_enabled() -> bool:
@@ -493,7 +502,11 @@ def audit_kb(state: dict[str, Any]) -> dict[str, Any]:
     _persist_kb_status(project_id, status)
     return {
         "procurement": {
-            "kb_audit": {"bundle_count": len(bundles), "failed": failed},
+            "kb_audit": {
+                "bundle_count": len(bundles),
+                "failed": failed,
+                "unchanged": project_id in _SKIPPED_EXTRACTION,
+            },
             "kb_status": status,
         }
     }
