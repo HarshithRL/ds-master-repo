@@ -22,7 +22,9 @@ from shared.logger_global import get_logger
 log = get_logger(__name__, service="ai_brain")
 
 # A run whose heartbeat is older than this is treated as dead, not slow.
-STALE_HEARTBEAT_S = 900.0
+# Beats land every 30s, so this is ten missed beats. Longer only widens the
+# window where a build killed by a deploy silently blocks the rebuild button.
+STALE_HEARTBEAT_S = 300.0
 
 TERMINAL_STATUSES = frozenset({"ready", "needs_review", "staged", "failed"})
 
