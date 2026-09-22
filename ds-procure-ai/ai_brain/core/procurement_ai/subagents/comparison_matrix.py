@@ -140,6 +140,10 @@ async def _research_with_coverage(
     required: set[str] = set()
     for bid in bids:
         required.update(list_bid_chunk_ids(project_id, bid, for_coverage=True))
+    # Keep coverage to what was packed; the budget drops the tail on purpose and
+    # those chunks would otherwise never stop showing up as unread.
+    if packed_ids:
+        required &= {str(cid) for cid in packed_ids}
     coverage = CoverageState(required=required)
     coverage.read.update(packed_ids)
     state: dict[str, Any] = {
