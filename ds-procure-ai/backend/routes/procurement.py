@@ -234,6 +234,46 @@ def delete_project_file(project_id, artifact_id):
 
 
 @procurement_bp.route(
+    "/api/procurement/projects/<project_id>/files/<artifact_id>/vendor",
+    methods=["PATCH"],
+)
+def set_project_file_vendor(project_id, artifact_id):
+    """Pin the bidder for one file by hand; survives every later re-classification."""
+    try:
+        require_workspace_id()
+    except AuthRequiredError as exc:
+        return auth_error_response(exc)
+
+    body = request.get_json(silent=True) or {}
+    bid_id = str(body.get("vendorId") or body.get("vendor_id") or "").strip()
+    if not bid_id:
+        return jsonify({"error": "bad_request", "detail": "vendorId is required"}), 400
+
+    from ai_brain.core.kb.extract.classify import set_vendor_manually
+
+    try:
+        result = set_vendor_manually(
+            project_id,
+            artifact_id,
+            bid_id,
+            bid_label=str(body.get("vendorLabel") or body.get("vendor_label") or ""),
+            doc_role=str(body.get("docRole") or body.get("doc_role") or ""),
+        )
+    except LookupError:
+        return jsonify({"error": "not_found"}), 404
+    except ValueError as exc:
+        return jsonify({"error": "bad_request", "detail": str(exc)}), 400
+
+    log.info(
+        "vendor pinned manually project_id={} artifact_id={} vendor_id={}",
+        project_id,
+        artifact_id,
+        result.get("vendor_id"),
+    )
+    return jsonify(result)
+
+
+@procurement_bp.route(
     "/api/procurement/projects/<project_id>/overview",
     methods=["GET"],
 )

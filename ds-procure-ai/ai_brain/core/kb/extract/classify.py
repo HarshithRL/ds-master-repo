@@ -157,6 +157,81 @@ def classify_and_pin(
     return confirm_classification(project_id, artifact_id, classification)
 
 
+# Automated pins are clamped below this, so the value only ever means "a person
+# chose this" and no later re-classification may overwrite it.
+MANUAL_PIN_CONFIDENCE = 1.0
+_MAX_AUTO_CONFIDENCE = 0.99
+
+
+def set_vendor_manually(
+    project_id: str,
+    artifact_id: str,
+    bid_id: str,
+    *,
+    bid_label: str | None = None,
+    doc_role: str | None = None,
+) -> dict[str, object]:
+    """Pin a bidder chosen by a person and mark the knowledge base stale.
+
+    created_at is refreshed because _staleness compares it against the last kb
+    build; the file itself did not change but its meaning for the matrix did.
+    """
+    slug = _slug(bid_id)
+    if not slug:
+        raise ValueError("bid_id is required")
+    role = (doc_role or "").strip().lower()
+    if role and role not in DOC_ROLES:
+        raise ValueError(f"unknown doc_role: {doc_role}")
+    label = (bid_label or "").strip() or slug
+    now = utc_now_iso()
+    with session_scope() as session:
+        artifact = session.get(Artifact, artifact_id)
+        if artifact is None or artifact.project_id != project_id:
+            raise LookupError(artifact_id)
+        artifact.vendor_id = slug
+        artifact.doc_role = role or artifact.doc_role or "proposal"
+        artifact.role_confidence = MANUAL_PIN_CONFIDENCE
+        artifact.created_at = now
+        vendor_id = f"{project_id}:{slug}"
+        if session.get(Vendor, vendor_id) is None:
+            session.add(
+                Vendor(
+                    id=vendor_id,
+                    project_id=project_id,
+                    name=label,
+                    legal_entity=label,
+                    status="bidder",
+                    created_at=now,
+                )
+            )
+        session.flush()
+        out = {
+            "artifact_id": artifact_id,
+            "vendor_id": slug,
+            "doc_role": artifact.doc_role,
+            "manual": True,
+        }
+    _clear_unresolved_flag(artifact_id)
+    return out
+
+
+def _clear_unresolved_flag(artifact_id: str) -> None:
+    from sqlalchemy import delete
+
+    from shared.db.models import QualityFlag
+
+    try:
+        with session_scope() as session:
+            session.execute(
+                delete(QualityFlag).where(
+                    QualityFlag.artifact_id == artifact_id,
+                    QualityFlag.kind == "vendor_unresolved",
+                )
+            )
+    except Exception:
+        pass
+
+
 def artifact_snippets(artifact_id: str, limit: int = 6) -> list[str]:
     """Opening chunks of a parsed artifact — letterheads and signature blocks
     name the bidder far more reliably than the filename does."""
@@ -224,8 +299,21 @@ def confirm_classification(
         artifact = session.get(Artifact, artifact_id)
         if artifact is None or artifact.project_id != project_id:
             raise LookupError(artifact_id)
+        # A person outranks every later automated pass, and the check lives here
+        # so it shares the write's transaction instead of racing a second query.
+        if float(artifact.role_confidence or 0.0) >= MANUAL_PIN_CONFIDENCE:
+            return {
+                "artifact_id": artifact_id,
+                "vendor_id": artifact.vendor_id,
+                "doc_role": artifact.doc_role,
+                "manual": True,
+                "vendors": [],
+            }
         artifact.doc_role = classification.doc_role
-        artifact.role_confidence = classification.role_confidence or classification.confidence
+        artifact.role_confidence = min(
+            classification.role_confidence or classification.confidence,
+            _MAX_AUTO_CONFIDENCE,
+        )
         if classification.doc_role == "rfp":
             artifact.vendor_id = None
             session.flush()
