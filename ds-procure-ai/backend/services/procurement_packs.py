@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import contextvars
+from datetime import datetime, timezone
 from pathlib import Path
-from threading import Event, RLock
+from threading import Event, RLock, Thread
 from time import monotonic
 from typing import Any
 
@@ -21,6 +23,18 @@ _INSIGHT_TTL_S = 30.0
 _INSIGHT_LOCK = RLock()
 _INSIGHT_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 _INSIGHT_IN_FLIGHT: dict[str, Event] = {}
+
+# Pack agents read every vendor file and can run for many minutes. Nobody waits
+# on the HTTP request once the run is backgrounded, so the ceiling only has to
+# stop a wedged run from living forever. Must stay above the agent's own
+# COMPARE_TIMEOUT_S so the agent finishes on its terms, not by a dropped socket.
+_PACK_RUN_TIMEOUT_S = 2400.0
+# A restart kills the worker thread but leaves "running" on disk, and the UI
+# disables the button while it says that. Past the agent's own ceiling plus
+# margin, treat it as dead so the user can start a new run.
+_PACK_STALE_AFTER_S = 2100.0
+_PACK_LOCK = RLock()
+_PACK_THREADS: dict[str, Thread] = {}
 
 
 def insights_for_owner(project_id: str, owner_id: str) -> dict[str, Any] | None:
@@ -107,18 +121,62 @@ def packs_for_owner(project_id: str, owner_id: str) -> dict[str, Any] | None:
     if project_repo.get_for_owner_or_none(project_id, owner_id) is None:
         return None
     try:
-        return _brain_get(f"/v1/projects/{project_id}/packs")
+        status = _brain_get(f"/v1/projects/{project_id}/packs")
     except Exception as exc:  # noqa: BLE001
         log.warning("brain packs fallback: {}", exc)
         from ai_brain.core.procurement_ai.packs import store as pack_store
 
-        return pack_store.read_status(project_id)
+        status = pack_store.read_status(project_id)
+    return _reap_stale_pack(project_id, status)
+
+
+def _pack_worker_alive(project_id: str, kind: str) -> bool:
+    with _PACK_LOCK:
+        worker = _PACK_THREADS.get(f"{project_id}:{kind}")
+    return worker is not None and worker.is_alive()
+
+
+def _age_seconds(stamp: Any) -> float:
+    """Seconds since an ISO timestamp; unreadable stamps count as ancient."""
+    try:
+        started = datetime.fromisoformat(str(stamp))
+    except (TypeError, ValueError):
+        return float("inf")
+    if started.tzinfo is None:
+        started = started.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - started).total_seconds()
+
+
+def _reap_stale_pack(project_id: str, status: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Clear a "running" row whose worker died with the process that started it."""
+    if not isinstance(status, dict):
+        return status
+    for kind in ("xlsx", "ppt"):
+        row = status.get(kind)
+        if not isinstance(row, dict) or row.get("status") != "running":
+            continue
+        if _pack_worker_alive(project_id, kind):
+            continue
+        if _age_seconds(row.get("updated_at")) < _PACK_STALE_AFTER_S:
+            continue
+        from ai_brain.core.procurement_ai.packs import store as pack_store
+
+        log.warning("reaping stale {} pack run project_id={}", kind, project_id)
+        status = pack_store.write_status(
+            project_id,
+            kind,
+            status="failed",
+            error="Build stopped before it finished. Start it again.",
+        )
+    return status
 
 
 def start_pack(project_id: str, owner_id: str, capability: str) -> dict[str, Any] | None:
     if project_repo.get_for_owner_or_none(project_id, owner_id) is None:
         return None
     thread_id = f"{project_id}:{capability}"
+    if capability == "compare_xlsx":
+        return _start_pack_background(project_id, owner_id, capability, thread_id, "xlsx")
     try:
         return _brain_post(
             f"/v1/projects/{project_id}/runs",
@@ -127,6 +185,83 @@ def start_pack(project_id: str, owner_id: str, capability: str) -> dict[str, Any
     except Exception as exc:  # noqa: BLE001
         log.warning("brain run fallback capability={}: {}", capability, exc)
         return _local_pack(project_id, owner_id, capability, thread_id)
+
+
+def _start_pack_background(
+    project_id: str,
+    owner_id: str,
+    capability: str,
+    thread_id: str,
+    kind: str,
+) -> dict[str, Any]:
+    """Kick the pack agent onto a thread and return the polled status right away."""
+    from ai_brain.core.procurement_ai.packs import store as pack_store
+
+    key = f"{project_id}:{kind}"
+    with _PACK_LOCK:
+        running = _PACK_THREADS.get(key)
+        if running is not None and running.is_alive():
+            # A second run would race the first onto the same workbook path.
+            log.info("pack run already in flight capability={} project_id={}", capability, project_id)
+            return pack_store.read_status(project_id)
+
+        # The worker has no Flask request to read OBO headers from, so capture
+        # them here and hand them over explicitly.
+        headers = brain_request_headers()
+        pack_store.write_status(
+            project_id, kind, status="running", thread_id=thread_id, error=None
+        )
+        _invalidate_insights(project_id, owner_id)
+        ctx = contextvars.copy_context()
+        worker = Thread(
+            target=ctx.run,
+            args=(_run_pack, project_id, owner_id, capability, thread_id, kind, headers),
+            daemon=True,
+            name=f"pack-{kind}-{project_id[:12]}",
+        )
+        _PACK_THREADS[key] = worker
+        worker.start()
+    return pack_store.read_status(project_id)
+
+
+def _invalidate_insights(project_id: str, owner_id: str) -> None:
+    """Drop the cached payload so a pack status change is visible on the next poll."""
+    with _INSIGHT_LOCK:
+        _INSIGHT_CACHE.pop(f"{owner_id}:{project_id}", None)
+
+
+def _run_pack(
+    project_id: str,
+    owner_id: str,
+    capability: str,
+    thread_id: str,
+    kind: str,
+    headers: dict[str, str],
+) -> None:
+    from ai_brain.core.procurement_ai.packs import store as pack_store
+
+    try:
+        _brain_post(
+            f"/v1/projects/{project_id}/runs",
+            {"capability": capability, "message": capability, "thread_id": thread_id},
+            headers=headers,
+            timeout=_PACK_RUN_TIMEOUT_S,
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.warning("brain run fallback capability={}: {}", capability, exc)
+        try:
+            _local_pack(project_id, owner_id, capability, thread_id)
+        except Exception:
+            log.exception("pack run failed capability={} project_id={}", capability, project_id)
+            pack_store.write_status(
+                project_id,
+                kind,
+                status="failed",
+                error=f"{type(exc).__name__}: {exc}"[:500],
+                thread_id=thread_id,
+            )
+    finally:
+        _invalidate_insights(project_id, owner_id)
 
 
 def pack_download_path(project_id: str, owner_id: str, kind: str) -> Path | None:
@@ -150,7 +285,24 @@ def _local_pack(project_id: str, owner_id: str, capability: str, thread_id: str)
 
     if capability == "kb_build":
         # enqueue_kb_build already copies the OBO context onto its own thread.
+        from ai_brain.core.kb.extract import job_store
         from ai_brain.core.kb.extract.ingest import enqueue_kb_build
+
+        # A second build races the first onto the same evidence rows, doubling
+        # cost and per-vendor counts. A dead run is reaped first, so this cannot
+        # wedge the project.
+        job_store.reap_stalled(project_id)
+        live = job_store.latest_status_map([project_id]).get(project_id)
+        if live == "building":
+            # Same payload as a fresh start would look like a dead button.
+            return {
+                "route": "procurement",
+                "thread_id": thread_id,
+                "procurement": {
+                    "kb_status": "building",
+                    "kb_already_running": True,
+                },
+            }
 
         enqueue_kb_build(project_id)
         return {
@@ -205,10 +357,16 @@ def _brain_get(path: str) -> dict[str, Any]:
         return body
 
 
-def _brain_post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
+def _brain_post(
+    path: str,
+    payload: dict[str, Any],
+    *,
+    headers: dict[str, str] | None = None,
+    timeout: float = 180.0,
+) -> dict[str, Any]:
     url = f"{brain_base_url()}{path}"
-    with httpx.Client(timeout=180.0) as client:
-        response = client.post(url, json=payload, headers=brain_request_headers())
+    with httpx.Client(timeout=timeout) as client:
+        response = client.post(url, json=payload, headers=headers or brain_request_headers())
         response.raise_for_status()
         body = response.json()
         if not isinstance(body, dict):

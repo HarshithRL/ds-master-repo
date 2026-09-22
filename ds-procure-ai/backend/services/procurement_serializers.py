@@ -369,12 +369,20 @@ def _file_groups(artifacts: list[Artifact]) -> list[dict[str, Any]]:
     grouped: dict[str, list[dict[str, Any]]] = {}
     for artifact in _current_only(artifacts):
         folder = artifact.folder or artifact_repo.FOLDER_VENDOR
+        confidence = float(getattr(artifact, "role_confidence", 0.0) or 0.0)
         grouped.setdefault(folder, []).append(
             {
                 "id": artifact.id,
                 "name": artifact.original_name,
                 "type": artifact_repo.artifact_file_type(artifact.original_name),
                 "meta": artifact_repo.format_file_meta(artifact.size_bytes, artifact.created_at),
+                "vendorId": artifact.vendor_id or "",
+                "vendorLabel": _vendor_label(artifact.vendor_id),
+                "docRole": artifact.doc_role or "",
+                "parseStatus": artifact.parse_status or "",
+                "vendorManual": confidence >= 1.0,
+                # 0.4 is the filename-stem fallback: a guess, not a reading.
+                "vendorGuessed": bool(artifact.vendor_id) and confidence <= 0.4,
             }
         )
 

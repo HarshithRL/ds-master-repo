@@ -5,3 +5,7 @@ export function xlsxIsFilled(status) {
 export function xlsxIsWritten(status) {
   return status === "ready" || status === "template";
 }
+
+export function xlsxIsBuilding(status) {
+  return status === "running";
+}

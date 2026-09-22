@@ -7,6 +7,7 @@ and multiple legal entities — graph membership is W7.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
@@ -54,12 +55,20 @@ _FILENAME_BIDS: tuple[tuple[tuple[str, ...], str, str, str], ...] = (
     (("bdo",), "bdo", "BDO", "proposal"),
 )
 
+# "<Vendor> Response to ... RFP.pdf" is a bid, not the buyer's tender document.
+_RESPONSE_MARKERS = ("response", "reply", "submission", "proposal", "offer", "quote")
+
 
 def classify_from_filename(filename: str) -> BidClassification | None:
     """High-confidence identity from the filename. None → call the fast model."""
     name = (filename or "").lower()
-    if "rfp" in name and not any(
-        token in name for token in ("kpmg", "pwc", "ey", "bdo", "inetum", "trifinance")
+    if (
+        "rfp" in name
+        and not any(
+            token in name
+            for token in ("kpmg", "pwc", "ey", "bdo", "inetum", "trifinance")
+        )
+        and not any(marker in name for marker in _RESPONSE_MARKERS)
     ):
         return BidClassification(
             bid_id="rfp",
@@ -125,12 +134,20 @@ def classify_from_stem(filename: str) -> BidClassification | None:
     )
 
 
-def classify_and_pin(project_id: str, artifact_id: str, filename: str) -> dict[str, object] | None:
+def classify_and_pin(
+    project_id: str,
+    artifact_id: str,
+    filename: str,
+    *,
+    snippets: list[str] | None = None,
+    known_bids: list[str] | None = None,
+) -> dict[str, object] | None:
     """Filename heuristic, then optional LLM, then filename-stem bid. Always pin."""
     classification = classify_from_filename(filename)
     if classification is None:
+        body = [s for s in (snippets or []) if s.strip()] or [filename]
         try:
-            classification = classify_snippets(filename, [filename])
+            classification = classify_snippets(filename, body, known_bids=known_bids)
         except Exception:
             classification = None
     if classification is None:
@@ -140,14 +157,133 @@ def classify_and_pin(project_id: str, artifact_id: str, filename: str) -> dict[s
     return confirm_classification(project_id, artifact_id, classification)
 
 
+# Automated pins are clamped below this, so the value only ever means "a person
+# chose this" and no later re-classification may overwrite it.
+MANUAL_PIN_CONFIDENCE = 1.0
+_MAX_AUTO_CONFIDENCE = 0.99
+
+
+def set_vendor_manually(
+    project_id: str,
+    artifact_id: str,
+    bid_id: str,
+    *,
+    bid_label: str | None = None,
+    doc_role: str | None = None,
+) -> dict[str, object]:
+    """Pin a bidder chosen by a person and mark the knowledge base stale.
+
+    created_at is refreshed because _staleness compares it against the last kb
+    build; the file itself did not change but its meaning for the matrix did.
+    """
+    slug = _slug(bid_id)
+    if not slug:
+        raise ValueError("bid_id is required")
+    role = (doc_role or "").strip().lower()
+    if role and role not in DOC_ROLES:
+        raise ValueError(f"unknown doc_role: {doc_role}")
+    label = (bid_label or "").strip() or slug
+    now = utc_now_iso()
+    with session_scope() as session:
+        artifact = session.get(Artifact, artifact_id)
+        if artifact is None or artifact.project_id != project_id:
+            raise LookupError(artifact_id)
+        artifact.vendor_id = slug
+        artifact.doc_role = role or artifact.doc_role or "proposal"
+        artifact.role_confidence = MANUAL_PIN_CONFIDENCE
+        artifact.created_at = now
+        vendor_id = f"{project_id}:{slug}"
+        if session.get(Vendor, vendor_id) is None:
+            session.add(
+                Vendor(
+                    id=vendor_id,
+                    project_id=project_id,
+                    name=label,
+                    legal_entity=label,
+                    status="bidder",
+                    created_at=now,
+                )
+            )
+        session.flush()
+        out = {
+            "artifact_id": artifact_id,
+            "vendor_id": slug,
+            "doc_role": artifact.doc_role,
+            "manual": True,
+        }
+    _clear_unresolved_flag(artifact_id)
+    return out
+
+
+def _clear_unresolved_flag(artifact_id: str) -> None:
+    from sqlalchemy import delete
+
+    from shared.db.models import QualityFlag
+
+    try:
+        with session_scope() as session:
+            session.execute(
+                delete(QualityFlag).where(
+                    QualityFlag.artifact_id == artifact_id,
+                    QualityFlag.kind == "vendor_unresolved",
+                )
+            )
+    except Exception:
+        pass
+
+
+def artifact_snippets(artifact_id: str, limit: int = 6) -> list[str]:
+    """Opening chunks of a parsed artifact — letterheads and signature blocks
+    name the bidder far more reliably than the filename does."""
+    from shared.db.models import Chunk
+
+    with session_scope() as session:
+        rows = session.execute(
+            select(Chunk.text)
+            .where(Chunk.artifact_id == artifact_id)
+            .order_by(Chunk.ordinal)
+            .limit(limit)
+        ).all()
+        out = [str(r[0] or "").strip() for r in rows if (r[0] or "").strip()]
+        if out:
+            return out
+        # Chunk writes fail independently of parsing (row-level Delta conflicts,
+        # oversized statements), so parsed_json is often still populated.
+        artifact = session.get(Artifact, artifact_id)
+        raw = getattr(artifact, "parsed_json", None) if artifact is not None else None
+    return _parsed_json_snippets(raw, limit)
+
+
+def _parsed_json_snippets(raw: object, limit: int) -> list[str]:
+    if not raw:
+        return []
+    data = raw
+    if isinstance(raw, str):
+        try:
+            data = json.loads(raw)
+        except ValueError:
+            return []
+    text = ""
+    if isinstance(data, dict):
+        text = str(data.get("markdown") or data.get("text") or "")
+    elif isinstance(data, str):
+        text = data
+    text = text.strip()
+    if not text:
+        return []
+    blocks = [b.strip() for b in text.split("\n\n") if b.strip()]
+    return blocks[:limit] if blocks else [text[:1000]]
+
+
 def classify_snippets(
     filename: str,
     snippets: list[str],
     *,
+    known_bids: list[str] | None = None,
     invoke: InvokeFn | None = None,
 ) -> BidClassification:
     """Fast-model structured classification. Tests inject `invoke` (no live LLM)."""
-    prompt = _classifier_prompt(filename, snippets)
+    prompt = _classifier_prompt(filename, snippets, known_bids=known_bids)
     fn = invoke or _live_invoke
     return fn(prompt)
 
@@ -163,8 +299,21 @@ def confirm_classification(
         artifact = session.get(Artifact, artifact_id)
         if artifact is None or artifact.project_id != project_id:
             raise LookupError(artifact_id)
+        # A person outranks every later automated pass, and the check lives here
+        # so it shares the write's transaction instead of racing a second query.
+        if float(artifact.role_confidence or 0.0) >= MANUAL_PIN_CONFIDENCE:
+            return {
+                "artifact_id": artifact_id,
+                "vendor_id": artifact.vendor_id,
+                "doc_role": artifact.doc_role,
+                "manual": True,
+                "vendors": [],
+            }
         artifact.doc_role = classification.doc_role
-        artifact.role_confidence = classification.role_confidence or classification.confidence
+        artifact.role_confidence = min(
+            classification.role_confidence or classification.confidence,
+            _MAX_AUTO_CONFIDENCE,
+        )
         if classification.doc_role == "rfp":
             artifact.vendor_id = None
             session.flush()
@@ -213,14 +362,25 @@ def roster_names(project_id: str) -> list[str]:
         return sorted({row.name for row in rows})
 
 
-def _classifier_prompt(filename: str, snippets: list[str]) -> str:
+def _classifier_prompt(
+    filename: str, snippets: list[str], known_bids: list[str] | None = None
+) -> str:
     body = "\n".join(snippets[:8])[:4000]
+    known = ""
+    if known_bids:
+        known = (
+            "bid_id values already used in this project: "
+            + ", ".join(sorted(set(known_bids)))
+            + "\nReuse one of them verbatim when this file comes from the same "
+            "bidder; only invent a new bid_id for a genuinely different one.\n"
+        )
     return (
         "Classify this procurement artifact.\n"
         "Return bid_id (stable slug), bid_label, doc_role, and legal entities.\n"
         "Do not trust the filename alone; filenames may describe the buyer, not the bidder.\n"
         "Consortium bids: one bid_id, multiple entities.\n"
-        f"filename: {filename}\n"
+        + known
+        + f"filename: {filename}\n"
         f"snippets:\n{body}\n"
     )
 

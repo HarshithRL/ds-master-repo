@@ -188,7 +188,9 @@ def delete_for_owner(
         )
         if artifact is None or artifact.project is None:
             raise ArtifactNotFoundError(artifact_id)
-        if artifact.project.owner_id != owner_id or artifact.project.module_id != module_id:
+        # Team-shared module: any member may remove any file. Module id still
+        # separates procurement from everything else.
+        if artifact.project.module_id != module_id:
             raise ArtifactNotFoundError(artifact_id)
 
         relpath = artifact.storage_relpath

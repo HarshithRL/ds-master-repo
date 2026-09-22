@@ -10,7 +10,16 @@ import { Spinner } from "@/components/ui/spinner";
 
 import { API_BASE } from "../../../../../../services/api";
 import { kbIsBuilding, kbStatusCopy } from "../kbStatus";
-import { xlsxIsFilled, xlsxIsWritten } from "../packStatus";
+import { xlsxIsBuilding, xlsxIsFilled, xlsxIsWritten } from "../packStatus";
+
+function staleInputs(stale) {
+  const parts = [];
+  const files = stale.kb_new_files || 0;
+  const notes = stale.kb_new_notes || 0;
+  if (files) parts.push(`${files} new file${files === 1 ? "" : "s"}`);
+  if (notes) parts.push(`${notes} new note${notes === 1 ? "" : "s"}`);
+  return parts.join(" and ") || "New input";
+}
 
 function packHref(kind, packs, downloadPath) {
   const fromRoute = downloadPath?.(kind);
@@ -23,8 +32,16 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
   const decision = insights?.decision || {};
   const packs = insights?.packs || {};
   const missing = (insights?.requirements?.items || []).filter((item) => item.status === "missing");
+  const blockingMissing = missing.filter((item) => item.severity === "blocking");
+  const optionalMissing = missing.filter((item) => item.severity !== "blocking");
   const xlsxReady = xlsxIsFilled(packs.xlsx?.status);
-  const xlsxWritten = xlsxIsWritten(packs.xlsx?.status);
+  // The run outlives the POST that starts it, so the button follows the polled
+  // status rather than local click state.
+  const xlsxBuilding = xlsxIsBuilding(packs.xlsx?.status);
+  const xlsxBusy = busy === "xlsx" || xlsxBuilding;
+  // Keep an earlier workbook downloadable while the next run is in flight.
+  const xlsxWritten =
+    xlsxIsWritten(packs.xlsx?.status) || (xlsxBuilding && Boolean(packs.xlsx?.filename));
   const pptReady = packs.ppt?.status === "ready";
   const fileCount = insights?.file_count || 0;
   const xlsxHref = packHref("xlsx", packs, downloadPath);
@@ -32,6 +49,9 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
   const kbStatus = insights?.kb_status || "empty";
   const building = kbIsBuilding(kbStatus);
   const failed = kbStatus === "failed";
+  const stale = insights?.stale || {};
+  const staleKb = Boolean(stale.kb) && !building;
+  const staleXlsx = Boolean(stale.xlsx) && !building && !staleKb && !xlsxBuilding;
 
   let step = "upload";
   if (fileCount > 0) step = "kb";
@@ -39,7 +59,9 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
     step = "kb";
   } else if (!building && fileCount > 0) {
     step = "gaps";
-    if (skippedGaps || missing.length === 0) step = "xlsx";
+    // Only blocking gaps gate. skippedGaps is per-mount state, so an optional
+    // gap used to pin the rail on step 3 again after every reload.
+    if (skippedGaps || blockingMissing.length === 0) step = "xlsx";
     if (xlsxReady) step = "ppt";
     if (pptReady) step = "done";
   }
@@ -70,6 +92,41 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
         })}
       </ol>
 
+      {staleKb || staleXlsx ? (
+        <article className="ws-insight-card pack">
+          <header>
+            <span>Out of date</span>
+            <strong>{staleKb ? "Knowledge base" : "Excel"}</strong>
+          </header>
+          <p>
+            {staleKb
+              ? `${staleInputs(stale)} since the knowledge base was built. Vendor evidence does not cover that yet.`
+              : "The knowledge base changed after this workbook was built, so the cells describe the earlier evidence."}
+          </p>
+          <div className="ws-pack-actions">
+            {staleKb ? (
+              <button
+                type="button"
+                className="ws-pack-btn"
+                disabled={busy === "kb"}
+                onClick={() => onBuild("kb")}
+              >
+                Rebuild knowledge base
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="ws-pack-btn"
+                disabled={xlsxBusy}
+                onClick={() => onBuild("xlsx")}
+              >
+                {xlsxBusy ? "Building..." : "Rebuild comparison"}
+              </button>
+            )}
+          </div>
+        </article>
+      ) : null}
+
       {step === "kb" && (building || failed) ? (
         <Card size="sm">
           <CardHeader>
@@ -84,6 +141,18 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
             <Badge variant={failed ? "destructive" : "secondary"}>
               {failed ? "Failed" : "Building"}
             </Badge>
+            {/* A failed build pins the rail to this card, so without a retry
+                here the only way out of the error is a page reload. */}
+            {failed ? (
+              <button
+                type="button"
+                className="ws-pack-btn"
+                disabled={busy === "kb"}
+                onClick={() => onBuild("kb")}
+              >
+                {busy === "kb" ? "Starting..." : "Rebuild knowledge base"}
+              </button>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
@@ -92,14 +161,23 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
         <article className="ws-insight-card pack">
           <header>
             <span>HITL</span>
-            <strong>{missing.length} missing</strong>
+            <strong>{blockingMissing.length} blocking</strong>
           </header>
-          <p>Upload the remaining files, or continue with gaps marked missing. Packs stay draft.</p>
+          <p>
+            A comparison needs these. Upload them, or continue and the pack will record them as
+            not supplied.
+          </p>
           <ul className="ws-gap-list">
             {missing.map((item) => (
-              <li key={item.checklist_key} className="block">
-                <span>{item.label}</span>
-                <em>missing</em>
+              <li
+                key={item.checklist_key}
+                className={item.severity === "blocking" ? "block" : "opt"}
+              >
+                <span>
+                  {item.label}
+                  {item.hint ? <small>{item.hint}</small> : null}
+                </span>
+                <em>{item.severity === "blocking" ? "required" : "optional"}</em>
               </li>
             ))}
           </ul>
@@ -121,9 +199,22 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
             <strong>Excel</strong>
           </header>
           <p>{decision.summary || "Build the comparison matrix from parsed files. Humans award."}</p>
+          {optionalMissing.length > 0 ? (
+            <ul className="ws-gap-list">
+              {optionalMissing.map((item) => (
+                <li key={item.checklist_key} className="opt">
+                  <span>
+                    {item.label}
+                    {item.hint ? <small>{item.hint}</small> : null}
+                  </span>
+                  <em>not supplied</em>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <div className="ws-pack-actions">
-            <button type="button" className="ws-pack-btn" disabled={busy === "xlsx"} onClick={() => onBuild("xlsx")}>
-              {busy === "xlsx" ? "Building..." : "Yes, build comparison"}
+            <button type="button" className="ws-pack-btn" disabled={xlsxBusy} onClick={() => onBuild("xlsx")}>
+              {xlsxBusy ? "Building..." : "Yes, build comparison"}
             </button>
           </div>
         </article>
@@ -137,7 +228,7 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
           </header>
           <p>
             {packs.xlsx?.error ||
-              "Workbook written, but vendor evidence was not persisted. Review the template or rebuild after the knowledge base is ready."}
+              "Workbook written, but vendor evidence was not persisted. Download the template, or build the comparison once the knowledge base is ready."}
           </p>
           <div className="ws-pack-actions">
             {xlsxHref ? (
@@ -145,13 +236,49 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
                 Download template
               </a>
             ) : null}
-            <button type="button" className="ws-pack-btn" disabled={busy === "xlsx"} onClick={() => onBuild("xlsx")}>
-              {busy === "xlsx" ? "Building..." : "Rebuild comparison"}
+            <button type="button" className="ws-pack-btn" disabled={xlsxBusy} onClick={() => onBuild("xlsx")}>
+              {xlsxBusy ? "Building..." : "Build comparison"}
             </button>
           </div>
         </article>
       )}
 
+
+      {xlsxReady && !pptReady && (
+        <article className="ws-insight-card pack">
+          <header>
+            <span>Ready</span>
+            <strong>Excel</strong>
+          </header>
+          <p>
+            {packs.xlsx?.error ||
+              "Comparison matrix built from cited evidence. Draft workbook — humans award."}
+          </p>
+          <div className="ws-pack-actions">
+            {xlsxHref ? (
+              <a className="ws-pack-link" href={xlsxHref}>
+                Download comparison
+              </a>
+            ) : null}
+            <button
+              type="button"
+              className="ws-pack-btn"
+              disabled={xlsxBusy}
+              onClick={() => onBuild("xlsx")}
+            >
+              {xlsxBusy ? "Building..." : "Rebuild comparison"}
+            </button>
+            <button
+              type="button"
+              className="ws-pack-link"
+              disabled={building || busy === "kb"}
+              onClick={() => onBuild("kb")}
+            >
+              {building ? "Rebuilding knowledge base..." : "Rebuild knowledge base"}
+            </button>
+          </div>
+        </article>
+      )}
 
       {pptReady && pptHref && (
         <article className="ws-insight-card pack">

@@ -54,12 +54,12 @@ def _clear_model_cache():
 
 
 def test_configured_models_use_system_ai_foundation():
-    assert get_fast_model_name() == "system.ai.claude-sonnet-4-5"
-    assert get_thinking_model_name() == "system.ai.claude-opus-4-6"
+    assert get_fast_model_name() == "system.ai.databricks-claude-sonnet-4-5"
+    assert get_thinking_model_name() == "system.ai.databricks-claude-opus-4-6"
 
 
 def test_env_overrides_use_opus_fallback(monkeypatch):
-    fallback = "system.ai.claude-opus-4-5"
+    fallback = "system.ai.databricks-claude-opus-4-5"
     monkeypatch.setenv("DATABRICKS_FAST_MODEL", fallback)
     monkeypatch.setenv("DATABRICKS_THINKING_MODEL", fallback)
     assert get_fast_model_name() == fallback
@@ -71,11 +71,12 @@ def test_retired_gateway_env_falls_back_to_llm_yaml(monkeypatch):
     monkeypatch.setenv("DATABRICKS_MODEL", stale)
     monkeypatch.setenv("DATABRICKS_FAST_MODEL", stale)
     monkeypatch.setenv("DATABRICKS_THINKING_MODEL", stale)
-    assert get_fast_model_name() == "system.ai.claude-sonnet-4-5"
-    assert get_thinking_model_name() == "system.ai.claude-opus-4-6"
+    assert get_fast_model_name() == "system.ai.databricks-claude-sonnet-4-5"
+    assert get_thinking_model_name() == "system.ai.databricks-claude-opus-4-6"
 
 
-def test_get_llm_uses_forwarded_access_token_when_gateway_scope_present(monkeypatch):
+def test_gateway_scope_no_longer_switches_model_path(monkeypatch):
+    """ai-gateway in the token must not route the visitor to system.ai.*."""
     captured = _install_llm_fakes(monkeypatch)
     token = _jwt("ai-gateway", "model-serving")
     from shared.databricks_runtime import (
@@ -97,8 +98,8 @@ def test_get_llm_uses_forwarded_access_token_when_gateway_scope_present(monkeypa
         assert minted.get("auth_type") == "pat"
         assert minted.get("token") == token
         assert minted.get("client_id") != "app-sp"
-        assert captured.get("use_ai_gateway") is True
-        assert captured.get("model") == "system.ai.claude-sonnet-4-5"
+        assert captured.get("use_ai_gateway") is False
+        assert captured.get("model") == "databricks-claude-sonnet-4-5"
     finally:
         clear_obo()
 

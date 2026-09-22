@@ -319,5 +319,26 @@ def _write_sources(
     ws.cell(row, 1, "Key flags")
     flags = matrix.flags or (insights.get("decision") or {}).get("blockers") or []
     put(ws, row, 2, "; ".join(str(item) for item in flags) or MISSING)
+    row += 2
+    _write_analyst_notes(ws, insights, row)
     ws.column_dimensions["A"].width = 36
     ws.column_dimensions["B"].width = 80
+
+
+def _write_analyst_notes(ws: Worksheet, insights: dict[str, Any], row: int) -> None:
+    """Human input the documents cannot supply, kept separate from vendor claims."""
+    ws.cell(row, 1, "Analyst notes")
+    ws.cell(row, 1).font = Font(bold=True)
+    row += 1
+    notes = insights.get("analyst_notes") or []
+    if not notes:
+        put(ws, row, 2, "None recorded")
+        return
+    for note in notes:
+        kind = str(note.get("kind") or "note")
+        scope = str(note.get("bid_id") or "project")
+        voice = "vendor stated" if kind == "vendor_statement" else "buying team"
+        stamp = str(note.get("created_at") or "")[:10]
+        ws.cell(row, 1, f"{scope} · {kind}")
+        put(ws, row, 2, f"[{stamp} · {voice}] {str(note.get('body') or '').strip()}")
+        row += 1

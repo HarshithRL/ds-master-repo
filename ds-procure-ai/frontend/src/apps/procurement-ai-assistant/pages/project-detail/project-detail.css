@@ -11,9 +11,9 @@
 }
 
 .project-detail-container {
-  max-width: 1450px;
+  max-width: none;
   margin: 0 auto;
-  padding: 24px 42px 16px;
+  padding: 24px 24px 16px;
 }
 
 .project-detail-container.is-workspace {

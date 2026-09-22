@@ -8,17 +8,35 @@ which is a post-processing persist state, not a model output).
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable
 from typing import Any, Callable, Literal
 
 from pydantic import BaseModel, Field, model_validator
+from sqlalchemy import select
 
 from shared.db.connection import session_scope
 from shared.db.models import Chunk, QualityFlag, utc_now_iso
 
 EvidenceStatus = Literal["met", "partial", "not_offered", "not_stated", "unclear"]
 UNGROUNDED_KIND = "ungrounded_claim"
+# Grounding proves the quote is in the document, not that it answers the
+# requirement: "€ 1.600" really was cited for "Certification published by
+# 30 Nov". A fragment this short cannot carry a compliance verdict, so it goes
+# to a human as unclear instead of crediting the vendor.
+THIN_CLAIM_KIND = "thin_met_claim"
+MIN_MET_CLAIM_CHARS = 25
+# not_stated asserts the document is silent, which only holds if the analyst read
+# it all. When research is cut short the absence is ours, not the bidder's.
+INCOMPLETE_RESEARCH_NOTE = "research incomplete: absence not verified"
+ABSENCE_UNVERIFIED_TEXT = (
+    "not determined: the analyst did not finish reading this bid, so no "
+    "conclusion about the bidder was drawn"
+)
 
 ChunkLookup = Callable[[str], str | None]
+ArtifactLookup = Callable[[str], str | None]
+# One connection, several statements, rather than one huge IN list.
+CHUNK_FETCH_BATCH = 500
 
 
 class EvidenceItem(BaseModel):
@@ -140,10 +158,14 @@ def verify_grounding(
     chunk_text: str | None = None,
     *,
     chunk_lookup: ChunkLookup | None = None,
+    artifact_lookup: ArtifactLookup | None = None,
 ) -> bool:
     """Claim must literally appear in the cited chunk (normalized substring).
 
     Fail-closed: missing chunk text is not grounded. `not_stated` always passes.
+    Callers grounding a whole bundle should pass batched/memoised lookups; the
+    defaults hit DBSQL once per item, and `load_artifact_markdown` re-parses the
+    artifact's entire JSON every time.
     """
     if item.status == "not_stated":
         return True
@@ -155,7 +177,8 @@ def verify_grounding(
         if item.chunk_id:
             source = lookup(item.chunk_id)
     if source is None and item.artifact_id:
-        source = load_artifact_markdown(item.artifact_id)
+        artifacts = artifact_lookup or load_artifact_markdown
+        source = artifacts(item.artifact_id)
     if source is None:
         return False
     return normalize(item.claim_text) in normalize(source)
@@ -187,14 +210,37 @@ def apply_grounding_gate(
     *,
     project_id: str | None = None,
     chunk_lookup: ChunkLookup | None = None,
+    artifact_lookup: ArtifactLookup | None = None,
+    flag_sink: list[QualityFlag] | None = None,
 ) -> EvidenceItem:
     """Downgrade ungrounded items to unclear/0 and raise `ungrounded_claim`."""
-    if verify_grounding(item, chunk_text, chunk_lookup=chunk_lookup):
-        return item
+    if verify_grounding(
+        item,
+        chunk_text,
+        chunk_lookup=chunk_lookup,
+        artifact_lookup=artifact_lookup,
+    ):
+        return _gate_thin_met(item, project_id=project_id, flag_sink=flag_sink)
     flagged = item.model_copy(update={"status": "unclear", "confidence": 0.0})
     if project_id:
-        record_ungrounded_claim(project_id, item)
+        record_ungrounded_claim(project_id, item, sink=flag_sink)
     return flagged
+
+
+def _gate_thin_met(
+    item: EvidenceItem,
+    *,
+    project_id: str | None,
+    flag_sink: list[QualityFlag] | None,
+) -> EvidenceItem:
+    """Downgrade a `met` backed by too little text to carry the verdict."""
+    if item.status != "met":
+        return item
+    if len((item.claim_text or "").strip()) >= MIN_MET_CLAIM_CHARS:
+        return item
+    if project_id:
+        record_thin_claim(project_id, item, sink=flag_sink)
+    return item.model_copy(update={"status": "unclear", "confidence": 0.0})
 
 
 def load_chunk_text(chunk_id: str) -> str | None:
@@ -207,7 +253,59 @@ def load_chunk_text(chunk_id: str) -> str | None:
         return row.text
 
 
-def record_ungrounded_claim(project_id: str, item: EvidenceItem) -> QualityFlag:
+def load_chunk_texts(chunk_ids: Iterable[str]) -> dict[str, str]:
+    """Fetch many chunks in one round trip.
+
+    Calling `load_chunk_text` in a loop opens one DBSQL connection per chunk
+    (NullPool), which blocks the event loop long enough that asyncio timeouts
+    never fire. Batched so a bid with thousands of chunks cannot build an
+    `IN (...)` list big enough to hit the statement size limit.
+    """
+    ids = [cid for cid in dict.fromkeys(chunk_ids) if cid]
+    if not ids:
+        return {}
+    out: dict[str, str] = {}
+    with session_scope() as session:
+        for start in range(0, len(ids), CHUNK_FETCH_BATCH):
+            rows = session.execute(
+                select(Chunk.id, Chunk.text).where(
+                    Chunk.id.in_(ids[start : start + CHUNK_FETCH_BATCH])
+                )
+            ).all()
+            out.update({str(cid): (text or "") for cid, text in rows})
+    return out
+
+
+def record_thin_claim(
+    project_id: str, item: EvidenceItem, *, sink: list[QualityFlag] | None = None
+) -> QualityFlag:
+    """Flag a `met` whose quote is too short to evidence the requirement."""
+    flag = QualityFlag(
+        id=str(uuid.uuid4()),
+        project_id=project_id,
+        artifact_id=item.artifact_id,
+        kind=THIN_CLAIM_KIND,
+        detail=(
+            f"requirement={item.requirement_id} chunk={item.chunk_id or ''} "
+            f"claim={normalize(item.claim_text)[:240]}"
+        ),
+        severity="high",
+        created_at=utc_now_iso(),
+    )
+    if sink is not None:
+        sink.append(flag)
+        return flag
+    with session_scope() as session:
+        session.add(flag)
+        session.flush()
+        session.expunge(flag)
+    return flag
+
+
+def record_ungrounded_claim(
+    project_id: str, item: EvidenceItem, *, sink: list[QualityFlag] | None = None
+) -> QualityFlag:
+    """Write the flag, or hand it to `sink` so a bundle can persist them together."""
     now = utc_now_iso()
     flag = QualityFlag(
         id=str(uuid.uuid4()),
@@ -221,6 +319,9 @@ def record_ungrounded_claim(project_id: str, item: EvidenceItem) -> QualityFlag:
         severity="high",
         created_at=now,
     )
+    if sink is not None:
+        sink.append(flag)
+        return flag
     with session_scope() as session:
         session.add(flag)
         session.flush()

@@ -13,7 +13,10 @@ from shared.logger_global import get_logger
 
 log = get_logger(__name__)
 
-KINDS = ("note", "risk", "decision", "question")
+# Correspondence the analyst relays from a vendor (email, call minutes). Kept
+# apart from the other kinds because it is the vendor's voice, not ours.
+VENDOR_STATEMENT = "vendor_statement"
+KINDS = ("note", "risk", "decision", "question", VENDOR_STATEMENT)
 SOURCES = ("manual", "chat", "artifact")
 
 

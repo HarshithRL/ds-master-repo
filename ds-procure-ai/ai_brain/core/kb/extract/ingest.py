@@ -97,13 +97,19 @@ def _parse_and_store(artifact: Artifact) -> Artifact:
 
 async def extract_artifact(artifact: Artifact, doc: Any = None) -> None:
     """Classify vendor_id + doc_role (filename first). Deep-agent extract is kb_build."""
-    from ai_brain.core.kb.extract.classify import classify_and_pin
+    from ai_brain.core.kb.extract.classify import artifact_snippets, classify_and_pin
 
     project_id = getattr(artifact, "project_id", "") or ""
     name = getattr(artifact, "original_name", "") or ""
     aid = getattr(artifact, "id", "") or ""
     if project_id and aid:
-        pinned = classify_and_pin(project_id, aid, name)
+        pinned = classify_and_pin(
+            project_id,
+            aid,
+            name,
+            snippets=artifact_snippets(aid),
+            known_bids=_project_bids(project_id),
+        )
         log.info(
             "ingest classify artifact_id={} name={} pinned={}",
             aid,
@@ -112,6 +118,16 @@ async def extract_artifact(artifact: Artifact, doc: Any = None) -> None:
         )
     else:
         log.info("ingest classify skip artifact_id={} name={}", aid, name)
+
+
+def _project_bids(project_id: str) -> list[str]:
+    """Bids already pinned in this project, so the classifier can reuse one."""
+    try:
+        from ai_brain.core.kb.store.materialize import list_bid_ids
+
+        return [b for b in list_bid_ids(project_id) if b and b != "rfp"]
+    except Exception:
+        return []
 
 
 async def embed_pending_chunks(project_id: str, batch_size: int = 64) -> None:
@@ -303,7 +319,9 @@ def _run_ingest_thread(project_id: str, artifact_ids: list[str]) -> None:
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     try:
-        asyncio.run(ingest_project(project_id, artifact_ids))
+        asyncio.run(
+            ingest_project(project_id, artifact_ids, on_event=_ingest_progress(project_id))
+        )
     except Exception:
         log.exception("ingest thread failed project_id={}", project_id)
         _set_kb_job(
@@ -321,6 +339,25 @@ def _run_ingest_thread(project_id: str, artifact_ids: list[str]) -> None:
             status="staged",
             message="Files parsed. Knowledge base build is off.",
         )
+
+
+# Parsing one big file can run for minutes. Ingest writes no job row, so the
+# status file's own age is the only liveness signal and a silent run gets
+# reaped as orphaned while it is still working.
+INGEST_PROGRESS_INTERVAL_S = 45.0
+
+
+def _ingest_progress(project_id: str):
+    last = [0.0]
+
+    def _on_event(event: str, **fields: Any) -> None:
+        now = time.monotonic()
+        if now - last[0] < INGEST_PROGRESS_INTERVAL_S:
+            return
+        last[0] = now
+        _set_kb_job(project_id, status="ingesting", message="Parsing uploaded files…")
+
+    return _on_event
 
 
 def _auto_kb_build_enabled() -> bool:
