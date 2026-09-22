@@ -31,15 +31,34 @@ from shared.logger_global import get_logger
 
 log = get_logger(__name__, service="ai_brain")
 
+def _tunable_seconds(env_key: str, default: float) -> float:
+    raw = (os.getenv(env_key, "") or "").strip()
+    try:
+        value = float(raw) if raw else default
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
 # 240s was too tight for the multi-turn vendor_analyst + pricing/profile passes on larger bids.
-ANALYZE_BID_TIMEOUT_S = 960.0
+# 960s then failed a measured 978s bid: consolidating a vendor's documents under
+# one bid id concentrates work that used to be split across several nodes.
+ANALYZE_BID_TIMEOUT_S = _tunable_seconds("MATE_ANALYZE_BID_TIMEOUT_S", 1500.0)
 # Self-guard must fire before LangGraph's Send timeout. LangGraph enforces that
 # one by cancelling the task (CancelledError is a BaseException), which this
 # node cannot catch — one slow bid would fail the whole build with no record of
 # which bid stalled. Timing out ourselves keeps the failure scoped to one bid.
 # The gap must also cover fill_extraction_failed; at 60s a real run was killed
 # mid-cleanup and left the project with no evidence at all.
-ANALYZE_BID_SOFT_TIMEOUT_S = 780.0
+_SOFT_TIMEOUT_GAP_S = 180.0
+# Clamped, so no env override can invert the order these two depend on.
+ANALYZE_BID_SOFT_TIMEOUT_S = min(
+    _tunable_seconds(
+        "MATE_ANALYZE_BID_SOFT_TIMEOUT_S",
+        ANALYZE_BID_TIMEOUT_S - _SOFT_TIMEOUT_GAP_S,
+    ),
+    ANALYZE_BID_TIMEOUT_S - _SOFT_TIMEOUT_GAP_S,
+)
 # Research is bounded so the emit stage always gets to run. Previously a slow
 # researcher consumed the whole budget and the outer timeout cancelled emit too,
 # so a slow bid produced no evidence at all instead of partial evidence.
