@@ -215,6 +215,7 @@ def plan_kb_build(state: dict[str, Any]) -> list[Send] | str:
     if not bids:
         return "audit_kb"
     targets = _bids_needing_extraction(project_id, bids)
+    _drop_orphan_evidence(project_id, bids)
     if not targets:
         log.info("kb_build nothing changed project_id={} bids={}", project_id, len(bids))
         return "audit_kb"
@@ -245,6 +246,42 @@ def _incremental_enabled() -> bool:
         "false",
         "no",
     )
+
+
+def _drop_orphan_evidence(project_id: str, bids: list[str]) -> int:
+    """Evidence for a bid no file carries any more.
+
+    Re-classification moves files between bid ids (five filename guesses
+    collapsing onto one real bidder), and the rows written under the old id
+    would otherwise keep showing up as extra vendor columns forever.
+    """
+    if not bids:
+        return 0
+    try:
+        from sqlalchemy import delete
+
+        from shared.db.connection import session_scope
+        from shared.db.models import Evidence
+
+        with session_scope() as session:
+            result = session.execute(
+                delete(Evidence).where(
+                    Evidence.project_id == project_id,
+                    Evidence.vendor_id.not_in(bids),
+                )
+            )
+        dropped = int(getattr(result, "rowcount", 0) or 0)
+    except Exception as exc:  # noqa: BLE001 - cleanup must never fail a build
+        log.warning("orphan evidence sweep failed project_id={}: {}", project_id, exc)
+        return 0
+    if dropped:
+        log.info(
+            "dropped orphan evidence project_id={} rows={} kept_bids={}",
+            project_id,
+            dropped,
+            bids,
+        )
+    return dropped
 
 
 def _bids_needing_extraction(project_id: str, bids: list[str]) -> list[str]:
