@@ -25,7 +25,8 @@ from shared.logger_global import get_logger
 log = get_logger(__name__, service="ai_brain")
 
 DEFAULT_PROFILE = "adb-7181820732839861"
-DEFAULT_MODEL = "system.ai.claude-opus-4-5"
+# Registered under system.ai WITH the databricks- prefix; dropping it 404s.
+DEFAULT_MODEL = "system.ai.databricks-claude-opus-4-5"
 # Workspace FMAPI caps input tokens per minute. Parallel bids trip it, and a
 # per-minute cap clears on its own, so back off instead of failing the bid.
 LLM_MAX_RETRIES = 5
@@ -40,6 +41,10 @@ _RETIRED_MODEL_MARKERS = (
     "gw_dev_claude",
 )
 _GATEWAY_SCOPE = "ai-gateway"
+# Off: the gateway path only triggered for visitors whose token happened to
+# carry ai-gateway, so the same project succeeded for one user and 404'd for
+# another. Everyone now goes through the attached serving endpoints.
+PREFER_AI_GATEWAY = False
 _SERVING_SCOPES = frozenset({"model-serving", "serving.serving-endpoints"})
 _SERVING_ENDPOINTS: dict[str, str] = {
     "fast": "databricks-claude-sonnet-4-5",
@@ -145,7 +150,9 @@ def get_llm(kind: ModelKind = "fast", *, max_tokens: int | None = None) -> ChatD
     """
     names = _load_model_names()
     scopes = set(obo_token_scopes())
-    use_ai_gateway = obo_is_bound() and _GATEWAY_SCOPE in scopes
+    use_ai_gateway = (
+        PREFER_AI_GATEWAY and obo_is_bound() and _GATEWAY_SCOPE in scopes
+    )
     if use_ai_gateway:
         model = names.get(kind) or DEFAULT_MODEL
         client: WorkspaceClient = RequestScopedWorkspaceClient()
