@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiGet, apiPost } from "../../../../../../services/api";
 
@@ -17,27 +17,46 @@ export function useChatAnalysis(projectId, { refreshToken = 0, onInsights } = {}
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState("");
   const [skippedGaps, setSkippedGaps] = useState(false);
+  const inFlight = useRef(false);
+  const everLoaded = useRef(false);
 
-  const refresh = useCallback(() => {
-    if (!projectId) return undefined;
-    return apiGet(analysisRoutes(projectId).insights)
-      .then((payload) => {
-        setInsights(payload);
-        setError(null);
-        onInsights?.(payload);
-      })
-      .catch(() => setError("Unable to load analysis."));
-  }, [projectId, onInsights]);
+  const refresh = useCallback(
+    (force = false) => {
+      if (!projectId) return undefined;
+      // Polling is faster than the slowest response, so without this the
+      // requests stack up on a project that is already slow to answer.
+      if (!force && inFlight.current) return undefined;
+      inFlight.current = true;
+      return apiGet(analysisRoutes(projectId).insights)
+        .then((payload) => {
+          everLoaded.current = true;
+          setInsights(payload);
+          setError(null);
+          onInsights?.(payload);
+        })
+        .catch(() => {
+          // A deploy or one slow call should not replace a populated panel
+          // with an error banner; the next tick almost always succeeds.
+          if (!everLoaded.current) setError("Unable to load analysis.");
+        })
+        .finally(() => {
+          inFlight.current = false;
+        });
+    },
+    [projectId, onInsights],
+  );
 
   useEffect(() => {
     setInsights(null);
     setError(null);
     setBusy("");
     setSkippedGaps(false);
+    everLoaded.current = false;
+    inFlight.current = false;
   }, [projectId]);
 
   useEffect(() => {
-    refresh();
+    refresh(true);
   }, [refresh, refreshToken]);
 
   useEffect(() => {
@@ -54,13 +73,15 @@ export function useChatAnalysis(projectId, { refreshToken = 0, onInsights } = {}
     setError("");
     try {
       const result = await apiPost(analysisRoutes(projectId).pack(kind), {});
+      // Refresh first: it clears `error` on success, which would otherwise
+      // wipe the notice below the moment it is set.
+      await refresh(true);
       // The POST succeeds either way, so without this the click looks ignored.
       if (kind === "kb" && result?.procurement?.kb_already_running) {
         setError(
           "A knowledge base build is already running. Wait for it to finish before starting another.",
         );
       }
-      await refresh();
     } catch (err) {
       setError(err?.message || "Pack build failed.");
     } finally {
