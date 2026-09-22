@@ -9,6 +9,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 
 import { API_BASE } from "../../../../../../services/api";
+import { analysisStep } from "../analysisStep";
 import { kbIsBuilding, kbStatusCopy } from "../kbStatus";
 import { xlsxIsBuilding, xlsxIsFilled, xlsxIsWritten } from "../packStatus";
 
@@ -53,18 +54,17 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
   const staleKb = Boolean(stale.kb) && !building;
   const staleXlsx = Boolean(stale.xlsx) && !building && !staleKb && !xlsxBuilding;
 
-  let step = "upload";
-  if (fileCount > 0) step = "kb";
-  if (failed) {
-    step = "kb";
-  } else if (!building && fileCount > 0) {
-    step = "gaps";
-    // Only blocking gaps gate. skippedGaps is per-mount state, so an optional
-    // gap used to pin the rail on step 3 again after every reload.
-    if (skippedGaps || blockingMissing.length === 0) step = "xlsx";
-    if (xlsxReady) step = "ppt";
-    if (pptReady) step = "done";
-  }
+  const step = analysisStep({
+    fileCount,
+    kbBuilding: building,
+    kbFailed: failed,
+    blockingCount: blockingMissing.length,
+    skippedGaps,
+    xlsxBusy,
+    xlsxWritten,
+    xlsxReady,
+    pptReady,
+  });
 
   const steps = [
     { id: "upload", label: "Create + files" },
