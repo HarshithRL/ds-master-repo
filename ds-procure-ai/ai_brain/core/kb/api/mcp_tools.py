@@ -275,11 +275,26 @@ def _relevance_first(
     return ordered
 
 
+# A company-registry extract answered no requirement in a measured 5-bid run
+# (99 of 177 chunks, zero deliverable signals), yet coverage kept feeding it
+# back as unread and spent the refill turns the proposal needed.
+LOW_SIGNAL_ROLES = frozenset({"registry"})
+
+
 def prefetch_bid_chunks(project_id: str, bid_id: str) -> tuple[dict[str, str], list[str]]:
     """Pack parsed chunks into virtual /_chunks/*.md files (no LLM)."""
     from ai_brain.core.procurement_ai.project_context import load_project
 
     rows = list_bid_chunk_rows(project_id, bid_id)
+    # Registry extracts are filing boilerplate. Packing them crowds the proposal
+    # out of context: one bid packed 197 registry chunks (35.5k tokens, 59% of
+    # its pack) ahead of an 82-chunk proposal and returned zero evidence. They
+    # stay searchable through the chunk tools, they just are not pre-loaded.
+    deliverable = [
+        row for row in rows if row.get("doc_role") not in LOW_SIGNAL_ROLES
+    ]
+    if deliverable:
+        rows = deliverable
     bodies = load_chunk_texts(str(row["chunk_id"]) for row in rows)
     rows = _relevance_first(project_id, rows, bodies)
     project = load_project(project_id)
@@ -345,12 +360,6 @@ def list_bid_chunks(bid_id: str, project_id: str | None = None) -> str:
     return "\n".join(lines)
 
 
-# A company-registry extract answered no requirement in a measured 5-bid run
-# (99 of 177 chunks, zero deliverable signals), yet coverage kept feeding it
-# back as unread and spent the refill turns the proposal needed.
-COVERAGE_SKIP_ROLES = frozenset({"registry"})
-
-
 def list_bid_chunk_ids(
     project_id: str, bid_id: str, *, for_coverage: bool = False
 ) -> list[str]:
@@ -359,7 +368,7 @@ def list_bid_chunk_ids(
         return [
             row["chunk_id"]
             for row in rows
-            if row.get("doc_role") not in COVERAGE_SKIP_ROLES
+            if row.get("doc_role") not in LOW_SIGNAL_ROLES
         ]
     return [row["chunk_id"] for row in rows]
 
