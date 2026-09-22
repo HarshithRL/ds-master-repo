@@ -108,6 +108,9 @@ def _finish_message(status: str, audit: dict) -> str:
     bundles = int(audit.get("bundle_count") or 0)
     failed = int(audit.get("failed") or 0)
     if status == "ready":
+        if audit.get("unchanged"):
+            # Re-running with nothing new looked like a dead button otherwise.
+            return f"No document changed · knowledge base already covers {bundles} bid(s)."
         return f"Knowledge base ready · {bundles} bid(s)."
     if status == "needs_review":
         return f"Knowledge base needs review · {failed} bid(s) failed."

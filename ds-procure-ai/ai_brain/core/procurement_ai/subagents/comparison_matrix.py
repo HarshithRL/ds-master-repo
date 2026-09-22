@@ -259,6 +259,11 @@ def build_comparison_orchestrator(
     )
 
 
+# One cell per bid per requirement makes this schema far larger than a
+# single-answer emit, so it needs more validation retries before the cap fires.
+COMPARISON_EMIT_CALL_LIMIT = 40
+
+
 def build_comparison_emit(
     *,
     model: Any | None = None,
@@ -274,7 +279,7 @@ def build_comparison_emit(
         tools=[],
         system_prompt=EMIT_PROMPT,
         response_format=ToolStrategy(ComparisonMatrix, handle_errors=True),
-        middleware=emit_middleware(fast),
+        middleware=emit_middleware(fast, run_limit=COMPARISON_EMIT_CALL_LIMIT),
         checkpointer=None,
         name="comparison_emit",
     )

@@ -224,10 +224,15 @@ def extraction_middleware(fallback_model: Any) -> list[Any]:
     ]
 
 
-def emit_middleware(fallback_model: Any) -> list[Any]:
-    """Middleware for ToolStrategy emit agents (no MCP tools)."""
+def emit_middleware(fallback_model: Any, *, run_limit: int = 15) -> list[Any]:
+    """Middleware for ToolStrategy emit agents (no MCP tools).
+
+    `run_limit` is per emit agent: a schema covering every bid against every
+    requirement needs more retries than a single-answer one before the cap
+    turns a recoverable validation error into a dead run.
+    """
     return [
-        ModelCallLimitMiddleware(run_limit=15, exit_behavior="error"),
+        ModelCallLimitMiddleware(run_limit=run_limit, exit_behavior="error"),
         ModelRetryMiddleware(),
         ModelFallbackMiddleware(fallback_model),
     ]
