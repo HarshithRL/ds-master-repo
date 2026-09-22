@@ -47,6 +47,40 @@ function ReviewCell({ projectId, requirementId, bid, onSaved }) {
 
       {open ? (
         <div className="req-review">
+          <div className="req-evidence">
+            {bid.analyst_note ? (
+              <div className="req-evidence-block is-analyst">
+                <span className="req-evidence-label">Analyst</span>
+                <blockquote className="req-evidence-quote">{bid.analyst_note}</blockquote>
+              </div>
+            ) : null}
+
+            {bid.claim ? (
+              <div className="req-evidence-block">
+                {bid.analyst_note ? (
+                  <span className="req-evidence-label">Model evidence it replaced</span>
+                ) : null}
+                <blockquote className="req-evidence-quote">{bid.claim}</blockquote>
+              </div>
+            ) : bid.analyst_note ? null : (
+              <p className="req-evidence-empty">
+                {bid.status === "not_stated"
+                  ? "No passage in this bid addresses the requirement."
+                  : "No quote was recorded for this verdict."}
+              </p>
+            )}
+
+            <p className="req-evidence-meta">
+              {bid.citation ? <span>{bid.citation}</span> : null}
+              {bid.page != null ? <span>p.{bid.page}</span> : null}
+              {typeof bid.confidence === "number" ? (
+                <span>confidence {bid.confidence.toFixed(2)}</span>
+              ) : null}
+              {bid.reviewed ? <span className="is-reviewed">human reviewed</span> : null}
+            </p>
+            {bid.warning ? <p className="req-evidence-warning">{bid.warning}</p> : null}
+          </div>
+
           <select value={status} onChange={(e) => setStatus(e.target.value)}>
             {STATUSES.map((s) => (
               <option key={s} value={s}>

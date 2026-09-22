@@ -273,8 +273,26 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
               className="ws-pack-link"
               disabled={building || busy === "kb"}
               onClick={() => onBuild("kb")}
+              title="Re-reads the documents. Your overrides and notes are kept."
             >
-              {building ? "Rebuilding knowledge base..." : "Rebuild knowledge base"}
+              {building ? "Rebuilding knowledge base..." : "Rebuild knowledge (keep my edits)"}
+            </button>
+            <button
+              type="button"
+              className="ws-pack-link is-destructive"
+              disabled={building || busy === "kb"}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "This deletes every status override and analyst note in this project, " +
+                      "then re-reads the documents from scratch. This cannot be undone.",
+                  )
+                ) {
+                  onBuild("kb", { clearReviews: true });
+                }
+              }}
+            >
+              Rebuild knowledge (clear my edits)
             </button>
           </div>
         </article>

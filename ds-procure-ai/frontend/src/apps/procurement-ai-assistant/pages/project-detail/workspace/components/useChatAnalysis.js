@@ -67,12 +67,14 @@ export function useChatAnalysis(projectId, { refreshToken = 0, onInsights } = {}
     return () => window.clearInterval(id);
   }, [projectId, refresh]);
 
-  async function buildPack(kind) {
+  async function buildPack(kind, { clearReviews = false } = {}) {
     if (!projectId) return;
     setBusy(kind);
     setError("");
     try {
-      const result = await apiPost(analysisRoutes(projectId).pack(kind), {});
+      const result = await apiPost(analysisRoutes(projectId).pack(kind), {
+        clear_reviews: clearReviews,
+      });
       // Refresh first: it clears `error` on success, which would otherwise
       // wipe the notice below the moment it is set.
       await refresh(true);

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from io import BytesIO
 
-from flask import Blueprint, jsonify, send_file
+from flask import Blueprint, jsonify, request, send_file
 
 from services import procurement_packs
 from services.request_user import AuthRequiredError, auth_error_response, require_workspace_id
@@ -53,7 +53,13 @@ def start_project_pack(project_id, kind):
     )
     if not capability:
         return jsonify({"error": "bad_request", "detail": "kind must be xlsx, ppt or kb"}), 400
-    payload = procurement_packs.start_pack(project_id, owner_id, capability)
+    body = request.get_json(silent=True) or {}
+    payload = procurement_packs.start_pack(
+        project_id,
+        owner_id,
+        capability,
+        clear_reviews=bool(body.get("clear_reviews")),
+    )
     if payload is None:
         return jsonify({"error": "not_found"}), 404
     return jsonify(payload)
