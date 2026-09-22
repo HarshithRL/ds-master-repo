@@ -454,14 +454,51 @@ async def analyze_bid(
 
 
 def audit_kb(state: dict[str, Any]) -> dict[str, Any]:
+    project_id = str(state.get("project_id") or "").strip()
     bundles = list(state.get("kb_bundles") or [])
     failed = sum(1 for b in bundles if b.get("status") == "extraction_failed")
+    if bundles:
+        status = "ready" if not failed else "needs_review"
+    else:
+        # Nothing was extracted this run: either the first build found no bids,
+        # or every bid was already current. Only the stored evidence can tell
+        # them apart, and calling both "staged" would erase a good result.
+        status = _status_from_stored_evidence(project_id)
+    _persist_kb_status(project_id, status)
     return {
         "procurement": {
             "kb_audit": {"bundle_count": len(bundles), "failed": failed},
-            "kb_status": "ready" if bundles and not failed else ("needs_review" if bundles else "staged"),
+            "kb_status": status,
         }
     }
+
+
+def _status_from_stored_evidence(project_id: str) -> str:
+    if not project_id:
+        return "staged"
+    try:
+        from ai_brain.core.kb.store.persist import kb_counts
+
+        counts = kb_counts(project_id) or {}
+    except Exception as exc:  # noqa: BLE001
+        log.warning("kb audit counts failed project_id={}: {}", project_id, exc)
+        return "staged"
+    if not int(counts.get("evidence") or 0):
+        return "staged"
+    return "needs_review" if int(counts.get("extraction_failed") or 0) else "ready"
+
+
+def _persist_kb_status(project_id: str, status: str) -> None:
+    """The graph runs inside the HTTP request too, and that path had no other
+    writer, so a finished build kept showing the previous run's status."""
+    if not project_id:
+        return
+    try:
+        from ai_brain.core.procurement_ai.packs.store import write_kb_job
+
+        write_kb_job(project_id, status=status, message=None, error=None)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("kb status persist failed project_id={}: {}", project_id, exc)
 
 
 def plan_publish(state: dict[str, Any]) -> list[Send]:
