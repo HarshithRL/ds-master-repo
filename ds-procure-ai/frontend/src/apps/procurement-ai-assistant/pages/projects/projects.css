@@ -150,6 +150,7 @@
   display: grid;
   grid-template-columns: 2.2fr 1.3fr 1.1fr 1.3fr 1.3fr;
   align-items: center;
+  gap: 16px;
   width: 100%;
   min-height: 72px;
   padding: 0 18px;
@@ -158,6 +159,8 @@
   background: transparent;
   color: var(--text-muted);
   text-align: left;
+  /* Rows are <button>, which does not inherit the app font on its own. */
+  font-family: inherit;
   font-size: 13px;
 }
 
@@ -209,7 +212,14 @@
    STATUS
    ========================= */
 
+.status-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
 .status-dot {
+  flex: none;
   display: inline-block;
   width: 7px;
   height: 7px;

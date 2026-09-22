@@ -7,6 +7,7 @@ and multiple legal entities — graph membership is W7.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
@@ -133,12 +134,20 @@ def classify_from_stem(filename: str) -> BidClassification | None:
     )
 
 
-def classify_and_pin(project_id: str, artifact_id: str, filename: str) -> dict[str, object] | None:
+def classify_and_pin(
+    project_id: str,
+    artifact_id: str,
+    filename: str,
+    *,
+    snippets: list[str] | None = None,
+    known_bids: list[str] | None = None,
+) -> dict[str, object] | None:
     """Filename heuristic, then optional LLM, then filename-stem bid. Always pin."""
     classification = classify_from_filename(filename)
     if classification is None:
+        body = [s for s in (snippets or []) if s.strip()] or [filename]
         try:
-            classification = classify_snippets(filename, [filename])
+            classification = classify_snippets(filename, body, known_bids=known_bids)
         except Exception:
             classification = None
     if classification is None:
@@ -148,14 +157,58 @@ def classify_and_pin(project_id: str, artifact_id: str, filename: str) -> dict[s
     return confirm_classification(project_id, artifact_id, classification)
 
 
+def artifact_snippets(artifact_id: str, limit: int = 6) -> list[str]:
+    """Opening chunks of a parsed artifact — letterheads and signature blocks
+    name the bidder far more reliably than the filename does."""
+    from shared.db.models import Chunk
+
+    with session_scope() as session:
+        rows = session.execute(
+            select(Chunk.text)
+            .where(Chunk.artifact_id == artifact_id)
+            .order_by(Chunk.ordinal)
+            .limit(limit)
+        ).all()
+        out = [str(r[0] or "").strip() for r in rows if (r[0] or "").strip()]
+        if out:
+            return out
+        # Chunk writes fail independently of parsing (row-level Delta conflicts,
+        # oversized statements), so parsed_json is often still populated.
+        artifact = session.get(Artifact, artifact_id)
+        raw = getattr(artifact, "parsed_json", None) if artifact is not None else None
+    return _parsed_json_snippets(raw, limit)
+
+
+def _parsed_json_snippets(raw: object, limit: int) -> list[str]:
+    if not raw:
+        return []
+    data = raw
+    if isinstance(raw, str):
+        try:
+            data = json.loads(raw)
+        except ValueError:
+            return []
+    text = ""
+    if isinstance(data, dict):
+        text = str(data.get("markdown") or data.get("text") or "")
+    elif isinstance(data, str):
+        text = data
+    text = text.strip()
+    if not text:
+        return []
+    blocks = [b.strip() for b in text.split("\n\n") if b.strip()]
+    return blocks[:limit] if blocks else [text[:1000]]
+
+
 def classify_snippets(
     filename: str,
     snippets: list[str],
     *,
+    known_bids: list[str] | None = None,
     invoke: InvokeFn | None = None,
 ) -> BidClassification:
     """Fast-model structured classification. Tests inject `invoke` (no live LLM)."""
-    prompt = _classifier_prompt(filename, snippets)
+    prompt = _classifier_prompt(filename, snippets, known_bids=known_bids)
     fn = invoke or _live_invoke
     return fn(prompt)
 
@@ -221,14 +274,25 @@ def roster_names(project_id: str) -> list[str]:
         return sorted({row.name for row in rows})
 
 
-def _classifier_prompt(filename: str, snippets: list[str]) -> str:
+def _classifier_prompt(
+    filename: str, snippets: list[str], known_bids: list[str] | None = None
+) -> str:
     body = "\n".join(snippets[:8])[:4000]
+    known = ""
+    if known_bids:
+        known = (
+            "bid_id values already used in this project: "
+            + ", ".join(sorted(set(known_bids)))
+            + "\nReuse one of them verbatim when this file comes from the same "
+            "bidder; only invent a new bid_id for a genuinely different one.\n"
+        )
     return (
         "Classify this procurement artifact.\n"
         "Return bid_id (stable slug), bid_label, doc_role, and legal entities.\n"
         "Do not trust the filename alone; filenames may describe the buyer, not the bidder.\n"
         "Consortium bids: one bid_id, multiple entities.\n"
-        f"filename: {filename}\n"
+        + known
+        + f"filename: {filename}\n"
         f"snippets:\n{body}\n"
     )
 

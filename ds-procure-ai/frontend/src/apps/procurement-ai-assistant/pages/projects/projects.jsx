@@ -134,7 +134,7 @@ function Projects() {
                 <span>{project.category}</span>
                 <span>{project.owner}</span>
 
-                <span>
+                <span className="status-cell">
                   <span
                     className={`status-dot ${project.status
                       .toLowerCase()

@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef } from "react";
 
-import { apiGetSse, apiPost } from "../../../../../../services/api";
+import { apiPostSse } from "../../../../../../services/api";
 
 export const WORKSPACE_PROCUREMENT = Object.freeze({
   mainagent: true,
@@ -8,15 +8,13 @@ export const WORKSPACE_PROCUREMENT = Object.freeze({
 });
 
 const initialUi = {
-  tab: "Chat",
+  tab: "Analysis",
   draft: "",
   status: "idle",
   sendError: null,
   streamText: "",
   thoughts: [],
   thoughtStartedAt: null,
-  responseId: null,
-  sequenceNumber: 0,
 };
 
 function mergeThought(thoughts, next) {
@@ -51,11 +49,9 @@ function chatUiReducer(state, action) {
         streamText: "",
         thoughts: [],
         thoughtStartedAt: Date.now(),
-        responseId: action.responseId || null,
-        sequenceNumber: 0,
       };
     case "token":
-      return { ...state, streamText: action.text, sequenceNumber: action.sequenceNumber ?? state.sequenceNumber };
+      return { ...state, streamText: action.text };
     case "thought":
       return {
         ...state,
@@ -152,52 +148,70 @@ export function useWorkspaceChatStream({
     let failed = false;
 
     try {
-      const response = await apiPost(
-        `/api/procurement/projects/${projectId}/workspace/responses`,
-        { message: text, session_id: sessionId, history: apiHistory },
-      );
-      if (!response?.id) throw new Error("Agent did not create a background response.");
-      dispatch({ type: "send_start", responseId: response.id });
-      let lastSequence = 0;
-      await apiGetSse(
-        `/api/procurement/projects/${projectId}/workspace/responses/${response.id}/events?starting_after=0`,
+      await apiPostSse(
+        `/api/procurement/projects/${projectId}/workspace/chat/stream`,
+        {
+          message: text,
+          history: apiHistory,
+          session_id: sessionId,
+          procurement: {
+            ...WORKSPACE_PROCUREMENT,
+            project_id: projectId,
+          },
+        },
         (evt) => {
           if (generation !== generationRef.current) {
             return;
           }
-          lastSequence = Math.max(lastSequence, Number(evt.sequence_number || 0));
-          if (evt.type === "response.output_text.delta" && evt.custom_outputs?.kind === "thought") {
+          if (evt.type === "session" && evt.session_id) {
+            onSession?.({
+              id: evt.session_id,
+              title: evt.title || "New chat",
+            });
+          } else if (evt.type === "token" && evt.text) {
+            assembled += evt.text;
+            dispatch({ type: "token", text: assembled });
+          } else if (evt.type === "thought" || evt.type === "context") {
             thoughts = mergeThought(thoughts, {
-              kind: "thought",
-              label: "Thought",
-              detail: evt.delta || "",
+              kind: evt.kind,
+              label: evt.label || "Thought",
+              detail: evt.detail || "",
             });
             dispatch({
               type: "thought",
-              kind: "thought",
-              label: "Thought",
-              detail: evt.delta || "",
+              kind: evt.kind,
+              label: evt.label || "Thought",
+              detail: evt.detail || "",
             });
-          } else if (evt.type === "response.output_text.delta" && evt.delta) {
-            assembled += evt.delta;
-            dispatch({ type: "token", text: assembled, sequenceNumber: lastSequence });
-          } else if (evt.type === "response.output_item.done") {
-            const item = evt.item || {};
-            const content = Array.isArray(item.content) ? item.content : [];
-            const textPart = content.map((part) => part?.text || "").join("");
-            assembled = textPart || assembled;
-            dispatch({ type: "token", text: assembled, sequenceNumber: lastSequence });
-          } else if (evt.type === "response.resumed") {
-            dispatch({ type: "thought", kind: "step", label: "Resumed safely", detail: "Continuing a recovered agent run." });
-          } else if (evt.custom_outputs?.kind === "file_progress") {
+          } else if (evt.type === "done") {
+            assembled = evt.text || assembled;
+            const packHref = evt.xlsx_href || evt.ppt_href || "";
+            if (packHref && !String(assembled).includes(packHref)) {
+              assembled = `${String(assembled || "").trim()} Download: ${packHref}`.trim();
+            }
+            if (Array.isArray(evt.thoughts) && evt.thoughts.length) {
+              thoughts = evt.thoughts;
+            }
+            dispatch({ type: "token", text: assembled });
+          } else if (evt.type === "file_progress") {
             onFileProgress?.({
-              ...evt.custom_outputs,
+              file_id: evt.file_id || "",
+              filename: evt.filename || "",
+              status: evt.status || "",
+              chunk_count: evt.chunk_count || 0,
+              error: evt.error || "",
+            });
+          } else if (evt.type === "index_ready") {
+            onFileProgress?.({
+              type: "index_ready",
+              chunk_count: evt.chunk_count || 0,
+              index_ready: true,
             });
           } else if (evt.type === "error") {
             failed = true;
             dispatch({
               type: "send_error",
-              error: evt.error?.message || "Agent stream failed.",
+              error: evt.detail || "Agent stream failed.",
             });
           }
         },

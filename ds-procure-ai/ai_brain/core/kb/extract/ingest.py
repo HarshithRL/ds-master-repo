@@ -97,13 +97,19 @@ def _parse_and_store(artifact: Artifact) -> Artifact:
 
 async def extract_artifact(artifact: Artifact, doc: Any = None) -> None:
     """Classify vendor_id + doc_role (filename first). Deep-agent extract is kb_build."""
-    from ai_brain.core.kb.extract.classify import classify_and_pin
+    from ai_brain.core.kb.extract.classify import artifact_snippets, classify_and_pin
 
     project_id = getattr(artifact, "project_id", "") or ""
     name = getattr(artifact, "original_name", "") or ""
     aid = getattr(artifact, "id", "") or ""
     if project_id and aid:
-        pinned = classify_and_pin(project_id, aid, name)
+        pinned = classify_and_pin(
+            project_id,
+            aid,
+            name,
+            snippets=artifact_snippets(aid),
+            known_bids=_project_bids(project_id),
+        )
         log.info(
             "ingest classify artifact_id={} name={} pinned={}",
             aid,
@@ -112,6 +118,16 @@ async def extract_artifact(artifact: Artifact, doc: Any = None) -> None:
         )
     else:
         log.info("ingest classify skip artifact_id={} name={}", aid, name)
+
+
+def _project_bids(project_id: str) -> list[str]:
+    """Bids already pinned in this project, so the classifier can reuse one."""
+    try:
+        from ai_brain.core.kb.store.materialize import list_bid_ids
+
+        return [b for b in list_bid_ids(project_id) if b and b != "rfp"]
+    except Exception:
+        return []
 
 
 async def embed_pending_chunks(project_id: str, batch_size: int = 64) -> None:

@@ -59,25 +59,100 @@ BID_RETURN_MARGIN_S = 25.0
 
 
 def classify_unpinned_artifacts(project_id: str) -> int:
-    """Filename/LLM/stem pin for artifacts that still have null vendor_id / doc_role."""
-    from ai_brain.core.kb.extract.classify import classify_and_pin
+    """Pin unclassified artifacts, and re-pin stem-fallback guesses once the
+    parsed text that can actually name the bidder exists."""
+    from ai_brain.core.kb.extract.classify import (
+        STEM_FALLBACK_CONFIDENCE,
+        artifact_snippets,
+        classify_and_pin,
+    )
     from ai_brain.core.procurement_ai.project_context import load_artifacts, load_project
 
     project = load_project(project_id)
     if project is None:
         return 0
+    artifacts = list(load_artifacts(project.id))
+
+    def _provisional(artifact) -> bool:
+        return float(getattr(artifact, "role_confidence", 0.0) or 0.0) <= (
+            STEM_FALLBACK_CONFIDENCE
+        )
+
+    known = sorted(
+        {
+            (a.vendor_id or "").strip()
+            for a in artifacts
+            if (a.vendor_id or "").strip() and not _provisional(a)
+        }
+    )
     pinned = 0
-    for artifact in load_artifacts(project.id):
-        if (artifact.vendor_id or "").strip() or (artifact.doc_role or "").strip() == "rfp":
+    for artifact in artifacts:
+        if (artifact.doc_role or "").strip() == "rfp":
+            continue
+        current = (artifact.vendor_id or "").strip()
+        if current and not _provisional(artifact):
+            continue
+        snippets = artifact_snippets(artifact.id)
+        if current and not snippets:
+            # Nothing to re-read, so the retry would only re-derive the same
+            # filename slug. Record it instead of leaving a wrong bidder silent.
+            _flag_unresolved_vendor(project.id, artifact, current)
             continue
         result = classify_and_pin(
             project.id,
             artifact.id,
             artifact.original_name or "",
+            snippets=snippets,
+            known_bids=known,
         )
         if result:
             pinned += 1
+            new_bid = str(result.get("vendor_id") or "").strip()
+            if new_bid and new_bid not in known:
+                known.append(new_bid)
     return pinned
+
+
+VENDOR_UNRESOLVED_KIND = "vendor_unresolved"
+
+
+def _flag_unresolved_vendor(project_id: str, artifact, guessed_bid: str) -> None:
+    """Surface a bidder still named after its filename because nothing parsed."""
+    import uuid
+
+    from sqlalchemy import delete
+
+    from shared.db.connection import session_scope
+    from shared.db.models import QualityFlag, utc_now_iso
+
+    name = getattr(artifact, "original_name", "") or artifact.id
+    parse_status = (getattr(artifact, "parse_status", "") or "unknown").strip()
+    detail = (
+        f"{name}: no parsed text, so the bidder is still the filename guess "
+        f"'{guessed_bid}' (parse_status={parse_status}). Re-upload or fix the "
+        "parse to classify it properly."
+    )
+    try:
+        with session_scope() as session:
+            session.execute(
+                delete(QualityFlag).where(
+                    QualityFlag.artifact_id == artifact.id,
+                    QualityFlag.kind == VENDOR_UNRESOLVED_KIND,
+                )
+            )
+            session.add(
+                QualityFlag(
+                    id=str(uuid.uuid4()),
+                    project_id=project_id,
+                    artifact_id=artifact.id,
+                    kind=VENDOR_UNRESOLVED_KIND,
+                    detail=detail,
+                    severity="warn",
+                    created_at=utc_now_iso(),
+                )
+            )
+    except Exception:
+        log.warning("could not flag unresolved vendor artifact_id={}", artifact.id)
 
 
 def ensure_vendor_bids(project_id: str) -> list[str]:

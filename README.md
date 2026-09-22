@@ -176,10 +176,3 @@ predictions.write.mode("overwrite").saveAsTable(gold_table("my_project_predictio
 - Databricks Asset Bundles docs: https://docs.databricks.com/dev-tools/bundles/index.html
 
 ---
-
-## Contacts
-
-| Name | Email |
-|------|-------|
-| Pierre de Laguiche | pierre.delaguiche@etexgroup.com |
-| Mustafa Arda Bicakci | mustafaarda.bicakci@etexgroup.com |
