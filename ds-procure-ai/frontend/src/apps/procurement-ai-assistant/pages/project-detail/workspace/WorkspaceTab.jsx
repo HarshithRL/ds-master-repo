@@ -218,7 +218,15 @@ function WorkspaceTab({ projectId, onProjectUpdated }) {
     }
     setIndexing(true);
     try {
-      await apiPost(`/api/procurement/projects/${projectId}/packs/kb`, {});
+      const result = await apiPost(`/api/procurement/projects/${projectId}/packs/kb`, {});
+      if (result?.procurement?.kb_already_running) {
+        setUploadUi((prev) => ({
+          ...prev,
+          error:
+            "A knowledge base build is already running for this project. " +
+            "Wait for it to finish before starting another.",
+        }));
+      }
       setFileTick((tick) => tick + 1);
     } catch (err) {
       setUploadUi((prev) => ({

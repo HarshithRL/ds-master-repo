@@ -294,10 +294,14 @@ def _local_pack(project_id: str, owner_id: str, capability: str, thread_id: str)
         job_store.reap_stalled(project_id)
         live = job_store.latest_status_map([project_id]).get(project_id)
         if live == "building":
+            # Same payload as a fresh start would look like a dead button.
             return {
                 "route": "procurement",
                 "thread_id": thread_id,
-                "procurement": {"kb_status": "building"},
+                "procurement": {
+                    "kb_status": "building",
+                    "kb_already_running": True,
+                },
             }
 
         enqueue_kb_build(project_id)
