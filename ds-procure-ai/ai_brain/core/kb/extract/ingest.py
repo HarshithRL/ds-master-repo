@@ -319,7 +319,9 @@ def _run_ingest_thread(project_id: str, artifact_ids: list[str]) -> None:
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     try:
-        asyncio.run(ingest_project(project_id, artifact_ids))
+        asyncio.run(
+            ingest_project(project_id, artifact_ids, on_event=_ingest_progress(project_id))
+        )
     except Exception:
         log.exception("ingest thread failed project_id={}", project_id)
         _set_kb_job(
@@ -337,6 +339,25 @@ def _run_ingest_thread(project_id: str, artifact_ids: list[str]) -> None:
             status="staged",
             message="Files parsed. Knowledge base build is off.",
         )
+
+
+# Parsing one big file can run for minutes. Ingest writes no job row, so the
+# status file's own age is the only liveness signal and a silent run gets
+# reaped as orphaned while it is still working.
+INGEST_PROGRESS_INTERVAL_S = 45.0
+
+
+def _ingest_progress(project_id: str):
+    last = [0.0]
+
+    def _on_event(event: str, **fields: Any) -> None:
+        now = time.monotonic()
+        if now - last[0] < INGEST_PROGRESS_INTERVAL_S:
+            return
+        last[0] = now
+        _set_kb_job(project_id, status="ingesting", message="Parsing uploaded files…")
+
+    return _on_event
 
 
 def _auto_kb_build_enabled() -> bool:
