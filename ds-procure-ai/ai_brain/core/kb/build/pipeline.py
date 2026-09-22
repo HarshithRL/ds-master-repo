@@ -616,7 +616,13 @@ async def invoke_vendor_analyst(
 
     def _load_inputs() -> tuple[dict[str, Any], set[str], dict[str, str]]:
         data = bid_invoke_payload(project_id, bid_id)
-        ids = set(list_bid_chunk_ids(project_id, bid_id, for_coverage=True))
+        # Coverage tracks what the analyst was actually given. Asking SQL again
+        # would re-add chunks the pack budget deliberately left out, and every
+        # one of those would come back as unread forever.
+        packed = [str(cid) for cid in (data.get("packed_chunk_ids") or []) if cid]
+        ids = set(packed) or set(
+            list_bid_chunk_ids(project_id, bid_id, for_coverage=True)
+        )
         paths = {
             row["chunk_id"]: row.get("path") or ""
             for row in list_bid_chunk_rows(project_id, bid_id)

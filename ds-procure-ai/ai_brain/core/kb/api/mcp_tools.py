@@ -280,6 +280,51 @@ def _relevance_first(
 # back as unread and spent the refill turns the proposal needed.
 LOW_SIGNAL_ROLES = frozenset({"registry"})
 
+# Bids that finished well measured 25-47k tokens; 60k returned no evidence at
+# all and 155k blew the node timeout at 978s. The cap sits above every bid that
+# has ever succeeded, so it only bounds the runaway ones.
+PACK_TOKEN_BUDGET = 60_000
+
+
+def _pack_token_budget() -> int:
+    raw = (os.getenv("MATE_PACK_TOKEN_BUDGET", "") or "").strip()
+    try:
+        value = int(raw) if raw else PACK_TOKEN_BUDGET
+    except ValueError:
+        return PACK_TOKEN_BUDGET
+    return value if value > 0 else PACK_TOKEN_BUDGET
+
+
+def _within_pack_budget(
+    rows: list[dict[str, Any]], bid_id: str = ""
+) -> list[dict[str, Any]]:
+    """Trim the tail of an oversized pack.
+
+    Safe to cut here because _relevance_first interleaves per requirement:
+    every requirement has contributed its best chunk before any contributes its
+    second, so the tail is depth, not coverage. What is dropped stays reachable
+    through search_docs / read_chunk.
+    """
+    budget = _pack_token_budget()
+    used = 0
+    kept: list[dict[str, Any]] = []
+    for row in rows:
+        tokens = int(row.get("token_count") or 0)
+        if kept and used + tokens > budget:
+            break
+        used += tokens
+        kept.append(row)
+    if len(kept) < len(rows):
+        log.warning(
+            "pack trimmed bid={} kept={}/{} tokens={} budget={}",
+            bid_id or "?",
+            len(kept),
+            len(rows),
+            used,
+            budget,
+        )
+    return kept
+
 
 def prefetch_bid_chunks(project_id: str, bid_id: str) -> tuple[dict[str, str], list[str]]:
     """Pack parsed chunks into virtual /_chunks/*.md files (no LLM)."""
@@ -297,6 +342,7 @@ def prefetch_bid_chunks(project_id: str, bid_id: str) -> tuple[dict[str, str], l
         rows = deliverable
     bodies = load_chunk_texts(str(row["chunk_id"]) for row in rows)
     rows = _relevance_first(project_id, rows, bodies)
+    rows = _within_pack_budget(rows, bid_id)
     project = load_project(project_id)
     code = project.code if project is not None else "project"
     prefix = f"/project/{code}/vendors/{bid_id}/_chunks"
