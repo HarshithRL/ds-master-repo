@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -12,6 +13,20 @@ from .exceptions import (
     UnsupportedArtifact,
 )
 from .models import ArtifactDocument, ArtifactType, ParseOptions, source_name
+
+# Filesystem-hostile characters in a real upload name; the extension is kept
+# because parser selection and several parsers depend on it.
+_UNSAFE_NAME_CHARS = str.maketrans({c: "_" for c in '/\\:*?"<>|\r\n\t\0'})
+_MAX_STEM = 120
+
+
+def _temp_basename(filename: str | None) -> str:
+    name = Path(filename or "").name.translate(_UNSAFE_NAME_CHARS).strip(" .")
+    if not name:
+        return "upload.bin"
+    suffix = Path(name).suffix
+    stem = name[: len(name) - len(suffix)] or "upload"
+    return f"{stem[:_MAX_STEM]}{suffix or '.bin'}"
 from .parsers.registry import LEGACY_EXTENSIONS, PARSEABLE_EXTENSIONS, parser_for
 from shared.logger_global import get_logger
 
@@ -97,7 +112,7 @@ class ArtifactHandler:
             ) from exc
         finally:
             if cleanup:
-                path.unlink(missing_ok=True)
+                shutil.rmtree(path.parent, ignore_errors=True)
 
     def _resolve_type(
         self,
@@ -138,9 +153,12 @@ class ArtifactHandler:
         filename: str | None,
     ) -> tuple[Path, bool]:
         if isinstance(source, bytes):
-            suffix = Path(filename or "upload.bin").suffix or ".bin"
-            handle = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-            handle.write(source)
-            handle.close()
-            return Path(handle.name), True
+            # Parsers take the document's identity from the path they are
+            # handed, so a bare NamedTemporaryFile put tmpXXXX.pdf into the
+            # heading of every chunk and the real name never reached the
+            # analyst. Keep the upload's own name inside a temp directory.
+            directory = Path(tempfile.mkdtemp())
+            path = directory / _temp_basename(filename)
+            path.write_bytes(source)
+            return path, True
         return Path(source), False
