@@ -6,7 +6,7 @@ import json
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, insert, or_, select, update
 
 from ai_brain.core.kb.api.schemas import (
     ABSENCE_UNVERIFIED_TEXT,
@@ -17,10 +17,12 @@ from ai_brain.core.kb.api.schemas import (
     apply_grounding_gate,
     load_artifact_markdown,
     load_chunk_texts,
+    apply_alignment_pass,
 )
 from ai_brain.core.kb.skills import SKILLS_PACK_VERSION
 from ai_brain.core.procurement_ai.packs.matrix_layout import SWIFT_REQUIREMENTS
 from shared.db.connection import session_scope
+from shared.logger_global import get_logger
 from shared.db.models import (
     BidProfileRow,
     Evidence,
@@ -33,9 +35,85 @@ from shared.db.models import (
 MODEL_VERSION = "vendor-analyst-1"
 PROMPT_VERSION = SKILLS_PACK_VERSION
 
+log = get_logger(__name__, service="ai_brain")
+
+
+def _default_alignment_verifier() -> Any | None:
+    """Imported lazily: persisting evidence must not require the agent stack."""
+    try:
+        from ai_brain.core.kb.extract.agents import verify_alignment
+    except Exception as exc:  # noqa: BLE001 - fall back to term overlap
+        log.warning("alignment verifier unavailable: {}", exc)
+        return None
+    return verify_alignment
+
 _TIMELINE_OPTIONAL = frozenset(
     {f"R{i:02d}" for i in range(10, 18)}
 )
+
+# The overlay is the SWIFT CSP comparison grid. A tender that never mentions
+# the programme is being scored against someone else's questions, which reads
+# as a bad bid rather than the wrong checklist.
+TEMPLATE_MISMATCH_KIND = "requirements_off_template"
+_TEMPLATE_SUBJECT = ("swift", "cscf")
+
+
+def _template_subject_seen(project_id: str) -> bool:
+    from shared.db.models import Chunk
+
+    with session_scope() as session:
+        for token in _TEMPLATE_SUBJECT:
+            hit = session.scalar(
+                select(Chunk.id)
+                .where(Chunk.project_id == project_id, Chunk.text.ilike(f"%{token}%"))
+                .limit(1)
+            )
+            if hit:
+                return True
+    return False
+
+
+def flag_template_mismatch(project_id: str) -> bool:
+    """Record that a standing checklist was applied to an unrelated tender.
+
+    Advisory only: this raises a warning for a human, so nothing it does may
+    ever fail the build that produced the evidence.
+    """
+    if not project_id:
+        return False
+    try:
+        if _template_subject_seen(project_id):
+            return False
+        with session_scope() as session:
+            existing = session.scalar(
+                select(QualityFlag.id).where(
+                    QualityFlag.project_id == project_id,
+                    QualityFlag.kind == TEMPLATE_MISMATCH_KIND,
+                )
+            )
+            if existing:
+                return False
+            session.add(
+                QualityFlag(
+                    id=str(uuid.uuid4()),
+                    project_id=project_id,
+                    artifact_id=None,
+                    kind=TEMPLATE_MISMATCH_KIND,
+                    detail=(
+                        "Scored against the standing SWIFT CSP checklist (R01-R40), but no "
+                        "uploaded document mentions SWIFT or CSCF. Requirement results for "
+                        "this project describe the wrong questions, not the bidders."
+                    ),
+                    severity="high",
+                    created_at=utc_now_iso(),
+                )
+            )
+            session.flush()
+    except Exception as exc:  # noqa: BLE001 - never fail a build over a warning
+        log.warning("template mismatch check failed project_id={}: {}", project_id, exc)
+        return False
+    log.warning("requirements off template project_id={}", project_id)
+    return True
 
 
 def seed_swift_requirements(project_id: str) -> int:
@@ -70,6 +148,11 @@ def seed_swift_requirements(project_id: str) -> int:
                         **fields,
                     }
                 )
+            # A row carrying a source came from a document or a person, so the
+            # static overlay is no longer the authority on it; rewriting it
+            # every build would silently restore the template wording.
+            elif (row.source_artifact_id or "").strip():
+                continue
             elif (
                 row.ordinal != ordinal
                 or row.section != target
@@ -87,6 +170,7 @@ def seed_swift_requirements(project_id: str) -> int:
                 updates,
             )
         session.flush()
+    flag_template_mismatch(project_id)
     return len(new_rows)
 
 
@@ -100,6 +184,140 @@ def requirement_ids(project_id: str) -> list[str]:
         return [row.id for row in rows]
 
 
+def requirement_texts(project_id: str) -> dict[str, tuple[str | None, str | None]]:
+    """Requirement wording plus its target column, keyed by requirement id."""
+    if not project_id:
+        return {}
+    with session_scope() as session:
+        rows = session.execute(
+            select(Requirement.id, Requirement.text, Requirement.section).where(
+                Requirement.project_id == project_id
+            )
+        ).all()
+    return {str(rid): (text, section) for rid, text, section in rows}
+
+
+CANDIDATES_PER_REQUIREMENT = 3
+# A label like "CSR / EcoVadis disclosure" is a grid heading, not the question
+# the bidder answered: the RFP asks for "all CSR initiatives and carbon emission
+# reduction ... by subscribing to Ecovadis ... to share the results with Etex".
+# Scoring against the heading is what let unrelated sentences look like answers.
+MAX_PASSAGE_CHARS = 700
+
+
+def _page_of(location_json: str | None) -> int | None:
+    if not location_json:
+        return None
+    try:
+        payload = json.loads(location_json)
+    except (TypeError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    page = payload.get("page") or payload.get("page_start")
+    return int(page) if str(page).isdigit() else None
+
+
+def enrich_requirements_from_rfp(project_id: str, sourcer: Any | None = None) -> int:
+    """Replace template labels with the tender's own wording, once per project.
+
+    Only rows carrying no source are touched, so re-running is a no-op and a
+    human edit survives for the same reason the template seeder skips it.
+    """
+    if not project_id:
+        return 0
+    try:
+        from ai_brain.core.kb.api.mcp_tools import _rank_by_requirement
+        from ai_brain.core.kb.api.schemas import load_chunk_texts
+        from shared.db.models import Artifact, Chunk
+
+        with session_scope() as session:
+            pending = session.execute(
+                select(Requirement.id, Requirement.text, Requirement.section)
+                .where(
+                    Requirement.project_id == project_id,
+                    or_(
+                        Requirement.source_artifact_id.is_(None),
+                        Requirement.source_artifact_id == "",
+                    ),
+                )
+                .order_by(Requirement.ordinal, Requirement.id)
+            ).all()
+            if not pending:
+                return 0
+            rfp_rows = session.execute(
+                select(Chunk.id, Chunk.artifact_id, Chunk.location_json)
+                .join(Artifact, Artifact.id == Chunk.artifact_id)
+                .where(Chunk.project_id == project_id, Artifact.doc_role == "rfp")
+            ).all()
+        if not rfp_rows:
+            log.info("no rfp to source requirements from project_id={}", project_id)
+            return 0
+
+        bodies = load_chunk_texts(str(row[0]) for row in rfp_rows)
+        meta = {
+            str(cid): {"artifact_id": str(aid), "page": _page_of(loc)}
+            for cid, aid, loc in rfp_rows
+        }
+        _, by_requirement = _rank_by_requirement(
+            project_id, [{"chunk_id": cid} for cid in meta], bodies
+        )
+        labels = {str(rid): (text or "") for rid, text, _s in pending}
+        cases = []
+        for rid, text, section in pending:
+            ranked = (by_requirement.get(str(rid)) or [])[:CANDIDATES_PER_REQUIREMENT]
+            if not ranked:
+                continue
+            cases.append(
+                {
+                    "requirement_id": str(rid),
+                    "label": text or "",
+                    "target": section or "",
+                    "candidates": [
+                        {
+                            "artifact_id": meta[cid]["artifact_id"],
+                            "page": meta[cid]["page"],
+                            "text": bodies.get(cid, "")[:2000],
+                        }
+                        for cid in ranked
+                    ],
+                }
+            )
+        if not cases:
+            return 0
+        if sourcer is None:
+            from ai_brain.core.kb.extract.agents import source_requirements as sourcer
+        located = sourcer(cases)
+    except Exception as exc:  # noqa: BLE001 - template wording stays usable
+        log.warning("requirement sourcing skipped project_id={}: {}", project_id, exc)
+        return 0
+    if not located:
+        return 0
+
+    updates = [
+        {
+            "id": rid,
+            "project_id": project_id,
+            "text": f"{labels.get(rid, '')} — {hit['passage'][:MAX_PASSAGE_CHARS]}".strip(" —"),
+            "source_artifact_id": hit["artifact_id"],
+            "source_page": hit.get("page"),
+        }
+        for rid, hit in located.items()
+    ]
+    with session_scope() as session:
+        session.execute(
+            update(Requirement).execution_options(synchronize_session=False), updates
+        )
+        session.flush()
+    log.info(
+        "sourced requirement wording project_id={} ids={}/{}",
+        project_id,
+        len(updates),
+        len(cases),
+    )
+    return len(updates)
+
+
 def upsert_evidence_bundle(
     project_id: str,
     bundle: VendorEvidenceBundle,
@@ -108,6 +326,7 @@ def upsert_evidence_bundle(
     unverified_absence: bool = False,
     model_version: str = MODEL_VERSION,
     prompt_version: str = PROMPT_VERSION,
+    alignment_verifier: Any | None = None,
 ) -> dict[str, int]:
     """Ground then upsert. Reviewed cells are not overwritten."""
     # Caller-supplied bid_id wins: dedup below DELETEs rows, so a bundle that
@@ -138,6 +357,13 @@ def upsert_evidence_bundle(
                 flag_sink=ungrounded,
             )
         )
+    gated = apply_alignment_pass(
+        gated,
+        requirement_texts(project_id),
+        project_id=project_id,
+        verifier=alignment_verifier or _default_alignment_verifier(),
+        flag_sink=ungrounded,
+    )
     now = utc_now_iso()
     skipped_reviewed = 0
     unverified = 0
