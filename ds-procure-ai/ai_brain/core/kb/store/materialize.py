@@ -10,15 +10,13 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
 
 from sqlalchemy import select
 
 from ai_brain.core.procurement_ai.project_context import load_artifacts, load_project
 from shared.db.connection import session_scope
-from shared.db.models import Artifact, QualityFlag, Vendor
+from shared.db.models import Artifact, QualityFlag, Requirement, Vendor
 
 # Plan W4 maps rfp/registry/csr/proposal. classify.py also emits `pricing`;
 # those files are vendor-scoped, so they follow the bid folder.
@@ -67,23 +65,18 @@ def project_files(project_id: str) -> dict[str, str]:
         files[slug] = markdown
         used_paths.add(slug)
     files[f"/project/{code}/README.md"] = readme(project.id, project.code, artifacts, flags_by_artifact)
+    files[f"/project/{code}/REQUIREMENTS.md"] = requirements_doc(project.id)
     return files
 
 
-def list_bid_ids(
-    project_id: str,
-    artifacts: Sequence[Any] | None = None,
-) -> list[str]:
+def list_bid_ids(project_id: str) -> list[str]:
     """Distinct bid ids from `artifact.vendor_id`, never `vendor.id`."""
-    rows = artifacts
-    if rows is None:
-        project = load_project(project_id)
-        if project is None:
-            return []
-        rows = load_artifacts(project.id)
+    project = load_project(project_id)
+    if project is None:
+        return []
     bids: set[str] = set()
-    for artifact in rows:
-        bid = (getattr(artifact, "vendor_id", None) or "").strip()
+    for artifact in load_artifacts(project.id):
+        bid = (artifact.vendor_id or "").strip()
         if bid:
             bids.add(bid)
     return sorted(bids)
@@ -119,6 +112,68 @@ def quality_note(
         lines.extend(["", "## Detector flags"])
         for flag in flags:
             lines.append(f"- `{flag.kind}` ({flag.severity or 'n/a'}): {flag.detail or ''}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def requirements_doc(project_id: str) -> str:
+    """The checklist the analyst is scored against.
+
+    The bundle asks for one item per R-id, but nothing else in the tree says
+    what an R-id means, so `R37` had to be answered without ever stating it
+    reads "CSR / EcoVadis disclosure". Target is the column the tender expects
+    to fill, which is usually more specific than the label.
+    """
+    with session_scope() as session:
+        rows = session.execute(
+            select(
+                Requirement.id,
+                Requirement.text,
+                Requirement.section,
+                Requirement.category,
+                Requirement.mandatory,
+                Requirement.source_artifact_id,
+                Requirement.source_page,
+            )
+            .where(Requirement.project_id == project_id)
+            .order_by(Requirement.ordinal, Requirement.id)
+        ).all()
+    if not rows:
+        return "# Requirements\n\n(none seeded for this project)\n"
+    sourced = sum(1 for row in rows if (row[5] or "").strip())
+    lines = [
+        "# Requirements",
+        "",
+        "Answer every id below in VendorEvidenceBundle. Match a quote to the "
+        "requirement it actually answers: a quote that does not address the "
+        "wording here is `not_stated`, not `met`.",
+        "",
+    ]
+    if not sourced:
+        lines.extend([
+            "> Provenance: this checklist is a standing template, not extracted "
+            "from this project's own tender documents. Judge each bid against "
+            "the wording below, and do not assume the bidder was ever asked it.",
+            "",
+        ])
+    for rid, text, section, category, mandatory, source_artifact, source_page in rows:
+        bits = [f"- **{rid}** — {text}"]
+        if section:
+            bits.append(f"  - target: {section}")
+        meta = ", ".join(
+            part
+            for part in (
+                f"category: {category}" if category else "",
+                "mandatory" if mandatory else "optional",
+                f"source: {source_artifact} p.{source_page}"
+                if (source_artifact or "").strip()
+                else "source: template",
+            )
+            if part
+        )
+        if meta:
+            bits.append(f"  - {meta}")
+        lines.extend(bits)
     lines.append("")
     return "\n".join(lines)
 

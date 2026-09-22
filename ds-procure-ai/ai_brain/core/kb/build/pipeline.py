@@ -13,6 +13,7 @@ from langgraph.types import Send
 
 from ai_brain.core.kb.store.materialize import list_bid_ids, vendor_paths
 from ai_brain.core.kb.store.persist import (
+    enrich_requirements_from_rfp,
     fill_extraction_failed,
     seed_swift_requirements,
     upsert_bid_profile,
@@ -209,20 +210,18 @@ async def extract_requirements(
         # Both are synchronous DBSQL; under NullPool each one is a fresh
         # warehouse handshake, so on the loop they stall every concurrent node.
         ensure_vendor_bids(project_id)
-        return seed_swift_requirements(project_id)
+        seeded = seed_swift_requirements(project_id)
+        # The template ships grid headings; the bidders answered the RFP's own
+        # wording, so score against that wherever the tender states it.
+        enrich_requirements_from_rfp(project_id)
+        return seeded
 
     seeded = await asyncio.to_thread(_seed) if project_id else 0
-    extra = (
-        await invoke_requirement_extractor(project_id, config=config)
-        if project_id
-        else None
-    )
     return {
         "requirements_ready": True,
         "procurement": {
             "kb_status": "building",
             "requirements_seeded": seeded,
-            "requirement_agent": extra or "skipped",
         },
     }
 

@@ -12,6 +12,9 @@ https://docs.langchain.com/oss/python/deepagents/backends
 
 from __future__ import annotations
 
+import time
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 from typing import Any
 
 from langchain.agents.middleware import (
@@ -27,6 +30,9 @@ from ai_brain.core.kb.middleware.strip_tool_content_ids import StripToolContentI
 from ai_brain.core.kb.store.materialize import project_files, vendor_paths
 from ai_brain.core.kb.api.schemas import BidProfile, PricingExtraction, VendorEvidenceBundle
 from ai_brain.core.procurement_ai.packs.matrix_layout import EXTRACT_MAX_TOKENS
+from shared.logger_global import get_logger
+
+log = get_logger(__name__, service="ai_brain")
 
 STABLE_RULES = (
     "You are a procurement vendor analyst. Read only files under /project/.\n"
@@ -43,7 +49,19 @@ CITATION_DOCTRINE = (
     "status is not_stated. Never treat filename as evidence; filenames may name the buyer.\n"
 )
 
-VENDOR_ANALYST_PROMPT = STABLE_RULES + CITATION_DOCTRINE + (
+ALIGNMENT_DOCTRINE = (
+    "Answer the requirement that was asked. /project/*/REQUIREMENTS.md gives the "
+    "wording and target of every R-id; read it before emitting. A quote is "
+    "evidence only for the requirement it actually addresses — pricing text is "
+    "not a relationship disclosure, a CV is not a certification date, and a "
+    "disclaimer is not a CSR statement. If the bid never addresses a "
+    "requirement, that requirement is not_stated: an unanswered requirement is "
+    "a normal, expected outcome and is far more useful than a quote that does "
+    "not fit. Never spread one quote across several requirements to fill the "
+    "table.\n"
+)
+
+VENDOR_ANALYST_PROMPT = STABLE_RULES + CITATION_DOCTRINE + ALIGNMENT_DOCTRINE + (
     "The bid corpus is packed under /project/*/vendors/<bid>/_chunks/. "
     "Use ls/grep/read_file on those files and the RFP. "
     "Each _chunks/NNN.md file is sized to be read in ONE call: always pass "
@@ -55,7 +73,7 @@ VENDOR_ANALYST_PROMPT = STABLE_RULES + CITATION_DOCTRINE + (
     "Do not emit a schema in this step.\n"
 )
 
-VENDOR_EMIT_PROMPT = STABLE_RULES + CITATION_DOCTRINE + (
+VENDOR_EMIT_PROMPT = STABLE_RULES + CITATION_DOCTRINE + ALIGNMENT_DOCTRINE + (
     "Finish by calling the VendorEvidenceBundle structured-output tool: "
     "one item per requirement (R01â€“R40). Use only facts already in this "
     "conversation. Do not call file tools.\n"
@@ -103,6 +121,7 @@ def files_for_bid(project_id: str, bid_id: str) -> tuple[dict[str, dict[str, str
             vendor_prefix in path
             or "/rfp/" in path
             or path.endswith("README.md")
+            or path.endswith("REQUIREMENTS.md")
             or path.startswith("/skills/")
             or "/_quality/" in path
         ):
@@ -147,8 +166,9 @@ def bid_invoke_payload(project_id: str, bid_id: str) -> dict[str, Any]:
     pack_files = sorted(p for p in files if f"/vendors/{bid_id}/_chunks/" in p)
     content = (
         f"Analyse bid `{bid_id}` only. Corpus is under "
-        f"/project/*/vendors/{bid_id}/_chunks/ — ls/grep/read_file there and the RFP. "
-        f"There are {len(pack_files)} pack files, ordered most-relevant first. "
+        f"/project/*/vendors/{bid_id}/_chunks/ — ls/grep/read_file there and the RFP. "        "Read /project/*/REQUIREMENTS.md FIRST: it gives the wording and target "
+        "of every R-id, and a quote that does not address that wording is "
+        "`not_stated`, never `met`. "        f"There are {len(pack_files)} pack files, ordered most-relevant first. "
         f"Read each with read_file(path, limit={CHUNK_FILE_LINES}) so one call "
         "returns the whole file; the default limit of 100 lines would give you "
         "only a fraction of it. "
@@ -357,3 +377,259 @@ def _llm(kind: str):
     from ai_brain.core.config.llm import get_llm
 
     return get_llm(kind, max_tokens=EXTRACT_MAX_TOKENS)  # type: ignore[arg-type]
+
+
+ALIGNMENT_VERIFIER_PROMPT = (
+    "You check whether a quote answers the requirement it was filed under. "
+    "This is the only question you answer; you do not grade the bidder, and "
+    "you do not judge whether the answer is good.\n"
+    "addresses=true only when the quote speaks to what the requirement asks. "
+    "Wording may differ completely from the requirement: a bidder writing "
+    "'sustainability rating' does answer a requirement about EcoVadis, and a "
+    "bidder naming a start month does answer a requirement about project "
+    "start. Judge meaning, not shared words.\n"
+    "addresses=false when the quote is about something else, even if it comes "
+    "from the same document and sounds relevant: a day rate is not a signed "
+    "NDA, a CV is not a certification date, a liability disclaimer is not a "
+    "CSR statement, and a general statement of approach answers no specific "
+    "requirement.\n"
+    "false is the expected answer for many cases. Return one verdict per case, "
+    "in the order given, reusing the requirement_id verbatim."
+)
+
+
+def build_alignment_verifier(*, model: Any | None = None, fallback_model: Any | None = None):
+    """Structured-output judge for claim-to-requirement fit. No tools."""
+    from langchain.agents import create_agent
+    from langchain.agents.structured_output import ToolStrategy
+
+    from ai_brain.core.kb.api.schemas import AlignmentReview
+
+    primary = model or _llm("fast")
+    fast = fallback_model if fallback_model is not None else _llm("fast")
+    return create_agent(
+        model=primary,
+        tools=[],
+        system_prompt=ALIGNMENT_VERIFIER_PROMPT,
+        response_format=ToolStrategy(AlignmentReview, handle_errors=True),
+        middleware=emit_middleware(fast),
+        checkpointer=None,
+        name="alignment_verifier",
+    )
+
+
+# Keeps one judgement call per bid at a size the fast model answers reliably.
+ALIGNMENT_BATCH = 20
+# The judge runs inside the evidence write, after the analyst may already have
+# spent its soft budget, and the LLM client sets no request timeout. The node
+# keeps ~180s of margin, so staying under that stops a slow judge from costing
+# the bid the extraction it already paid for.
+ALIGNMENT_BUDGET_S = 120.0
+# One call's share of the budget. `llm.py` sets no request timeout and retries
+# five times, so a stalled endpoint has nothing of its own to stop it.
+ALIGNMENT_CALL_TIMEOUT_S = 60.0
+
+
+def _invoke_bounded(agent: Any, payload: dict, timeout_s: float) -> Any:
+    """Bound the wait, not the request.
+
+    The worker thread cannot be killed, but it can be abandoned: returning
+    control lets the caller fall back to term overlap, where blocking would
+    have cost the bid the extraction it already paid for.
+    """
+    pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="alignment")
+    try:
+        return pool.submit(agent.invoke, payload).result(timeout=timeout_s)
+    except FutureTimeout as exc:
+        raise TimeoutError(
+            f"alignment verifier call exceeded {timeout_s:.0f}s"
+        ) from exc
+    finally:
+        pool.shutdown(wait=False)
+
+
+REQUIREMENT_SOURCER_PROMPT = (
+    "You locate the tender's own wording for a requirement. Each case gives a "
+    "short requirement label and numbered candidate passages from the RFP.\n"
+    "Return the passage that states this requirement, copied VERBATIM from one "
+    "candidate. Copy the sentence or two that carry the ask, not a whole page.\n"
+    "The label is a summary someone else wrote; the RFP may word it completely "
+    "differently. Match on meaning, not shared words.\n"
+    "If no candidate states this requirement, return passage=null. Abstaining "
+    "is correct and expected: a label may summarise a grid the RFP never spells "
+    "out. Never write a passage of your own.\n"
+    "Reuse requirement_id verbatim and set artifact_id to the candidate's."
+)
+
+
+def build_requirement_sourcer(*, model: Any | None = None, fallback_model: Any | None = None):
+    """Structured-output locator for a requirement's wording in the RFP."""
+    from langchain.agents import create_agent
+    from langchain.agents.structured_output import ToolStrategy
+
+    from ai_brain.core.kb.api.schemas import RequirementSourceBundle
+
+    primary = model or _llm("fast")
+    fast = fallback_model if fallback_model is not None else _llm("fast")
+    return create_agent(
+        model=primary,
+        tools=[],
+        system_prompt=REQUIREMENT_SOURCER_PROMPT,
+        response_format=ToolStrategy(RequirementSourceBundle, handle_errors=True),
+        middleware=emit_middleware(fast),
+        checkpointer=None,
+        name="requirement_sourcer",
+    )
+
+
+# Passages run long, so fewer per call than the alignment judge.
+SOURCING_BATCH = 8
+SOURCING_BUDGET_S = 240.0
+
+
+def _normalise(text: str | None) -> str:
+    return " ".join((text or "").casefold().split())
+
+
+def source_requirements(
+    cases: list[dict[str, Any]],
+    *,
+    budget_s: float = SOURCING_BUDGET_S,
+    call_timeout_s: float = ALIGNMENT_CALL_TIMEOUT_S,
+) -> dict[str, dict[str, Any]]:
+    """requirement_id -> {passage, artifact_id, page}. Unlocated ids are absent.
+
+    Runs once per project rather than per bid, so a partial result is kept:
+    a batch that fails leaves its requirements on the template wording.
+    """
+    if not cases:
+        return {}
+    agent = build_requirement_sourcer()
+    deadline = time.monotonic() + budget_s
+    found: dict[str, dict[str, Any]] = {}
+    for start in range(0, len(cases), SOURCING_BATCH):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            log.warning("requirement sourcing hit its budget after {} ids", len(found))
+            break
+        batch = cases[start : start + SOURCING_BATCH]
+        blocks = []
+        for case in batch:
+            candidates = "\n".join(
+                f"   [{i + 1}] artifact_id={c['artifact_id']} page={c.get('page')}\n"
+                f"       {c['text']}"
+                for i, c in enumerate(case["candidates"])
+            )
+            blocks.append(
+                f"requirement_id={case['requirement_id']}\n"
+                f"label: {case['label']}\n"
+                f"target: {case.get('target') or ''}\n"
+                f"candidates:\n{candidates}"
+            )
+        try:
+            result = _invoke_bounded(
+                agent,
+                {
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": (
+                                f"Locate the wording for these {len(batch)} "
+                                "requirements.\n\n" + "\n\n".join(blocks)
+                            ),
+                        }
+                    ]
+                },
+                min(call_timeout_s, remaining),
+            )
+        except Exception as exc:  # noqa: BLE001 - keep what earlier batches found
+            log.warning("requirement sourcing batch failed: {}", exc)
+            continue
+        bundle = result.get("structured_response") if isinstance(result, dict) else None
+        by_id = {c["requirement_id"]: c for c in batch}
+        for source in list(getattr(bundle, "sources", []) or []):
+            case = by_id.get((source.requirement_id or "").strip())
+            if case is None or not (source.passage or "").strip():
+                continue
+            # The passage must exist in a candidate we supplied, or the tender is
+            # being quoted words it never contained.
+            hit = next(
+                (
+                    c
+                    for c in case["candidates"]
+                    if _normalise(source.passage) in _normalise(c["text"])
+                ),
+                None,
+            )
+            if hit is None:
+                log.warning(
+                    "requirement {} passage absent from its candidates; dropped",
+                    source.requirement_id,
+                )
+                continue
+            found[case["requirement_id"]] = {
+                "passage": source.passage.strip(),
+                "artifact_id": hit["artifact_id"],
+                "page": hit.get("page"),
+            }
+    return found
+
+
+def verify_alignment(
+    cases: list[dict[str, str]],
+    *,
+    budget_s: float = ALIGNMENT_BUDGET_S,
+    call_timeout_s: float = ALIGNMENT_CALL_TIMEOUT_S,
+) -> list[bool]:
+    """One boolean per case, in order. Raises so the caller can fall back."""
+    if not cases:
+        return []
+    agent = build_alignment_verifier()
+    deadline = time.monotonic() + budget_s
+    out: list[bool] = []
+    for start in range(0, len(cases), ALIGNMENT_BATCH):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(
+                f"alignment verifier exceeded {budget_s}s after {len(out)} cases"
+            )
+        batch = cases[start : start + ALIGNMENT_BATCH]
+        lines = [
+            f"{i + 1}. requirement_id={case['requirement_id']}\n"
+            f"   requirement: {case['requirement']}\n"
+            f"   target: {case['target']}\n"
+            f"   quote: {case['claim']}"
+            for i, case in enumerate(batch)
+        ]
+        result = _invoke_bounded(
+            agent,
+            {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Judge these {len(batch)} cases and return "
+                            f"{len(batch)} verdicts in order.\n\n"
+                            + "\n\n".join(lines)
+                        ),
+                    }
+                ]
+            },
+            min(call_timeout_s, remaining),
+        )
+        review = result.get("structured_response") if isinstance(result, dict) else None
+        verdicts = list(getattr(review, "verdicts", []) or [])
+        if len(verdicts) != len(batch):
+            raise ValueError(
+                f"alignment verifier returned {len(verdicts)} verdicts for {len(batch)} cases"
+            )
+        # Trusting position alone would re-create the bug this judge exists to
+        # catch, one layer up: a reordered reply would retire the wrong claims.
+        for case, verdict in zip(batch, verdicts):
+            if (verdict.requirement_id or "").strip() != case["requirement_id"]:
+                raise ValueError(
+                    "alignment verifier replied out of order: expected "
+                    f"{case['requirement_id']}, got {verdict.requirement_id}"
+                )
+        out.extend(bool(v.addresses) for v in verdicts)
+    return out
