@@ -6,6 +6,7 @@ import asyncio
 import json
 import os
 import time
+from threading import Lock
 from typing import Any, Optional
 
 from langchain_core.runnables import RunnableConfig
@@ -248,6 +249,7 @@ def plan_kb_build(state: dict[str, Any]) -> list[Send] | str:
         len(bids),
         sorted(set(bids) - set(targets)),
     )
+    _begin_progress(project_id, len(targets))
     return [
         Send(
             "analyze_bid",
@@ -265,6 +267,36 @@ def plan_kb_build(state: dict[str, Any]) -> list[Send] | str:
 # Set by routing, read by `audit_kb` in the same run: a build that re-extracted
 # nothing still has to tell the user why the screen did not change.
 _SKIPPED_EXTRACTION: set[str] = set()
+
+# Bids fan out concurrently, so the counter behind the build message needs a lock.
+_PROGRESS_LOCK = Lock()
+_BUILD_PROGRESS: dict[str, list[int]] = {}
+
+
+def _begin_progress(project_id: str, total: int) -> None:
+    with _PROGRESS_LOCK:
+        _BUILD_PROGRESS[project_id] = [0, total]
+
+
+def _bid_finished(project_id: str) -> None:
+    """Publish "n of m" so a build running for minutes is not a frozen screen."""
+    with _PROGRESS_LOCK:
+        entry = _BUILD_PROGRESS.get(project_id)
+        if entry is None:
+            return
+        entry[0] += 1
+        done, total = entry
+    try:
+        from ai_brain.core.procurement_ai.packs.store import write_kb_job
+
+        write_kb_job(
+            project_id,
+            status="building",
+            message=f"Extracting vendor evidence — {done} of {total} done…",
+        )
+    except Exception:
+        # Progress is cosmetic: a failed status write must not fail the build.
+        log.exception("kb progress write failed project_id={}", project_id)
 
 
 def _incremental_enabled() -> bool:
@@ -473,6 +505,7 @@ async def analyze_bid(
         profile_n = 0
         status = "extraction_failed"
     finally:
+        _bid_finished(project_id)
         set_current_project_id(None)
     return {
         "kb_bundles": [

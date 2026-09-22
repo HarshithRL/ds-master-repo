@@ -199,6 +199,10 @@ def start_pack(
         log.info("cleared reviews before rebuild project_id={} rows={}", project_id, cleared)
     if capability == "compare_xlsx":
         return _start_pack_background(project_id, owner_id, capability, thread_id, "xlsx")
+    if capability == "kb_build":
+        # The brain runs this inline and registers no job row, so a POST timeout
+        # reads as failure and starts a second build the guard cannot see.
+        return _local_pack(project_id, owner_id, capability, thread_id)
     try:
         return _brain_post(
             f"/v1/projects/{project_id}/runs",
