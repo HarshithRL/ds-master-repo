@@ -54,12 +54,20 @@ _FILENAME_BIDS: tuple[tuple[tuple[str, ...], str, str, str], ...] = (
     (("bdo",), "bdo", "BDO", "proposal"),
 )
 
+# "<Vendor> Response to ... RFP.pdf" is a bid, not the buyer's tender document.
+_RESPONSE_MARKERS = ("response", "reply", "submission", "proposal", "offer", "quote")
+
 
 def classify_from_filename(filename: str) -> BidClassification | None:
     """High-confidence identity from the filename. None → call the fast model."""
     name = (filename or "").lower()
-    if "rfp" in name and not any(
-        token in name for token in ("kpmg", "pwc", "ey", "bdo", "inetum", "trifinance")
+    if (
+        "rfp" in name
+        and not any(
+            token in name
+            for token in ("kpmg", "pwc", "ey", "bdo", "inetum", "trifinance")
+        )
+        and not any(marker in name for marker in _RESPONSE_MARKERS)
     ):
         return BidClassification(
             bid_id="rfp",
