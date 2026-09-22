@@ -272,11 +272,15 @@ def _drop_orphan_evidence(project_id: str, bids: list[str]) -> int:
     Re-classification moves files between bid ids (five filename guesses
     collapsing onto one real bidder), and the rows written under the old id
     would otherwise keep showing up as extra vendor columns forever.
+
+    A reviewed row is a person's verdict, not the model's, so the sweep leaves
+    it alone: re-classification is a routine event and must not silently delete
+    human work. Clearing the review hands the cell back and lets it go.
     """
     if not bids:
         return 0
     try:
-        from sqlalchemy import delete
+        from sqlalchemy import delete, or_
 
         from shared.db.connection import session_scope
         from shared.db.models import Evidence
@@ -286,6 +290,10 @@ def _drop_orphan_evidence(project_id: str, bids: list[str]) -> int:
                 delete(Evidence).where(
                     Evidence.project_id == project_id,
                     Evidence.vendor_id.not_in(bids),
+                    or_(
+                        Evidence.reviewed_by.is_(None),
+                        Evidence.reviewed_by == "",
+                    ),
                 )
             )
         dropped = int(getattr(result, "rowcount", 0) or 0)

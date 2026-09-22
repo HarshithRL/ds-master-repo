@@ -349,6 +349,11 @@ def build_requirements_view(project_id: str) -> dict[str, Any]:
                     "status": cell.status if cell else "not_stated",
                     "reviewed": bool(cell.pinned) if cell else False,
                     "citation": (cell.citation if cell else None) or "",
+                    "claim": (cell.claim if cell else None) or "",
+                    "analyst_note": (cell.analyst_note if cell else None) or "",
+                    "page": cell.page if cell else None,
+                    "confidence": cell.confidence if cell else None,
+                    "warning": (cell.source_quality_warning if cell else None) or "",
                 }
             )
         grouped[row.category or "other"].append(

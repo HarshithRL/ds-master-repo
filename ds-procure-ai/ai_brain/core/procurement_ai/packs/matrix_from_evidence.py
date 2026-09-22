@@ -34,6 +34,7 @@ from ai_brain.core.procurement_ai.packs.matrix_schema import (
 )
 from shared.db.connection import session_scope
 from shared.db.models import Artifact, BidProfileRow, Evidence, PricingLine, QualityFlag, Requirement, Vendor
+from shared.db.repos.evidence import split_review_claim
 from shared.logger_global import get_logger
 
 log = get_logger(__name__, service="ai_brain")
@@ -56,6 +57,11 @@ class RenderedCell:
     comment: str | None = None
     page: int | None = None
     artifact_id: str | None = None
+    # `text` carries the quote already, but wrapped in status marks and
+    # citation lines; a reader asking "why met?" needs it on its own.
+    claim: str | None = None
+    confidence: float | None = None
+    analyst_note: str | None = None
 
 
 @dataclass
@@ -230,6 +236,7 @@ def render_evidence_cell(
     """Map a persisted evidence row onto a distinct render state."""
     status = (row.status or "").strip()
     pinned = bool((row.reviewed_by or "").strip())
+    analyst_note, model_evidence = split_review_claim(row.claim_text)
     warning = _source_quality_warning(high_flags or [])
     citation = _citation_line(row, artifact_names or {})
     names = artifact_names or {}
@@ -273,6 +280,9 @@ def render_evidence_cell(
         comment=_cell_comment(row, names, citation, pinned),
         page=row.page,
         artifact_id=row.artifact_id,
+        claim=model_evidence or None,
+        confidence=row.confidence,
+        analyst_note=analyst_note or None,
     )
 
 
