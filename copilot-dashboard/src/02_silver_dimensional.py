@@ -123,9 +123,8 @@ print(f"Target schema: {S}")
 # MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.sl_agent_inventory AS
 # MAGIC SELECT
 # MAGIC   Item_name AS item_name, Created_in AS created_in, Item_ID AS item_id,
-# MAGIC   Status AS status, Owner AS owner, Model AS model,
+# MAGIC   Owner AS owner, Model AS model,
 # MAGIC   Authentication AS authentication, Orchestration AS orchestration,
-# MAGIC   Microsoft_Entra_app_ID AS microsoft_entra_app_id,
 # MAGIC   Microsoft_Entra_Agent_ID AS microsoft_entra_agent_id,
 # MAGIC   Blueprint_ID AS blueprint_id,
 # MAGIC   Created_On AS created_on, Published_On AS published_on,
@@ -248,10 +247,10 @@ print(f"Target schema: {S}")
 # MAGIC parsed_all AS (
 # MAGIC   SELECT
 # MAGIC     item_id, item_name, created_in,
-# MAGIC     NULLIF(status, '-') AS status, NULLIF(owner, '-') AS owner,
+# MAGIC     NULLIF(owner, '-') AS owner,
 # MAGIC     NULLIF(model, '-') AS model, NULLIF(authentication, '-') AS authentication,
 # MAGIC     NULLIF(orchestration, '-') AS orchestration,
-# MAGIC     microsoft_entra_app_id, microsoft_entra_agent_id, blueprint_id,
+# MAGIC     microsoft_entra_agent_id, blueprint_id,
 # MAGIC     to_date(created_on, 'M/d/yyyy h:mm:ss a') AS created_on_date,
 # MAGIC     to_date(published_on, 'M/d/yyyy h:mm:ss a') AS published_on_date,
 # MAGIC     created_by
@@ -285,7 +284,7 @@ print(f"Target schema: {S}")
 # MAGIC     k.environment_type, k.environment_region, COALESCE(k.is_managed, FALSE) AS is_managed,
 # MAGIC     XXHASH64(LOWER(COALESCE(k.environment, p.created_in))) AS environment_key,
 # MAGIC     CASE WHEN LOWER(COALESCE(p.created_in, '')) LIKE '%agent builder%' THEN 'Agent Builder' ELSE 'Copilot Studio' END AS platform,
-# MAGIC     CASE WHEN NULLIF(p.status, '-') IS NOT NULL OR NULLIF(p.owner, '-') IS NOT NULL THEN TRUE ELSE FALSE END AS is_valid_agent,
+# MAGIC     CASE WHEN NULLIF(p.created_by, '-') IS NOT NULL THEN TRUE ELSE FALSE END AS is_valid_agent,
 # MAGIC     CASE WHEN LOWER(COALESCE(p.authentication, '-')) IN ('-', 'none', 'no authentication') THEN TRUE ELSE FALSE END AS is_no_auth,
 # MAGIC     (ua.agent_name_norm IS NOT NULL) AS is_used
 # MAGIC   FROM parsed_all p
