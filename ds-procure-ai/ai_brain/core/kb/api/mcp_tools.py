@@ -175,38 +175,45 @@ _STOPWORDS = frozenset(
 )
 
 
-def _requirement_token_sets(project_id: str) -> list[frozenset[str]]:
-    """One token set per requirement — kept separate so no requirement is starved."""
+def _requirement_token_sets(project_id: str) -> list[tuple[str, frozenset[str]]]:
+    """(label, tokens) per requirement — kept separate so no requirement is starved."""
     from shared.db.models import Requirement
 
-    texts: list[str] = []
+    rows: list[tuple[str, str]] = []
     try:
         with session_scope() as session:
-            texts = [
-                str(value or "")
-                for value in session.scalars(
-                    select(Requirement.text).where(
-                        Requirement.project_id == project_id
-                    )
+            rows = [
+                (str(rid or ""), str(text or ""))
+                for rid, text in session.execute(
+                    select(Requirement.id, Requirement.text)
+                    .where(Requirement.project_id == project_id)
+                    .order_by(Requirement.ordinal)
                 ).all()
             ]
     except Exception:  # noqa: BLE001
-        texts = []
-    if not texts:
+        rows = []
+    if not rows:
         from ai_brain.core.procurement_ai.packs.matrix_layout import SWIFT_REQUIREMENTS
 
-        texts = [str(row[1]) for row in SWIFT_REQUIREMENTS]
-    out: list[frozenset[str]] = []
-    for value in texts:
+        rows = [(str(row[0]), str(row[1])) for row in SWIFT_REQUIREMENTS]
+    out: list[tuple[str, frozenset[str]]] = []
+    for label, value in rows:
         tokens = frozenset(_WORD_RE.findall(value.lower())) - _STOPWORDS
         if tokens:
-            out.append(tokens)
+            out.append((label, tokens))
     return out
 
 
 def _relevance_first(
     project_id: str, rows: list[dict[str, Any]], bodies: dict[str, str]
 ) -> list[dict[str, Any]]:
+    ordered, _ = _rank_by_requirement(project_id, rows, bodies)
+    return ordered
+
+
+def _rank_by_requirement(
+    project_id: str, rows: list[dict[str, Any]], bodies: dict[str, str]
+) -> tuple[list[dict[str, Any]], dict[str, list[str]]]:
     """Order chunks so every requirement's best evidence lands on the first pages.
 
     Two things go wrong with a single global score. Long chunks win on raw term
@@ -219,10 +226,13 @@ def _relevance_first(
 
     Nothing is dropped — unmatched chunks keep their existing doc_role order at
     the end — so a mis-scored chunk costs reading position, never an answer.
+
+    The ranking is returned as well: once a pack is trimmed it is the only
+    record of which chunk would have answered which requirement.
     """
     requirements = _requirement_token_sets(project_id)
     if not requirements or not rows:
-        return rows
+        return rows, {}
 
     docs: dict[str, list[str]] = {}
     for row in rows:
@@ -230,7 +240,7 @@ def _relevance_first(
         docs[cid] = _WORD_RE.findall(bodies.get(cid, "").lower())
     total = len(docs)
     if not total:
-        return rows
+        return rows, {}
 
     avg_len = (sum(len(tokens) for tokens in docs.values()) / total) or 1.0
     doc_freq: Counter[str] = Counter()
@@ -255,11 +265,15 @@ def _relevance_first(
         return score
 
     ranked: list[list[str]] = []
-    for query in requirements:
+    by_requirement: dict[str, list[str]] = {}
+    for label, query in requirements:
         hits = [(bm25(cid, query), cid) for cid in docs]
         hits = [hit for hit in hits if hit[0] > 0]
         hits.sort(key=lambda hit: (-hit[0], hit[1]))
-        ranked.append([cid for _, cid in hits])
+        queue = [cid for _, cid in hits]
+        ranked.append(queue)
+        if queue:
+            by_requirement[label] = queue
 
     picked: list[str] = []
     seen: set[str] = set()
@@ -272,7 +286,7 @@ def _relevance_first(
     by_id = {str(row["chunk_id"]): row for row in rows}
     ordered = [by_id[cid] for cid in picked if cid in by_id]
     ordered.extend(row for row in rows if str(row["chunk_id"]) not in seen)
-    return ordered
+    return ordered, by_requirement
 
 
 # A company-registry extract answered no requirement in a measured 5-bid run
@@ -341,8 +355,10 @@ def prefetch_bid_chunks(project_id: str, bid_id: str) -> tuple[dict[str, str], l
     if deliverable:
         rows = deliverable
     bodies = load_chunk_texts(str(row["chunk_id"]) for row in rows)
-    rows = _relevance_first(project_id, rows, bodies)
-    rows = _within_pack_budget(rows, bid_id)
+    rows, by_requirement = _rank_by_requirement(project_id, rows, bodies)
+    kept = _within_pack_budget(rows, bid_id)
+    dropped = {str(r["chunk_id"]) for r in rows[len(kept):]}
+    rows = kept
     project = load_project(project_id)
     code = project.code if project is not None else "project"
     prefix = f"/project/{code}/vendors/{bid_id}/_chunks"
@@ -385,7 +401,44 @@ def prefetch_bid_chunks(project_id: str, bid_id: str) -> tuple[dict[str, str], l
         used_lines += block_lines
         packed.append(cid)
     flush()
+    pointers = _dropped_chunk_pointers(by_requirement, dropped)
+    if pointers:
+        files[f"{prefix}/UNREAD.md"] = pointers
     return files, packed
+
+
+# Enough to answer a requirement without re-listing a whole document.
+MAX_POINTERS_PER_REQUIREMENT = 3
+
+
+def _dropped_chunk_pointers(
+    by_requirement: dict[str, list[str]], dropped: set[str]
+) -> str:
+    """Name the best unpacked chunk per requirement.
+
+    Trimming costs depth, and a requirement whose remaining evidence sits in a
+    dropped chunk would otherwise be answered `not_stated` with no hint that
+    anything was missing. The ranking already knows which chunk that is, so
+    hand the analyst the id instead of hoping it guesses a search term.
+    """
+    if not dropped or not by_requirement:
+        return ""
+    lines: list[str] = []
+    for label, queue in by_requirement.items():
+        missing = [cid for cid in queue if cid in dropped][
+            :MAX_POINTERS_PER_REQUIREMENT
+        ]
+        if missing:
+            lines.append(f"- {label}: {', '.join(missing)}")
+    if not lines:
+        return ""
+    return (
+        "# Evidence not pre-loaded\n\n"
+        "This bid was too large to pack in full. The chunks below scored "
+        "highest for the listed requirement but are NOT in the files above.\n"
+        "Before recording `not_stated` for any requirement named here, read "
+        "its chunks with `read_chunk`.\n\n" + "\n".join(lines) + "\n"
+    )
 
 
 def list_bid_chunks(bid_id: str, project_id: str | None = None) -> str:
