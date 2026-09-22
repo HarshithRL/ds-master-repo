@@ -141,6 +141,18 @@ function HitlRail({ insights, skippedGaps, busy, onSkipGaps, onBuild, onAddFile,
             <Badge variant={failed ? "destructive" : "secondary"}>
               {failed ? "Failed" : "Building"}
             </Badge>
+            {/* A failed build pins the rail to this card, so without a retry
+                here the only way out of the error is a page reload. */}
+            {failed ? (
+              <button
+                type="button"
+                className="ws-pack-btn"
+                disabled={busy === "kb"}
+                onClick={() => onBuild("kb")}
+              >
+                {busy === "kb" ? "Starting..." : "Rebuild knowledge base"}
+              </button>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
