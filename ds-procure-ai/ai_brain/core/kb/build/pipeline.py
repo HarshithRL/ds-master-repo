@@ -214,6 +214,17 @@ def plan_kb_build(state: dict[str, Any]) -> list[Send] | str:
     bids = ensure_vendor_bids(project_id) if project_id else []
     if not bids:
         return "audit_kb"
+    targets = _bids_needing_extraction(project_id, bids)
+    if not targets:
+        log.info("kb_build nothing changed project_id={} bids={}", project_id, len(bids))
+        return "audit_kb"
+    log.info(
+        "kb_build extracting project_id={} bids={}/{} skipped={}",
+        project_id,
+        len(targets),
+        len(bids),
+        sorted(set(bids) - set(targets)),
+    )
     return [
         Send(
             "analyze_bid",
@@ -224,8 +235,68 @@ def plan_kb_build(state: dict[str, Any]) -> list[Send] | str:
             },
             timeout=ANALYZE_BID_TIMEOUT_S,
         )
-        for bid_id in bids
+        for bid_id in targets
     ]
+
+
+def _incremental_enabled() -> bool:
+    return (os.getenv("MATE_KB_INCREMENTAL", "1") or "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+    )
+
+
+def _bids_needing_extraction(project_id: str, bids: list[str]) -> list[str]:
+    """Bids with no evidence, a failed pass, or inputs newer than their evidence.
+
+    Re-reading an unchanged bid costs a full agent run, and a five-bid project
+    spends ~20 minutes doing it. Anything uncertain falls back to the full list.
+    """
+    if not _incremental_enabled():
+        return list(bids)
+    try:
+        from sqlalchemy import case, func, select
+
+        from shared.db.connection import session_scope
+        from shared.db.models import Artifact, Evidence
+
+        with session_scope() as session:
+            ev_rows = session.execute(
+                select(
+                    Evidence.vendor_id,
+                    func.min(Evidence.extracted_at),
+                    func.sum(
+                        case((Evidence.status == "extraction_failed", 1), else_=0)
+                    ),
+                )
+                .where(Evidence.project_id == project_id)
+                .group_by(Evidence.vendor_id)
+            ).all()
+            art_rows = session.execute(
+                select(Artifact.vendor_id, func.max(Artifact.created_at))
+                .where(
+                    Artifact.project_id == project_id,
+                    Artifact.superseded_by.is_(None),
+                )
+                .group_by(Artifact.vendor_id)
+            ).all()
+    except Exception as exc:  # noqa: BLE001 - a planning query must never block a build
+        log.warning("incremental plan failed, extracting every bid: {}", exc)
+        return list(bids)
+
+    evidence = {str(r[0]): (str(r[1] or ""), int(r[2] or 0)) for r in ev_rows}
+    newest_input = {str(r[0]): str(r[1] or "") for r in art_rows}
+
+    targets: list[str] = []
+    for bid_id in bids:
+        oldest_evidence, failed = evidence.get(bid_id, ("", 0))
+        if not oldest_evidence or failed:
+            targets.append(bid_id)
+            continue
+        if newest_input.get(bid_id, "") > oldest_evidence:
+            targets.append(bid_id)
+    return targets
 
 
 def _tool_call_stats(messages: Any) -> tuple[int, int]:

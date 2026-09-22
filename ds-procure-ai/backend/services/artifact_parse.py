@@ -97,12 +97,37 @@ def parse_and_store(artifact: Artifact, *, force: bool = False) -> Artifact:
     saved = artifact_repo.save_parse_result(
         artifact.id,
         parse_status=PARSE_OK,
-        parsed_json=serialized,
+        parsed_json=_inline_parsed_json(serialized, markdown),
         parsed_relpath=relpath,
         parse_error=None,
     )
     _replace_chunks(saved, chunks)
     return saved
+
+
+# DBSQL rejects oversized statement parameters, which failed the whole parse of
+# large files even though the volume copy had already been written.
+INLINE_PARSED_JSON_LIMIT = 900_000
+
+
+def _inline_parsed_json(serialized: str, markdown: str) -> str:
+    """Full payload when it fits, else enough markdown to keep readers working.
+
+    parsed_relpath still points at the complete document on the volume, and an
+    empty column here would make the reparse check treat the file as unparsed.
+    """
+    if len(serialized) <= INLINE_PARSED_JSON_LIMIT:
+        return serialized
+    budget = max(0, INLINE_PARSED_JSON_LIMIT - 512)
+    trimmed = json.dumps(
+        {"markdown": markdown[:budget], "truncated": True}, ensure_ascii=False
+    )
+    log.warning(
+        "parsed_json too large for inline storage bytes={} kept={} relpath_has_full=1",
+        len(serialized),
+        len(trimmed),
+    )
+    return trimmed
 
 
 def _store_parse_failure(artifact: Artifact, parse_status: str, parse_error: str) -> Artifact:

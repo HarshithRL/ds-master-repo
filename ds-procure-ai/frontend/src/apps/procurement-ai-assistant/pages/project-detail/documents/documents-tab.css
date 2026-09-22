@@ -164,3 +164,107 @@
     max-width: none;
   }
 }
+
+/* =========================
+   VENDOR PIN
+   ========================= */
+
+.file-row.needs-vendor {
+  border-left: 2px solid var(--warning, #d98324);
+}
+
+.file-vendor-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.file-vendor-chip {
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 10px;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.file-vendor-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.file-vendor-chip.is-guess {
+  border-color: var(--warning, #d98324);
+  color: var(--warning, #d98324);
+}
+
+.file-vendor-chip.is-manual {
+  border-color: var(--success, #3f9a5a);
+  color: var(--success, #3f9a5a);
+}
+
+.file-vendor-warn {
+  color: var(--text-subtle);
+  font-size: 11px;
+}
+
+.file-vendor-editor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.file-vendor-editor input {
+  height: 28px;
+  min-width: 170px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.file-vendor-editor button {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--accent);
+  color: #ffffff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.file-vendor-editor button.is-ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.file-vendor-editor button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.file-vendor-error {
+  color: var(--danger, #c0432f);
+  font-size: 11px;
+}
+
+.documents-rebuild-hint {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--warning, #d98324);
+  border-radius: 9px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
