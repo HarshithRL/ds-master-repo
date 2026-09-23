@@ -130,7 +130,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT\n              agent_key,\n              agent_name,\n              created_by,\n              environment_name,\n              model,\n              platform,\n              status,\n              authentication,\n              orchestration,\n              created_on_date,\n              created_on_eu,\n              is_no_auth\n            FROM automation_d.silver.vw_agent_governance\n            WHERE is_valid_agent\n              AND platform = 'Copilot Studio'\n              AND environment_name IS NOT NULL\n            ",
+        "source": "SELECT\n              agent_key,\n              agent_name,\n              created_by,\n              environment_name,\n              model,\n              platform,\n              status,\n              authentication,\n              orchestration,\n              created_on_date,\n              created_on_eu,\n              is_no_auth\n            FROM automation_d.silver.vw_agent_governance\n            WHERE is_valid_agent\n              AND platform = 'Copilot Studio'\n              AND environment_name IS NOT NULL",
         "dimensions": [
           {
             "name": "agent_name",
@@ -204,7 +204,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT\n              agent_key,\n              agent_name,\n              created_by,\n              environment_name,\n              model,\n              platform,\n              status,\n              orchestration,\n              created_on_date,\n              created_on_eu,\n              is_no_auth\n            FROM automation_d.silver.vw_agent_governance\n            WHERE is_valid_agent\n              AND platform = 'Agent Builder'\n            ",
+        "source": "SELECT\r\n              agent_key,\r\n              agent_name,\r\n              created_by,\r\n              environment_name,\r\n              model,\r\n              platform,\r\n              status,\r\n              orchestration,\r\n              created_on_date,\r\n              created_on_eu,\r\n              is_no_auth\r\n            FROM automation_d.silver.vw_agent_governance\r\n            WHERE is_valid_agent\r\n              AND platform = 'Agent Builder'",
         "dimensions": [
           {
             "name": "agent_name",
