@@ -123,7 +123,7 @@ print(f"Target schema: {S}")
 # MAGIC CREATE OR REPLACE TABLE ${pipeline_schema}.sl_agent_inventory AS
 # MAGIC SELECT
 # MAGIC   Item_name AS item_name, Created_in AS created_in, Item_ID AS item_id,
-# MAGIC   Status AS status, Owner AS owner, Model AS model,
+# MAGIC   Owner AS owner, Model AS model,
 # MAGIC   Authentication AS authentication, Orchestration AS orchestration,
 # MAGIC   Microsoft_Entra_Agent_ID AS microsoft_entra_agent_id,
 # MAGIC   Blueprint_ID AS blueprint_id,
@@ -247,13 +247,12 @@ print(f"Target schema: {S}")
 # MAGIC parsed_all AS (
 # MAGIC   SELECT
 # MAGIC     item_id, item_name, created_in,
-# MAGIC     NULLIF(status, '-') AS status,
 # MAGIC     NULLIF(owner, '-') AS owner,
 # MAGIC     NULLIF(model, '-') AS model, NULLIF(authentication, '-') AS authentication,
 # MAGIC     NULLIF(orchestration, '-') AS orchestration,
 # MAGIC     microsoft_entra_agent_id, blueprint_id,
-# MAGIC     try_to_date(created_on, 'M/d/yyyy h:mm:ss a') AS created_on_date,
-# MAGIC     try_to_date(published_on, 'M/d/yyyy h:mm:ss a') AS published_on_date,
+# MAGIC     to_date(created_on, 'M/d/yyyy h:mm:ss a') AS created_on_date,
+# MAGIC     to_date(published_on, 'M/d/yyyy h:mm:ss a') AS published_on_date,
 # MAGIC     created_by
 # MAGIC   FROM dedup
 # MAGIC ),
