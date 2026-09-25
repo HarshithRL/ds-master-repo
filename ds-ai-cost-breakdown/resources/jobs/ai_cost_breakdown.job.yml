@@ -24,7 +24,7 @@ resources:
             notebook_path: ../../src/notebooks/patch_dashboard_catalog.py
             base_parameters:
               catalog: ${var.catalog}
-              dashboard_id: ${resources.dashboards.ai_cost_dashboard.id}
+              dashboard_id: ${resources.dashboards.ai_usage_costs.id}
               warehouse_id: ${var.warehouse_id}
           job_cluster_key: ai_cost_breakdown_cluster
 
