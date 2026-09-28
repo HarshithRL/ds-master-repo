@@ -26,6 +26,53 @@ REVIEWABLE_STATUSES = ("met", "partial", "not_offered", "not_stated", "unclear")
 MODEL_VERSION = "vendor-analyst-1"
 REVIEW_PROMPT_VERSION = "human-review"
 
+# A review states what a human decided; overwriting claim_text with it erased
+# what the model had found, leaving "why was this changed?" unanswerable. The
+# note leads, the model's quote is kept under this marker. `evidence` has no
+# column for a note, so the two share the field rather than one destroying the
+# other.
+MODEL_EVIDENCE_PREFIX = "— model evidence: "
+_MODEL_EVIDENCE_SEPARATOR = f"\n\n{MODEL_EVIDENCE_PREFIX}"
+
+
+def split_review_claim(claim_text: str | None) -> tuple[str, str]:
+    """(analyst note, model evidence). An unreviewed claim is all model."""
+    text = (claim_text or "").strip()
+    if _MODEL_EVIDENCE_SEPARATOR in text:
+        note, _, model = text.partition(_MODEL_EVIDENCE_SEPARATOR)
+        return note.strip(), model.strip()
+    return "", text
+
+
+def _unpin(row: Evidence) -> None:
+    """Drop the human verdict and put the model's own words back in the cell."""
+    note, model_evidence = split_review_claim(row.claim_text)
+    # No marker on a reviewed row means the review created it: the text is the
+    # analyst's note, and keeping it would read back as something the model
+    # found. An empty cell is honest and re-extraction refills it.
+    row.claim_text = model_evidence if note else None
+    row.reviewed_by = None
+    row.reviewed_at = None
+
+
+def clear_all_reviews(project_id: str) -> int:
+    """Unpin every reviewed cell in a project. Used by a deliberate reset."""
+    if not project_id:
+        return 0
+    with session_scope() as session:
+        rows = session.scalars(
+            select(Evidence).where(Evidence.project_id == project_id)
+        ).all()
+        cleared = 0
+        for row in rows:
+            if not (row.reviewed_by or "").strip():
+                continue
+            _unpin(row)
+            cleared += 1
+        session.flush()
+    log.info("cleared reviews project_id={} rows={}", project_id, cleared)
+    return cleared
+
 
 class EvidenceNotFoundError(LookupError):
     pass
@@ -85,7 +132,15 @@ def set_review(
             )
             session.add(row)
         row.status = status
-        row.claim_text = detail or f"Set to {status} by {reviewer}."
+        # Re-reviewing must not nest: the model's quote is carried across, never
+        # re-wrapped around the previous note.
+        _, model_evidence = split_review_claim(row.claim_text)
+        note_line = detail or f"Set to {status} by {reviewer}."
+        row.claim_text = (
+            f"{note_line}{_MODEL_EVIDENCE_SEPARATOR}{model_evidence}"
+            if model_evidence
+            else note_line
+        )
         row.confidence = 1.0
         row.reviewed_by = reviewer
         row.reviewed_at = now
@@ -115,6 +170,5 @@ def clear_review(project_id: str, requirement_id: str, vendor_id: str) -> None:
         if not reviewed:
             raise EvidenceNotFoundError(f"{requirement_id}/{vendor_id}")
         for row in reviewed:
-            row.reviewed_by = None
-            row.reviewed_at = None
+            _unpin(row)
         session.flush()

@@ -58,7 +58,7 @@
   "data_products": [
     {
       "data_product": "ds-ai-cost-breakdown",
-      "warehouse": false,
+      "warehouse": true,
       "consumer_groups": [
         {
           "tier": "READ",
@@ -73,7 +73,8 @@
               "catalog": "automation",
               "schema": "gold",
               "privileges": [
-                "USE_SCHEMA"
+                "USE_SCHEMA",
+                "SELECT"
               ]
             }
           ],

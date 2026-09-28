@@ -6,6 +6,7 @@ import asyncio
 import json
 import os
 import time
+from threading import Lock
 from typing import Any, Optional
 
 from langchain_core.runnables import RunnableConfig
@@ -13,6 +14,7 @@ from langgraph.types import Send
 
 from ai_brain.core.kb.store.materialize import list_bid_ids, vendor_paths
 from ai_brain.core.kb.store.persist import (
+    enrich_requirements_from_rfp,
     fill_extraction_failed,
     seed_swift_requirements,
     upsert_bid_profile,
@@ -209,20 +211,18 @@ async def extract_requirements(
         # Both are synchronous DBSQL; under NullPool each one is a fresh
         # warehouse handshake, so on the loop they stall every concurrent node.
         ensure_vendor_bids(project_id)
-        return seed_swift_requirements(project_id)
+        seeded = seed_swift_requirements(project_id)
+        # The template ships grid headings; the bidders answered the RFP's own
+        # wording, so score against that wherever the tender states it.
+        enrich_requirements_from_rfp(project_id)
+        return seeded
 
     seeded = await asyncio.to_thread(_seed) if project_id else 0
-    extra = (
-        await invoke_requirement_extractor(project_id, config=config)
-        if project_id
-        else None
-    )
     return {
         "requirements_ready": True,
         "procurement": {
             "kb_status": "building",
             "requirements_seeded": seeded,
-            "requirement_agent": extra or "skipped",
         },
     }
 
@@ -237,7 +237,11 @@ def plan_kb_build(state: dict[str, Any]) -> list[Send] | str:
     _drop_orphan_evidence(project_id, bids)
     if not targets:
         log.info("kb_build nothing changed project_id={} bids={}", project_id, len(bids))
+        # Routing returns an edge, not state, so the one fact the finish message
+        # needs is parked here for `audit_kb` to pick up in the same run.
+        _SKIPPED_EXTRACTION.add(project_id)
         return "audit_kb"
+    _SKIPPED_EXTRACTION.discard(project_id)
     log.info(
         "kb_build extracting project_id={} bids={}/{} skipped={}",
         project_id,
@@ -245,6 +249,7 @@ def plan_kb_build(state: dict[str, Any]) -> list[Send] | str:
         len(bids),
         sorted(set(bids) - set(targets)),
     )
+    _begin_progress(project_id, len(targets))
     return [
         Send(
             "analyze_bid",
@@ -257,6 +262,41 @@ def plan_kb_build(state: dict[str, Any]) -> list[Send] | str:
         )
         for bid_id in targets
     ]
+
+
+# Set by routing, read by `audit_kb` in the same run: a build that re-extracted
+# nothing still has to tell the user why the screen did not change.
+_SKIPPED_EXTRACTION: set[str] = set()
+
+# Bids fan out concurrently, so the counter behind the build message needs a lock.
+_PROGRESS_LOCK = Lock()
+_BUILD_PROGRESS: dict[str, list[int]] = {}
+
+
+def _begin_progress(project_id: str, total: int) -> None:
+    with _PROGRESS_LOCK:
+        _BUILD_PROGRESS[project_id] = [0, total]
+
+
+def _bid_finished(project_id: str) -> None:
+    """Publish "n of m" so a build running for minutes is not a frozen screen."""
+    with _PROGRESS_LOCK:
+        entry = _BUILD_PROGRESS.get(project_id)
+        if entry is None:
+            return
+        entry[0] += 1
+        done, total = entry
+    try:
+        from ai_brain.core.procurement_ai.packs.store import write_kb_job
+
+        write_kb_job(
+            project_id,
+            status="building",
+            message=f"Extracting vendor evidence — {done} of {total} done…",
+        )
+    except Exception:
+        # Progress is cosmetic: a failed status write must not fail the build.
+        log.exception("kb progress write failed project_id={}", project_id)
 
 
 def _incremental_enabled() -> bool:
@@ -273,11 +313,15 @@ def _drop_orphan_evidence(project_id: str, bids: list[str]) -> int:
     Re-classification moves files between bid ids (five filename guesses
     collapsing onto one real bidder), and the rows written under the old id
     would otherwise keep showing up as extra vendor columns forever.
+
+    A reviewed row is a person's verdict, not the model's, so the sweep leaves
+    it alone: re-classification is a routine event and must not silently delete
+    human work. Clearing the review hands the cell back and lets it go.
     """
     if not bids:
         return 0
     try:
-        from sqlalchemy import delete
+        from sqlalchemy import delete, or_
 
         from shared.db.connection import session_scope
         from shared.db.models import Evidence
@@ -287,6 +331,10 @@ def _drop_orphan_evidence(project_id: str, bids: list[str]) -> int:
                 delete(Evidence).where(
                     Evidence.project_id == project_id,
                     Evidence.vendor_id.not_in(bids),
+                    or_(
+                        Evidence.reviewed_by.is_(None),
+                        Evidence.reviewed_by == "",
+                    ),
                 )
             )
         dropped = int(getattr(result, "rowcount", 0) or 0)
@@ -457,6 +505,7 @@ async def analyze_bid(
         profile_n = 0
         status = "extraction_failed"
     finally:
+        _bid_finished(project_id)
         set_current_project_id(None)
     return {
         "kb_bundles": [
@@ -486,7 +535,11 @@ def audit_kb(state: dict[str, Any]) -> dict[str, Any]:
     _persist_kb_status(project_id, status)
     return {
         "procurement": {
-            "kb_audit": {"bundle_count": len(bundles), "failed": failed},
+            "kb_audit": {
+                "bundle_count": len(bundles),
+                "failed": failed,
+                "unchanged": project_id in _SKIPPED_EXTRACTION,
+            },
             "kb_status": status,
         }
     }

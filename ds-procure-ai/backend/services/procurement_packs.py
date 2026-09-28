@@ -171,12 +171,38 @@ def _reap_stale_pack(project_id: str, status: dict[str, Any] | None) -> dict[str
     return status
 
 
-def start_pack(project_id: str, owner_id: str, capability: str) -> dict[str, Any] | None:
+def start_pack(
+    project_id: str,
+    owner_id: str,
+    capability: str,
+    *,
+    clear_reviews: bool = False,
+) -> dict[str, Any] | None:
     if project_repo.get_for_owner_or_none(project_id, owner_id) is None:
         return None
     thread_id = f"{project_id}:{capability}"
+    if capability == "kb_build" and clear_reviews:
+        # Check before deleting: a build already running would leave the
+        # verdicts gone and nothing started to replace them.
+        from ai_brain.core.kb.extract import job_store
+
+        from shared.db.repos import evidence as evidence_repo
+
+        job_store.reap_stalled(project_id)
+        if job_store.latest_status_map([project_id]).get(project_id) == "building":
+            return {
+                "route": "procurement",
+                "thread_id": thread_id,
+                "procurement": {"kb_status": "building", "kb_already_running": True},
+            }
+        cleared = evidence_repo.clear_all_reviews(project_id)
+        log.info("cleared reviews before rebuild project_id={} rows={}", project_id, cleared)
     if capability == "compare_xlsx":
         return _start_pack_background(project_id, owner_id, capability, thread_id, "xlsx")
+    if capability == "kb_build":
+        # The brain runs this inline and registers no job row, so a POST timeout
+        # reads as failure and starts a second build the guard cannot see.
+        return _local_pack(project_id, owner_id, capability, thread_id)
     try:
         return _brain_post(
             f"/v1/projects/{project_id}/runs",

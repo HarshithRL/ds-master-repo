@@ -258,6 +258,78 @@
   resize: vertical;
 }
 
+/* The verdict is the model's claim; the quote is what lets a human check it. */
+.req-evidence {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.req-evidence-quote {
+  margin: 0;
+  padding: 6px 8px;
+  border-left: 2px solid #ff6900;
+  border-radius: 0 4px 4px 0;
+  background: var(--bg);
+  font-size: 12px;
+  line-height: 1.45;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.req-evidence-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* The model's quote stays visible after an override, but must not read as
+   the current answer. */
+.req-evidence-block:not(.is-analyst) .req-evidence-quote {
+  border-left-color: var(--border-strong, var(--border));
+  opacity: 0.75;
+}
+
+.req-evidence-label {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.req-evidence-block.is-analyst .req-evidence-label {
+  color: #ff6900;
+  opacity: 1;
+}
+
+.req-evidence-empty {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.req-evidence-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.req-evidence-meta .is-reviewed {
+  color: #ff6900;
+  opacity: 1;
+}
+
+.req-evidence-warning {
+  margin: 0;
+  font-size: 11px;
+  color: #fbbf24;
+}
+
 .req-review-actions {
   display: flex;
   gap: 6px;

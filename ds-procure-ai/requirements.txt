@@ -75,7 +75,9 @@ mlflow>=3,<4
 databricks-ai-bridge[agent-server]==0.20.0
 
 # SQLAlchemy for ORM (existing web_app)
-sqlalchemy>=2.0.52
+# Capped below 2.1: the UC table-prefix pass assigns ForeignKey._colspec, which
+# 2.1 turned into a read-only property, and the backend crashes on import.
+sqlalchemy>=2.0.52,<2.1
 psycopg[binary,pool]>=3.1
 
 # Testing

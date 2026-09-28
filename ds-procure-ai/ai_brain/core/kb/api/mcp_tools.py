@@ -404,11 +404,45 @@ def prefetch_bid_chunks(project_id: str, bid_id: str) -> tuple[dict[str, str], l
     pointers = _dropped_chunk_pointers(by_requirement, dropped)
     if pointers:
         files[f"{prefix}/UNREAD.md"] = pointers
+    guide = _requirement_chunk_guide(by_requirement, set(packed))
+    if guide:
+        files[f"{prefix}/INDEX.md"] = guide
     return files, packed
 
 
 # Enough to answer a requirement without re-listing a whole document.
 MAX_POINTERS_PER_REQUIREMENT = 3
+
+
+def _requirement_chunk_guide(
+    by_requirement: dict[str, list[str]], packed: set[str]
+) -> str:
+    """Say which packed chunk scored highest for each requirement.
+
+    The pack is one relevance order flattened across 40 requirements, so the
+    analyst had no way to tell which part of it was meant for which row and
+    answered them from whatever it had just read. The ranking already knows.
+    """
+    if not packed or not by_requirement:
+        return ""
+    lines: list[str] = []
+    for label, queue in by_requirement.items():
+        best = [cid for cid in queue if cid in packed][
+            :MAX_POINTERS_PER_REQUIREMENT
+        ]
+        if best:
+            lines.append(f"- {label}: {', '.join(best)}")
+    if not lines:
+        return ""
+    return (
+        "# Where to look per requirement\n\n"
+        "These chunks scored highest for each requirement and ARE in the pack "
+        "files. Start here, then confirm against the requirement wording in "
+        "/project/*/REQUIREMENTS.md.\n"
+        "A high score means shared vocabulary, not a correct answer: if the "
+        "chunk does not address the requirement, the answer is still "
+        "`not_stated`.\n\n" + "\n".join(lines) + "\n"
+    )
 
 
 def _dropped_chunk_pointers(

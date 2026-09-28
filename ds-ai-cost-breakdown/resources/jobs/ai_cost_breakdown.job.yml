@@ -1,7 +1,7 @@
 resources:
   jobs:
     ai_cost_breakdown_enrichment:
-      name: ai_cost_breakdown_enrichment
+      name: "ai_cost_breakdown_enrichment"
 
       schedule:
         quartz_cron_expression: 0 0 6 * * ?
@@ -11,9 +11,21 @@ resources:
       tasks:
         - task_key: enrich_ai_costs
           notebook_task:
-            notebook_path: ../src/RG Tag Mapping - AI Cost Enrichment.py
+            notebook_path: ../../src/notebooks/RG Tag Mapping - AI Cost Enrichment.py
             base_parameters:
               CATALOG: ${var.catalog}
+          job_cluster_key: ai_cost_breakdown_cluster
+
+        - task_key: patch_dashboard_catalog
+          depends_on:
+            - task_key: enrich_ai_costs
+          run_if: ALL_DONE
+          notebook_task:
+            notebook_path: ../../src/notebooks/patch_dashboard_catalog.py
+            base_parameters:
+              catalog: ${var.catalog}
+              dashboard_id: ${resources.dashboards.ai_usage_costs.id}
+              warehouse_id: ${var.warehouse_id}
           job_cluster_key: ai_cost_breakdown_cluster
 
       job_clusters:

@@ -1,4 +1,8 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "5"
+# ///
 # DBTITLE 1,01 - Bronze Ingestion
 # MAGIC %md
 # MAGIC # 01 - Bronze Ingestion
@@ -223,5 +227,4 @@ print(f"\nAll {len(results)} tables loaded to {TARGET_SCHEMA}")
 dbutils.notebook.exit(json.dumps({"tables": len(results), "schema": TARGET_SCHEMA}))
 
 # COMMAND ----------
-
 

@@ -4,39 +4,44 @@
 # environment_version = "5"
 # ///
 # MAGIC %md
-# MAGIC # RG Tag Mapping & Enriched AI Cost Table
+# MAGIC # RG Tag Mapping & Enriched AI Cost View
 # MAGIC
-# MAGIC This notebook copies source rows to bronze and builds an enriched gold cost view. Mapping rules and intermediate transformations are persistent views in the gold schema.
+# MAGIC Views and tables, for quick loading of the dash: a bronze view over the prod source, the RG mapping view, and the enriched gold table read by the dashboard.
 
 # COMMAND ----------
 
-try:
-  dbutils.widgets.text("CATALOG", "automation_d")
-  CATALOG = dbutils.widgets.get("CATALOG")
-except NameError:
-  CATALOG = "automation_d"
-BRONZE_SCHEMA = "bronze"
-GOLD_SCHEMA = "gold"
-SOURCE_TABLE = "ingestion_azure_p.costs.azure_actual_cost"
-# Bronze keeps the source rows; gold is the dashboard dataset.
-BRONZE_TABLE = f"{CATALOG}.{BRONZE_SCHEMA}.azure_actual_cost"
-SILVER_VIEW = f"{CATALOG}.{GOLD_SCHEMA}.ai_costs_silver_v"
-MAPPING_VIEW = f"{CATALOG}.{GOLD_SCHEMA}.rg_tag_mapping_v"
-GOLD_VIEW = f"{CATALOG}.{GOLD_SCHEMA}.ai_foundry_costs_enriched"
-
-print(f"Catalog:       {CATALOG}")
-print(f"Bronze schema: {BRONZE_SCHEMA}")
-print(f"Gold schema:   {GOLD_SCHEMA}")
-print(f"Bronze table:  {BRONZE_TABLE}")
-print(f"Silver view:   {SILVER_VIEW}")
-print(f"Mapping view:  {MAPPING_VIEW}")
-print(f"Gold view:     {GOLD_VIEW}")
-print(f"Source table:  {SOURCE_TABLE}")
+# CATALOG is passed by the job per bundle target (automation_d / _a / _p).
+# The source is always the prod ingestion table, in every environment.
+dbutils.widgets.text("CATALOG", "automation_d")
+CATALOG = dbutils.widgets.get("CATALOG")
+SOURCE_TABLE = f"ingestion_azure_{CATALOG[-1]}.costs.azure_actual_cost"
+BRONZE_VIEW = f"{CATALOG}.bronze.azure_actual_cost"
+MAPPING_VIEW = f"{CATALOG}.gold.rg_tag_mapping_v"
+GOLD_TABLE = f"{CATALOG}.gold.ai_foundry_costs_enriched"
 
 # COMMAND ----------
 
-for schema in [BRONZE_SCHEMA, GOLD_SCHEMA]:
+for schema in ["bronze", "gold"]:
   spark.sql(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{schema}")
+
+def drop_if_table(full_name):
+  """Earlier runs wrote tables with these names; CREATE OR REPLACE VIEW fails on a table, DROP TABLE fails on a view."""
+  _, schema, name = full_name.split(".")
+  if spark.sql(f"SHOW TABLES IN {CATALOG}.{schema} LIKE '{name}'").collect():
+    if spark.sql(f"DESCRIBE TABLE EXTENDED {full_name}").filter("col_name = 'Type'").collect()[0]["data_type"] != "VIEW":
+      spark.sql(f"DROP TABLE {full_name}")
+
+def drop_if_view(full_name):
+  """Gold used to be a view; CREATE OR REPLACE TABLE fails on an existing view."""
+  _, schema, name = full_name.split(".")
+  if spark.sql(f"SHOW TABLES IN {CATALOG}.{schema} LIKE '{name}'").collect():
+    if spark.sql(f"DESCRIBE TABLE EXTENDED {full_name}").filter("col_name = 'Type'").collect()[0]["data_type"] == "VIEW":
+      spark.sql(f"DROP VIEW {full_name}")
+
+# The former intermediate (silver) view is folded into the gold view below.
+spark.sql(f"DROP VIEW IF EXISTS {CATALOG}.gold.ai_costs_silver_v")
+
+# COMMAND ----------
 
 spark.sql(f"""
 CREATE OR REPLACE VIEW {MAPPING_VIEW} AS
@@ -63,7 +68,7 @@ SELECT * FROM VALUES
   ('%UIPATH-P-%', 'UiPath', 'Prod', 'Etex Services N.V.', NULL, 'UiPath production'),
   ('%hub-citadel-p-%', 'Citadel', 'Prod', 'Etex Services N.V.', NULL, 'Citadel production'),
   ('rg-koen-playground', 'Sandbox', 'Dev', 'Etex Services N.V.', NULL, 'Personal playground')
-AS {MAPPING_VIEW}(
+AS t(
   rg_pattern,
   inferred_application,
   inferred_environment,
@@ -73,70 +78,56 @@ AS {MAPPING_VIEW}(
 )
 """)
 
-print(f"Ready: {MAPPING_VIEW}")
+# COMMAND ----------
+
+# Bronze is a pass-through view over the prod source (no copy).
+drop_if_table(BRONZE_VIEW)
+spark.sql(f"CREATE OR REPLACE VIEW {BRONZE_VIEW} AS SELECT * FROM {SOURCE_TABLE}")
 
 # COMMAND ----------
 
-# Bronze preserves the source cost rows and schema for reproducibility.
-spark.sql(f"""
-CREATE OR REPLACE TABLE {BRONZE_TABLE} AS
-SELECT *
-FROM {SOURCE_TABLE}
-""")
-
-bronze_count = spark.sql(f"SELECT COUNT(*) AS row_count FROM {BRONZE_TABLE}").collect()[0]["row_count"]
-print(f"Created {BRONZE_TABLE} with {bronze_count:,} rows")
-
-# COMMAND ----------
-
-# Intermediate view standardizes tag values and prepares searchable text for enrichment.
-spark.sql(f"""
-CREATE OR REPLACE VIEW {SILVER_VIEW} AS
-SELECT
-  a.*,
-  UPPER(COALESCE(a.resourcegroupname, '')) AS rg_upper,
-  LOWER(CONCAT_WS(' ',
-    COALESCE(a.subscriptionname, ''),
-    COALESCE(a.resourcegroupname, ''),
-    COALESCE(a.consumedservice, ''),
-    COALESCE(a.servicefamily, ''),
-    COALESCE(a.metercategory, ''),
-    COALESCE(a.metersubcategory, ''),
-    COALESCE(a.metername, ''),
-    COALESCE(a.productname, ''),
-    COALESCE(a.additionalinfo, ''),
-    COALESCE(a.serviceinfo1, ''),
-    COALESCE(a.serviceinfo2, ''),
-    COALESCE(a.tags, '')
-  )) AS search_text,
-  CASE
-    WHEN NULLIF(TRIM(get_json_object(a.tags, '$.Application')), '') = 'EtexMate' THEN 'Etex Mate'
-    WHEN NULLIF(TRIM(get_json_object(a.tags, '$.Application')), '') IN ('GenAI-Chatbot', 'GenAi-ChatBot', 'GenAi-Chatbot') THEN 'GenAI-ChatBot'
-    WHEN NULLIF(TRIM(get_json_object(a.tags, '$.Application')), '') IN ('Uipath', 'UiPAth') THEN 'UiPath'
-    ELSE NULLIF(TRIM(get_json_object(a.tags, '$.Application')), '')
-  END AS raw_application,
-  NULLIF(TRIM(get_json_object(a.tags, '$.Service')), '') AS raw_service,
-  CASE
-    WHEN LOWER(NULLIF(TRIM(get_json_object(a.tags, '$.Domain')), '')) = 'finance' THEN 'Finance'
-    ELSE NULLIF(TRIM(get_json_object(a.tags, '$.Domain')), '')
-  END AS raw_domain,
-  NULLIF(TRIM(get_json_object(a.tags, '$.deployment')), '') AS raw_deployment,
-  NULLIF(TRIM(get_json_object(a.tags, '$.EnvironmentType')), '') AS raw_environment,
-  NULLIF(TRIM(get_json_object(a.tags, '$.Company')), '') AS raw_company,
-  NULLIF(TRIM(get_json_object(a.tags, '$.BusinessOwner')), '') AS raw_business_owner
-FROM {BRONZE_TABLE} a
-""")
-
-silver_count = spark.sql(f"SELECT COUNT(*) AS row_count FROM {SILVER_VIEW}").collect()[0]["row_count"]
-print(f"Created {SILVER_VIEW} with {silver_count:,} rows")
-
-# COMMAND ----------
+drop_if_view(GOLD_TABLE)
 
 spark.sql(f"""
-CREATE OR REPLACE VIEW {GOLD_VIEW} AS
-WITH source AS (
-  SELECT *
-  FROM {SILVER_VIEW}
+CREATE OR REPLACE TABLE {GOLD_TABLE} AS
+WITH tagged AS (
+  SELECT
+    a.*,
+    UPPER(COALESCE(a.resourcegroupname, '')) AS rg_upper,
+    LOWER(CONCAT_WS(' ',
+      COALESCE(a.subscriptionname, ''),
+      COALESCE(a.resourcegroupname, ''),
+      COALESCE(a.consumedservice, ''),
+      COALESCE(a.servicefamily, ''),
+      COALESCE(a.metercategory, ''),
+      COALESCE(a.metersubcategory, ''),
+      COALESCE(a.metername, ''),
+      COALESCE(a.productname, ''),
+      COALESCE(a.additionalinfo, ''),
+      COALESCE(a.serviceinfo1, ''),
+      COALESCE(a.serviceinfo2, ''),
+      COALESCE(a.tags, '')
+    )) AS search_text,
+    NULLIF(TRIM(get_json_object(a.tags, '$.Application')), '') AS tag_application,
+    NULLIF(TRIM(get_json_object(a.tags, '$.Service')), '') AS raw_service,
+    NULLIF(TRIM(get_json_object(a.tags, '$.Domain')), '') AS tag_domain,
+    NULLIF(TRIM(get_json_object(a.tags, '$.deployment')), '') AS raw_deployment,
+    NULLIF(TRIM(get_json_object(a.tags, '$.EnvironmentType')), '') AS raw_environment,
+    NULLIF(TRIM(get_json_object(a.tags, '$.Company')), '') AS raw_company
+  FROM {BRONZE_VIEW} a
+),
+
+source AS (
+  SELECT
+    t.*,
+    CASE
+      WHEN tag_application = 'EtexMate' THEN 'Etex Mate'
+      WHEN tag_application IN ('GenAI-Chatbot', 'GenAi-ChatBot', 'GenAi-Chatbot') THEN 'GenAI-ChatBot'
+      WHEN tag_application IN ('Uipath', 'UiPAth') THEN 'UiPath'
+      ELSE tag_application
+    END AS raw_application,
+    CASE WHEN LOWER(tag_domain) = 'finance' THEN 'Finance' ELSE tag_domain END AS raw_domain
+  FROM tagged t
 ),
 
 mapped AS (
@@ -150,7 +141,6 @@ mapped AS (
   FROM source s
   LEFT JOIN {MAPPING_VIEW} m
     ON s.rg_upper LIKE UPPER(m.rg_pattern)
-    OR UPPER(s.rg_upper) = UPPER(m.rg_pattern)
 ),
 
 derived AS (
@@ -313,55 +303,3 @@ SELECT
   load_ts
 FROM derived
 """)
-
-row_count = spark.sql(f"SELECT COUNT(*) AS row_count FROM {GOLD_VIEW}").collect()[0]["row_count"]
-print(f"Created {GOLD_VIEW} with {row_count:,} rows")
-
-# COMMAND ----------
-
-display(spark.sql(f"SELECT * FROM {MAPPING_VIEW} ORDER BY inferred_application, inferred_environment"))
-
-# COMMAND ----------
-
-display(spark.sql(f"""
-SELECT
-  resourcegroupname,
-  application,
-  service,
-  model,
-  spoke,
-  api_access,
-  SUM(cost_eur) AS cost_eur,
-  SUM(cost_usd) AS cost_usd,
-  COUNT(*) AS row_count
-FROM {GOLD_VIEW}
-WHERE application IS NULL OR model IS NULL OR spoke IS NULL
-GROUP BY resourcegroupname, application, service, model, spoke, api_access
-ORDER BY cost_eur DESC
-"""))
-
-# COMMAND ----------
-
-display(spark.sql(f"""
-SELECT
-  api_access,
-  spoke,
-  application,
-  service,
-  model,
-  COUNT(*) AS row_count,
-  ROUND(SUM(cost_eur), 2) AS cost_eur,
-  ROUND(SUM(cost_usd), 2) AS cost_usd
-FROM {GOLD_VIEW}
-GROUP BY api_access, spoke, application, service, model
-ORDER BY cost_eur DESC
-"""))
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Quick use
-# MAGIC
-# MAGIC 1. Set the catalog and schema in the config cell.
-# MAGIC 2. Run all cells.
-# MAGIC 3. Validate the mapping and gold cost output.

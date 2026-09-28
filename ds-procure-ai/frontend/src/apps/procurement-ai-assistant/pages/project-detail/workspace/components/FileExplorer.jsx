@@ -18,8 +18,8 @@ function FileExplorer({ files, storage, onAddFile, onIndex, indexing = false, up
         <div className="ws-panel-actions">
           <button
             type="button"
-            aria-label="Rebuild index"
-            title="Rebuild knowledge base index"
+            aria-label="Rebuild knowledge (keep my edits)"
+            title="Re-reads the documents. Your overrides and notes are kept."
             onClick={onIndex}
             disabled={indexing || kbBuilding || !onIndex}
           >

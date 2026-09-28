@@ -218,7 +218,11 @@ function WorkspaceTab({ projectId, onProjectUpdated }) {
     }
     setIndexing(true);
     try {
-      const result = await apiPost(`/api/procurement/projects/${projectId}/packs/kb`, {});
+      // Same contract as the Analysis rail's "keep my edits" button: an
+      // explicit false stops the two paths drifting into different defaults.
+      const result = await apiPost(`/api/procurement/projects/${projectId}/packs/kb`, {
+        clear_reviews: false,
+      });
       if (result?.procurement?.kb_already_running) {
         setUploadUi((prev) => ({
           ...prev,
