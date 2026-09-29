@@ -493,6 +493,16 @@ elif has_dev_changes and AUTO_PROMOTE:
     print(f"Promoting {total_changes} DEV change(s) to Main...")
     dev_draft = lv.get(DEV_DASHBOARD_ID)
     final_ser_str = dev_draft.serialized_dashboard
+    if len(final_ser_str or "") < 100:
+        print(f"  [Warning] DEV draft empty ({len(final_ser_str or '')} chars), loading from lvdash file: {LVDASH_PATH}")
+        if os.path.exists(LVDASH_PATH):
+            with open(LVDASH_PATH, "r", encoding="utf-8") as _f:
+                final_ser_str = _f.read()
+        else:
+            dev_lvdash = f"{DASHBOARDS_FOLDER}/DEV -  agent_dashboard_phase_1.lvdash.json"
+            if os.path.exists(dev_lvdash):
+                with open(dev_lvdash, "r", encoding="utf-8") as _f:
+                    final_ser_str = _f.read()
 
     # Patch catalog references from DEV to current environment
     if CATALOG != "automation_d" and "automation_d" in final_ser_str:
