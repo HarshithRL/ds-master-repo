@@ -57,7 +57,8 @@ class _Lakeview:
     """REST wrapper for Lakeview API — works across all SDK versions."""
     def get(self, dashboard_id):
         r = _req.get(f"{_lv_api}/api/2.0/lakeview/dashboards/{dashboard_id}", headers=_lv_hdr)
-        r.raise_for_status()
+        if not r.ok:
+            raise RuntimeError(f"HTTP {r.status_code}: {r.text[:500]}")
         d = r.json()
         sd = d.get("serialized_dashboard") or ""
         dn = d.get("display_name") or ""
@@ -540,6 +541,10 @@ if len(final_ser_str or "") < 100:
         "v2_synced": v2_changes
     }))
 
+_d = json.loads(final_ser_str)  # raises if not valid JSON
+if "serialized_dashboard" in _d or not _d.get("datasets") or not _d.get("pages"):
+    raise RuntimeError(f"Refusing to update: not a valid dashboard (keys={list(_d)})")
+
 # --- Update Main dashboard ---
 lv.update(
     dashboard_id=MAIN_DASHBOARD_ID,
@@ -557,13 +562,15 @@ print(f"  \u2713 Main dashboard published")
 
 # --- Update lvdash.json for Git tracking ---
 try:
-    lvdash_content = {
-        "display_name": main_name,
-        "warehouse_id": WAREHOUSE_ID,
-        "serialized_dashboard": final_ser_str
-    }
-    with open(LVDASH_PATH, "w") as f:
-        json.dump(lvdash_content, f, indent=2)
+    # lvdash_content = {
+    #     "display_name": main_name,
+    #     "warehouse_id": WAREHOUSE_ID,
+    #     "serialized_dashboard": final_ser_str
+    # }
+    # with open(LVDASH_PATH, "w") as f:
+    #     json.dump(lvdash_content, f, indent=2)
+    with open(LVDASH_PATH, "w", encoding="utf-8") as f:
+        json.dump(json.loads(final_ser_str), f, indent=2, ensure_ascii=False)
     print(f"  \u2713 lvdash.json updated: {LVDASH_PATH}")
     print(f"    \u2192 Commit this change to Git to track the dashboard update")
 except Exception as e:
