@@ -285,7 +285,7 @@ print(f"Target schema: {S}")
 # MAGIC     k.environment_type, k.environment_region, COALESCE(k.is_managed, FALSE) AS is_managed,
 # MAGIC     XXHASH64(LOWER(COALESCE(k.environment, p.created_in))) AS environment_key,
 # MAGIC     CASE WHEN LOWER(COALESCE(p.created_in, '')) LIKE '%agent builder%' THEN 'Agent Builder' ELSE 'Copilot Studio' END AS platform,
-# MAGIC     TRUE AS is_valid_agent,
+# MAGIC     CASE WHEN NULLIF(p.created_by, '-') IS NOT NULL THEN TRUE ELSE FALSE END AS is_valid_agent,
 # MAGIC     CASE WHEN LOWER(COALESCE(p.authentication, '-')) IN ('-', 'none', 'no authentication') THEN TRUE ELSE FALSE END AS is_no_auth,
 # MAGIC     (ua.agent_name_norm IS NOT NULL) AS is_used
 # MAGIC   FROM parsed_all p
