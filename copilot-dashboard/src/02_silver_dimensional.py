@@ -158,8 +158,8 @@ print(f"Target schema: {S}")
 # MAGIC   CAST(ROUND(TRY_CAST(Entitled_Quantity AS DOUBLE), 0) AS BIGINT) AS entitled_quantity,
 # MAGIC   CAST(ROUND(TRY_CAST(Prepaid_Consumed_Quantity AS DOUBLE), 0) AS BIGINT) AS prepaid_consumed_quantity,
 # MAGIC   CAST(ROUND(TRY_CAST(Pay_As_You_Go_Consumed_Quantity AS DOUBLE), 0) AS BIGINT) AS pay_as_you_go_consumed_quantity,
-# MAGIC   COALESCE(to_date(Usage_Date, 'M/d/yyyy h:mm:ss a'), to_date(Usage_Date, 'M/d/yyyy'), to_date(SPLIT(Usage_Date, ' ')[0], 'M/d/yyyy'), to_date(Usage_Date)) AS usage_date,
-# MAGIC   DATE_FORMAT(COALESCE(to_date(Usage_Date, 'M/d/yyyy h:mm:ss a'), to_date(Usage_Date, 'M/d/yyyy'), to_date(SPLIT(Usage_Date, ' ')[0], 'M/d/yyyy'), to_date(Usage_Date)), 'dd/MM/yyyy') AS usage_date_eu
+# MAGIC   COALESCE(try_to_date(Usage_Date, 'M/d/yyyy h:mm:ss a'), try_to_date(Usage_Date, 'M/d/yyyy'), try_to_date(SPLIT(Usage_Date, ' ')[0], 'M/d/yyyy'), try_to_date(Usage_Date)) AS usage_date,
+# MAGIC   DATE_FORMAT(COALESCE(try_to_date(Usage_Date, 'M/d/yyyy h:mm:ss a'), try_to_date(Usage_Date, 'M/d/yyyy'), try_to_date(SPLIT(Usage_Date, ' ')[0], 'M/d/yyyy'), try_to_date(Usage_Date)), 'dd/MM/yyyy') AS usage_date_eu
 # MAGIC FROM ${pipeline_schema}.environment_level_credit_consumption;
 
 # COMMAND ----------
@@ -549,9 +549,9 @@ print(f"Target schema: {S}")
 # MAGIC   k.Bot_Environment_Display_Name_PVA_Bot_PVA_Bot AS environment,
 # MAGIC   k.PVA_Bot AS bot_name,
 # MAGIC   COALESCE(
-# MAGIC     to_date(k.Date, 'yyyy-MM-dd HH:mm:ss'),
-# MAGIC     to_date(k.Date, 'M/d/yyyy'),
-# MAGIC     to_date(k.Date, 'M/d/yy')
+# MAGIC     try_to_date(k.Date, 'yyyy-MM-dd HH:mm:ss'),
+# MAGIC     try_to_date(k.Date, 'M/d/yyyy'),
+# MAGIC     try_to_date(k.Date, 'M/d/yy')
 # MAGIC   ) AS usage_date,
 # MAGIC   CAST(ROUND(TRY_CAST(k.Conversations AS DOUBLE), 0) AS BIGINT) AS conversations,
 # MAGIC   TRY_TO_TIMESTAMP(k.Created_On) AS created_on,
