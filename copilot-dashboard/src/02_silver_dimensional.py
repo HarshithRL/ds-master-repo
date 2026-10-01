@@ -252,8 +252,22 @@ print(f"Target schema: {S}")
 # MAGIC     NULLIF(model, '-') AS model, NULLIF(authentication, '-') AS authentication,
 # MAGIC     NULLIF(orchestration, '-') AS orchestration,
 # MAGIC     microsoft_entra_agent_id, blueprint_id,
-# MAGIC     try_to_date(created_on, 'M/d/yyyy h:mm:ss a') AS created_on_date,
-# MAGIC     try_to_date(published_on, 'M/d/yyyy h:mm:ss a') AS published_on_date,
+# MAGIC     COALESCE(
+# MAGIC       DATE(TRY_TO_TIMESTAMP(created_on, 'M/d/yyyy h:mm:ss a')),
+# MAGIC       DATE(TRY_TO_TIMESTAMP(created_on, 'MM/dd/yy')),
+# MAGIC       DATE(TRY_TO_TIMESTAMP(created_on, 'dd/MM/yy')),
+# MAGIC       DATE(TRY_TO_TIMESTAMP(created_on, 'yyyy-MM-dd')),
+# MAGIC       DATE(TRY_TO_TIMESTAMP(created_on, 'MM/dd/yyyy')),
+# MAGIC       DATE(TRY_TO_TIMESTAMP(created_on, 'dd/MM/yyyy'))
+# MAGIC     ) AS created_on_date,
+# MAGIC     COALESCE(
+# MAGIC       DATE(TRY_TO_TIMESTAMP(published_on, 'M/d/yyyy h:mm:ss a')),
+# MAGIC       DATE(TRY_TO_TIMESTAMP(published_on, 'MM/dd/yy')),
+# MAGIC       DATE(TRY_TO_TIMESTAMP(published_on, 'dd/MM/yy')),
+# MAGIC       DATE(TRY_TO_TIMESTAMP(published_on, 'yyyy-MM-dd')),
+# MAGIC       DATE(TRY_TO_TIMESTAMP(published_on, 'MM/dd/yyyy')),
+# MAGIC       DATE(TRY_TO_TIMESTAMP(published_on, 'dd/MM/yyyy'))
+# MAGIC     ) AS published_on_date,
 # MAGIC     created_by
 # MAGIC   FROM dedup
 # MAGIC ),
