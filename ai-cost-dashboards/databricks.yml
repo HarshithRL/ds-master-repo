@@ -3,10 +3,19 @@ bundle:
 
 include:
   - resources/dashboards/*.yml
+  - resources/jobs/*.yml
 
 variables:
   catalog:
     description: Unity Catalog catalog that contains the dashboard source data
+  source_table:
+    description: Fully qualified Azure actual-cost source table
+  policy_id:
+    description: Cluster policy used by the enrichment job
+  gold_refresh_enabled:
+    description: Whether this target is allowed to replace its gold cost table
+  refresh_pause_status:
+    description: Databricks schedule pause status for the enrichment job
   warehouse_id:
     description: SQL warehouse ID used by the dashboards
   dashboard_host:
@@ -21,6 +30,10 @@ targets:
       root_path: /Workspace/Users/${workspace.current_user.userName}/${bundle.name}/${bundle.target}
     variables:
       catalog: automation_d
+      source_table: ingestion_azure_p.costs.azure_actual_cost
+      policy_id: 306312B9730019AB
+      gold_refresh_enabled: "false"
+      refresh_pause_status: PAUSED
       warehouse_id: 69ada62b2fb9b9e2
       dashboard_host: adb-7181820732839861.1.azuredatabricks.net
 
@@ -31,6 +44,10 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       catalog: automation_d
+      source_table: ingestion_azure_p.costs.azure_actual_cost
+      policy_id: 306312B9730019AB
+      gold_refresh_enabled: "false"
+      refresh_pause_status: PAUSED
       warehouse_id: 69ada62b2fb9b9e2
       dashboard_host: adb-7181820732839861.1.azuredatabricks.net
     permissions:
@@ -56,6 +73,10 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/A
     variables:
       catalog: automation_a
+      source_table: ingestion_azure_a.costs.azure_actual_cost
+      policy_id: 306312B973005677
+      gold_refresh_enabled: "true"
+      refresh_pause_status: UNPAUSED
       warehouse_id: 0ef3e37fbbd5b772
       dashboard_host: adb-4796304964978539.19.azuredatabricks.net
     permissions:
@@ -75,6 +96,10 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/P
     variables:
       catalog: automation_p
+      source_table: ingestion_azure_p.costs.azure_actual_cost
+      policy_id: 306312B973005150
+      gold_refresh_enabled: "true"
+      refresh_pause_status: UNPAUSED
       warehouse_id: f500d0d670ae024b
       dashboard_host: adb-4844910598668398.18.azuredatabricks.net
     permissions:
