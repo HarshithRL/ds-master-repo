@@ -42,7 +42,25 @@ from its target state, and publishes both dashboards. The shared Azure DevOps
 template must invoke this script instead of only `databricks bundle deploy`;
 deploying a Lakeview draft alone does not refresh its published revision.
 
-This bundle does not own or create source tables. `ai_foundry_costs_enriched` is
-an upstream Azure-cost data product, while the retained `copilot-dashboard`
-bundle owns the Copilot credit metric view. Each target must have those source
-objects and grant dashboard viewers the necessary Unity Catalog access.
+## Azure cost refresh
+
+The bundle owns the `azure_cost_enrichment` job. It verifies the target's fixed
+`bronze` and `gold` schemas, exposes the configured Azure actual-cost source as
+`bronze.azure_actual_cost`, and creates or refreshes the following objects:
+
+- `gold.rg_tag_mapping_v`
+- `gold.ai_foundry_costs_enriched`
+
+It does not create, alter, or drop schemas. The Azure source is supplied
+explicitly per target: D/T use the verified
+`ingestion_azure_p.costs.azure_actual_cost` binding; A/P use their respective
+`ingestion_azure_a` and `ingestion_azure_p` source tables.
+
+D/T deploy a paused, non-writing job to protect the existing
+`automation_d.gold.ai_foundry_costs_enriched` producer. A/P jobs run daily at
+06:00 Europe/Brussels. Run the A/P job manually after deployment and verify its
+preflight checks before relying on the scheduled refresh.
+
+The retained `copilot-dashboard` bundle remains the owner of
+`silver.metric_credit_consumption_v2`. Each target still needs Unity Catalog
+grants for the job identity and dashboard viewers.
