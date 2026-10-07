@@ -1,0 +1,88 @@
+bundle:
+  name: ai-cost-dashboards
+
+include:
+  - resources/dashboards/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog that contains the dashboard source data
+  warehouse_id:
+    description: SQL warehouse ID used by the dashboards
+  dashboard_host:
+    description: Workspace host used in cross-dashboard links
+
+targets:
+  D:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/Users/${workspace.current_user.userName}/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_d
+      warehouse_id: 69ada62b2fb9b9e2
+      dashboard_host: adb-7181820732839861.1.azuredatabricks.net
+
+  T:
+    mode: production
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_d
+      warehouse_id: 69ada62b2fb9b9e2
+      dashboard_host: adb-7181820732839861.1.azuredatabricks.net
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: sahil.ailsingani@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: harshith.raghunath@etexgroup.com
+        level: CAN_MANAGE
+      - service_principal_name: 1ff203aa-a0ad-475e-85aa-4eac5c23bdc7
+        level: CAN_MANAGE
+      - group_name: SEC.RBAC.MDP.DATAAUTOMATION.AUTOMATION.DATAANALYST.DEFAULT
+        level: CAN_MANAGE
+      - group_name: SEC.RBAC.MDP.DATAAUTOMATION.AUTOMATION.DATASCIENTIST.DEFAULT
+        level: CAN_MANAGE
+
+  A:
+    mode: production
+    workspace:
+      host: https://adb-4796304964978539.19.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/A
+    variables:
+      catalog: automation_a
+      warehouse_id: 0ef3e37fbbd5b772
+      dashboard_host: adb-4796304964978539.19.azuredatabricks.net
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: sahil.ailsingani@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: harshith.raghunath@etexgroup.com
+        level: CAN_MANAGE
+
+  P:
+    mode: production
+    workspace:
+      host: https://adb-4844910598668398.18.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/P
+    variables:
+      catalog: automation_p
+      warehouse_id: f500d0d670ae024b
+      dashboard_host: adb-4844910598668398.18.azuredatabricks.net
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: sahil.ailsingani@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: harshith.raghunath@etexgroup.com
+        level: CAN_MANAGE
