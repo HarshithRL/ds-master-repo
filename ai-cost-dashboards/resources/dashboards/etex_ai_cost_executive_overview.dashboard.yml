@@ -49,27 +49,27 @@ resources:
                   },
                   {
                     "name": "selected_month_eur",
-                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(CASE WHEN is_closed_month THEN total_eur END, cost_month), MAX_BY(CASE WHEN is_closed_month AND is_invoiced THEN component_eur END, cost_month))"
+                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(total_eur, cost_month), MAX_BY(CASE WHEN is_invoiced THEN component_eur END, cost_month))"
                   },
                   {
                     "name": "selected_mom_pct",
-                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(CASE WHEN is_closed_month THEN change_pct END, cost_month), MAX_BY(CASE WHEN is_closed_month AND is_invoiced THEN component_change_pct END, cost_month))"
+                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(change_pct, cost_month), MAX_BY(CASE WHEN is_invoiced THEN component_change_pct END, cost_month))"
                   },
                   {
                     "name": "selected_ytd_eur",
-                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(CASE WHEN is_closed_month THEN total_ytd_eur END, cost_month), MAX_BY(CASE WHEN is_closed_month AND is_invoiced THEN component_ytd_eur END, cost_month))"
+                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(total_ytd_eur, cost_month), MAX_BY(CASE WHEN is_invoiced THEN component_ytd_eur END, cost_month))"
                   },
                   {
                     "name": "selected_previous_eur",
-                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(CASE WHEN is_closed_month THEN previous_eur END, cost_month), MAX_BY(CASE WHEN is_closed_month AND is_invoiced THEN component_previous_eur END, cost_month))"
+                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(previous_eur, cost_month), MAX_BY(CASE WHEN is_invoiced THEN component_previous_eur END, cost_month))"
                   },
                   {
                     "name": "latest_component_eur",
-                    "expr": "MAX_BY(CASE WHEN is_closed_month THEN component_eur END, cost_month)"
+                    "expr": "MAX_BY(component_eur, cost_month)"
                   },
                   {
                     "name": "latest_component_change_eur",
-                    "expr": "MAX_BY(CASE WHEN is_closed_month THEN component_eur - component_previous_eur END, cost_month)"
+                    "expr": "MAX_BY(component_eur - component_previous_eur, cost_month)"
                   }
                 ]
               }
@@ -591,7 +591,53 @@ resources:
                   "position": {
                     "x": 0,
                     "y": 5,
-                    "width": 12,
+                    "width": 9,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "closed_month_filter",
+                    "queries": [
+                      {
+                        "name": "closed_month_filter_cost_month",
+                        "query": {
+                          "datasetName": "azure_monthly_cost",
+                          "fields": [
+                            {
+                              "name": "cost_month",
+                              "expression": "`cost_month`"
+                            },
+                            {
+                              "name": "cost_month_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "widgetType": "filter-multi-select",
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Month"
+                      },
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "cost_month",
+                            "queryName": "closed_month_filter_cost_month"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 9,
+                    "y": 5,
+                    "width": 3,
                     "height": 1
                   }
                 },

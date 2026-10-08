@@ -109,6 +109,16 @@ targets:
         level: CAN_MANAGE
       - user_name: harshith.raghunath@etexgroup.com
         level: CAN_MANAGE
+    resources:
+      dashboards:
+        etex_ai_cost_executive_overview:
+          permissions:
+            - group_name: AUTOMATION.AICOSTDASHBOARDS.CONSUMER.WRITE
+              level: CAN_READ
+        azure_cost_detail:
+          permissions:
+            - group_name: AUTOMATION.AICOSTDASHBOARDS.CONSUMER.WRITE
+              level: CAN_READ
 
   P:
     mode: production
