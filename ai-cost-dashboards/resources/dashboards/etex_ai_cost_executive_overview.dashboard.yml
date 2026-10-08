@@ -11,7 +11,7 @@ resources:
               "catalog": "${var.catalog}",
               "config": {
                 "version": "1.1",
-                "source": "WITH billed AS (SELECT DATE_TRUNC('MONTH', cost_date) AS cost_month, CASE WHEN ai_capability = 'Copilot Studio' THEN 'Copilot Studio (Azure invoice)' WHEN cost_domain = 'Databricks' THEN 'Databricks AI' WHEN cost_domain = 'AI Foundry' AND LOWER(TRIM(spoke)) IN ('automation', 'intelligent automation') THEN 'EtexMate' WHEN cost_domain = 'AI Foundry' THEN 'Azure AI Foundry' WHEN ai_capability = 'GitHub Copilot' THEN 'GitHub Copilot' ELSE 'Other AI invoice' END AS cost_driver, cost_eur FROM ${var.catalog}.gold.ai_foundry_costs_enriched WHERE is_ai = TRUE AND cost_date >= DATE_TRUNC('YEAR', ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -12)) AND cost_date < DATE_TRUNC('MONTH', CURRENT_DATE())), components AS (SELECT cost_month, cost_driver, SUM(cost_eur) AS cost_eur FROM billed GROUP BY 1, 2), monthly AS (SELECT cost_month, SUM(cost_eur) AS total_eur FROM components GROUP BY 1), comparison AS (SELECT m.cost_month, m.total_eur, p.total_eur AS previous_eur, SUM(m.total_eur) OVER (PARTITION BY YEAR(m.cost_month) ORDER BY m.cost_month) AS total_ytd_eur FROM monthly m LEFT JOIN monthly p ON p.cost_month = ADD_MONTHS(m.cost_month, -1)), component_ytd AS (SELECT cost_month, cost_driver, cost_eur, SUM(cost_eur) OVER (PARTITION BY cost_driver, YEAR(cost_month) ORDER BY cost_month) AS component_ytd_eur FROM components) SELECT c.cost_month, c.cost_driver, c.cost_eur, ROUND(m.total_eur, 2) AS total_eur, ROUND(m.previous_eur, 2) AS previous_eur, ROUND(m.total_ytd_eur, 2) AS total_ytd_eur, ROUND(COALESCE(p.cost_eur, 0), 2) AS component_previous_eur, ROUND(c.component_ytd_eur, 2) AS component_ytd_eur, ROUND(100.0 * (c.cost_eur - COALESCE(p.cost_eur, 0)) / NULLIF(p.cost_eur, 0), 1) AS component_change_pct, ROUND(100.0 * (m.total_eur - m.previous_eur) / NULLIF(m.previous_eur, 0), 1) AS change_pct FROM component_ytd c JOIN comparison m ON c.cost_month = m.cost_month LEFT JOIN components p ON p.cost_driver = c.cost_driver AND p.cost_month = ADD_MONTHS(c.cost_month, -1) WHERE c.cost_month >= ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -12)",
+                "source": "WITH billed AS (SELECT DATE_TRUNC('MONTH', cost_date) AS cost_month, CASE WHEN ai_capability = 'Copilot Studio' THEN 'Copilot Studio (Azure invoice)' WHEN cost_domain = 'Databricks' THEN 'Databricks AI' WHEN cost_domain = 'AI Foundry' THEN 'Azure AI Foundry' WHEN ai_capability = 'GitHub Copilot' THEN 'GitHub Copilot' ELSE 'Other AI invoice' END AS cost_driver, cost_eur FROM ${var.catalog}.gold.ai_foundry_costs_enriched WHERE is_ai = TRUE AND cost_date >= DATE_TRUNC('YEAR', ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -12)) AND cost_date < DATE_TRUNC('MONTH', CURRENT_DATE())), components AS (SELECT cost_month, cost_driver, SUM(cost_eur) AS cost_eur FROM billed GROUP BY 1, 2), monthly AS (SELECT cost_month, SUM(cost_eur) AS total_eur FROM components GROUP BY 1), comparison AS (SELECT m.cost_month, m.total_eur, p.total_eur AS previous_eur, SUM(m.total_eur) OVER (PARTITION BY YEAR(m.cost_month) ORDER BY m.cost_month) AS total_ytd_eur FROM monthly m LEFT JOIN monthly p ON p.cost_month = ADD_MONTHS(m.cost_month, -1)), component_ytd AS (SELECT cost_month, cost_driver, cost_eur, SUM(cost_eur) OVER (PARTITION BY cost_driver, YEAR(cost_month) ORDER BY cost_month) AS component_ytd_eur FROM components) SELECT c.cost_month, c.cost_driver, c.cost_eur, ROUND(m.total_eur, 2) AS total_eur, ROUND(m.previous_eur, 2) AS previous_eur, ROUND(m.total_ytd_eur, 2) AS total_ytd_eur, ROUND(COALESCE(p.cost_eur, 0), 2) AS component_previous_eur, ROUND(c.component_ytd_eur, 2) AS component_ytd_eur, ROUND(100.0 * (c.cost_eur - COALESCE(p.cost_eur, 0)) / NULLIF(p.cost_eur, 0), 1) AS component_change_pct, ROUND(100.0 * (m.total_eur - m.previous_eur) / NULLIF(m.previous_eur, 0), 1) AS change_pct FROM component_ytd c JOIN comparison m ON c.cost_month = m.cost_month LEFT JOIN components p ON p.cost_driver = c.cost_driver AND p.cost_month = ADD_MONTHS(c.cost_month, -1) WHERE c.cost_month >= ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -12)",
                 "dimensions": [
                   {
                     "name": "cost_month",
@@ -55,12 +55,37 @@ resources:
               }
             },
             {
+              "name": "monthly_ai_components_with_credits",
+              "displayName": "Monthly AI Invoice and Copilot Credit Equivalent by Component",
+              "catalog": "${var.catalog}",
+              "config": {
+                "version": "1.1",
+                "source": "WITH invoice_components AS (SELECT DATE_TRUNC('MONTH', cost_date) AS cost_month, CASE WHEN ai_capability = 'Copilot Studio' THEN 'Copilot Studio (Azure invoice)' WHEN cost_domain = 'Databricks' THEN 'Databricks AI' WHEN cost_domain = 'AI Foundry' THEN 'Azure AI Foundry' WHEN ai_capability = 'GitHub Copilot' THEN 'GitHub Copilot' ELSE 'Other AI invoice' END AS cost_driver, cost_eur FROM ${var.catalog}.gold.ai_foundry_costs_enriched WHERE is_ai = TRUE AND cost_date >= DATE_TRUNC('YEAR', ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -12)) AND cost_date < DATE_TRUNC('MONTH', CURRENT_DATE())), credit_equivalents AS (SELECT CASE WHEN period_start_date < DATE '2026-06-01' THEN DATE '2026-06-01' ELSE CAST(DATE_TRUNC('MONTH', period_start_date) AS DATE) END AS cost_month, 'Copilot Studio (credit equivalent; not invoiced)' AS cost_driver, total_cost_eur AS cost_eur FROM ${var.catalog}.gold.copilot_credit_historical_periods) SELECT * FROM invoice_components UNION ALL SELECT * FROM credit_equivalents",
+                "dimensions": [
+                  {
+                    "name": "cost_month",
+                    "expr": "cost_month"
+                  },
+                  {
+                    "name": "cost_driver",
+                    "expr": "cost_driver"
+                  }
+                ],
+                "measures": [
+                  {
+                    "name": "total_cost_eur",
+                    "expr": "SUM(cost_eur)"
+                  }
+                ]
+              }
+            },
+            {
               "name": "azure_cumulative_cost",
               "displayName": "Azure AI Invoice by Day and Component",
               "catalog": "${var.catalog}",
               "config": {
                 "version": "1.1",
-                "source": "SELECT CAST(cost_date AS DATE) AS cost_date, CASE WHEN ai_capability = 'Copilot Studio' THEN 'Copilot Studio (Azure invoice)' WHEN cost_domain = 'Databricks' THEN 'Databricks AI' WHEN cost_domain = 'AI Foundry' AND LOWER(TRIM(spoke)) IN ('automation', 'intelligent automation') THEN 'EtexMate' WHEN cost_domain = 'AI Foundry' THEN 'Azure AI Foundry' WHEN ai_capability = 'GitHub Copilot' THEN 'GitHub Copilot' ELSE 'Other AI invoice' END AS cost_driver, SUM(cost_eur) AS cost_eur FROM ${var.catalog}.gold.ai_foundry_costs_enriched WHERE is_ai = TRUE AND cost_date <= CURRENT_DATE() GROUP BY 1, 2",
+                "source": "SELECT CAST(cost_date AS DATE) AS cost_date, CASE WHEN ai_capability = 'Copilot Studio' THEN 'Copilot Studio (Azure invoice)' WHEN cost_domain = 'Databricks' THEN 'Databricks AI' WHEN cost_domain = 'AI Foundry' THEN 'Azure AI Foundry' WHEN ai_capability = 'GitHub Copilot' THEN 'GitHub Copilot' ELSE 'Other AI invoice' END AS cost_driver, SUM(cost_eur) AS cost_eur FROM ${var.catalog}.gold.ai_foundry_costs_enriched WHERE is_ai = TRUE AND cost_date <= CURRENT_DATE() GROUP BY 1, 2",
                 "dimensions": [
                   {
                     "name": "cost_date",
@@ -80,12 +105,86 @@ resources:
               }
             },
             {
-              "name": "cost_movements",
-              "displayName": "AI Invoice Components and Studio Credit Context",
+              "name": "etexmate_cumulative_cost",
+              "displayName": "EtexMate Invoice by Day",
               "catalog": "${var.catalog}",
               "config": {
                 "version": "1.1",
-                "source": "WITH classified AS (SELECT CASE WHEN ai_capability = 'Copilot Studio' THEN 'Copilot Studio (Azure invoice)' WHEN cost_domain = 'Databricks' THEN 'Databricks AI' WHEN cost_domain = 'AI Foundry' AND LOWER(TRIM(spoke)) IN ('automation', 'intelligent automation') THEN 'EtexMate' WHEN cost_domain = 'AI Foundry' THEN 'Azure AI Foundry' WHEN ai_capability = 'GitHub Copilot' THEN 'GitHub Copilot' ELSE 'Other AI invoice' END AS cost_driver, cost_date, cost_eur FROM ${var.catalog}.gold.ai_foundry_costs_enriched WHERE cost_date >= ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -2) AND cost_date < DATE_TRUNC('MONTH', CURRENT_DATE()) AND is_ai = TRUE) SELECT cost_driver, 'Closed-month Azure invoice' AS cost_basis, ROUND(SUM(CASE WHEN cost_date >= ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -1) THEN cost_eur ELSE 0 END), 2) AS amount_eur, ROUND(SUM(CASE WHEN cost_date >= ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -1) THEN cost_eur ELSE -cost_eur END), 2) AS change_eur FROM classified GROUP BY cost_driver UNION ALL SELECT 'Copilot Studio (credit equivalent)' AS cost_driver, 'Cumulative credits (not invoiced)' AS cost_basis, ROUND(MEASURE(total_consumption_cost_eur), 2) AS amount_eur, CAST(NULL AS DOUBLE) AS change_eur FROM ${var.catalog}.silver.metric_credit_consumption_v2 WHERE agent_category = 'Copilot Studio'",
+                "source": "SELECT CAST(cost_date AS DATE) AS cost_date, 'EtexMate' AS cost_driver, SUM(cost_eur) AS cost_eur FROM ${var.catalog}.gold.ai_foundry_costs_enriched WHERE is_ai = TRUE AND cost_domain = 'AI Foundry' AND LOWER(TRIM(spoke)) IN ('automation', 'intelligent automation') AND cost_date <= CURRENT_DATE() GROUP BY 1, 2",
+                "dimensions": [
+                  {
+                    "name": "cost_date",
+                    "expr": "cost_date"
+                  },
+                  {
+                    "name": "cost_driver",
+                    "expr": "cost_driver"
+                  }
+                ],
+                "measures": [
+                  {
+                    "name": "total_cost_eur",
+                    "expr": "SUM(cost_eur)"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "etexmate_monthly_cost",
+              "displayName": "EtexMate Monthly Cost",
+              "catalog": "${var.catalog}",
+              "config": {
+                "version": "1.1",
+                "source": "WITH billed AS (SELECT DATE_TRUNC('MONTH', cost_date) AS cost_month, 'EtexMate' AS cost_driver, cost_eur FROM ${var.catalog}.gold.ai_foundry_costs_enriched WHERE is_ai = TRUE AND cost_domain = 'AI Foundry' AND LOWER(TRIM(spoke)) IN ('automation', 'intelligent automation') AND cost_date >= DATE_TRUNC('YEAR', ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -12)) AND cost_date < DATE_TRUNC('MONTH', CURRENT_DATE())), components AS (SELECT cost_month, cost_driver, SUM(cost_eur) AS cost_eur FROM billed GROUP BY 1, 2), monthly AS (SELECT cost_month, SUM(cost_eur) AS total_eur FROM components GROUP BY 1), comparison AS (SELECT m.cost_month, m.total_eur, p.total_eur AS previous_eur, SUM(m.total_eur) OVER (PARTITION BY YEAR(m.cost_month) ORDER BY m.cost_month) AS total_ytd_eur FROM monthly m LEFT JOIN monthly p ON p.cost_month = ADD_MONTHS(m.cost_month, -1)), component_ytd AS (SELECT cost_month, cost_driver, cost_eur, SUM(cost_eur) OVER (PARTITION BY cost_driver, YEAR(cost_month) ORDER BY cost_month) AS component_ytd_eur FROM components) SELECT c.cost_month, c.cost_driver, c.cost_eur, ROUND(m.total_eur, 2) AS total_eur, ROUND(m.previous_eur, 2) AS previous_eur, ROUND(m.total_ytd_eur, 2) AS total_ytd_eur, ROUND(COALESCE(p.cost_eur, 0), 2) AS component_previous_eur, ROUND(c.component_ytd_eur, 2) AS component_ytd_eur, ROUND(100.0 * (c.cost_eur - COALESCE(p.cost_eur, 0)) / NULLIF(p.cost_eur, 0), 1) AS component_change_pct, ROUND(100.0 * (m.total_eur - m.previous_eur) / NULLIF(m.previous_eur, 0), 1) AS change_pct FROM component_ytd c JOIN comparison m ON c.cost_month = m.cost_month LEFT JOIN components p ON p.cost_driver = c.cost_driver AND p.cost_month = ADD_MONTHS(c.cost_month, -1) WHERE c.cost_month >= ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -12)",
+                "dimensions": [
+                  {
+                    "name": "cost_month",
+                    "expr": "cost_month"
+                  },
+                  {
+                    "name": "cost_driver",
+                    "expr": "cost_driver"
+                  }
+                ],
+                "measures": [
+                  {
+                    "name": "total_cost_eur",
+                    "expr": "SUM(cost_eur)"
+                  },
+                  {
+                    "name": "monthly_total_eur",
+                    "expr": "MAX(total_eur)"
+                  },
+                  {
+                    "name": "change_pct",
+                    "expr": "MAX(change_pct)"
+                  },
+                  {
+                    "name": "selected_month_eur",
+                    "expr": "MAX_BY(cost_eur, cost_month)"
+                  },
+                  {
+                    "name": "selected_mom_pct",
+                    "expr": "MAX_BY(component_change_pct, cost_month)"
+                  },
+                  {
+                    "name": "selected_ytd_eur",
+                    "expr": "MAX_BY(component_ytd_eur, cost_month)"
+                  },
+                  {
+                    "name": "selected_previous_eur",
+                    "expr": "MAX_BY(component_previous_eur, cost_month)"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "etexmate_cost_movements",
+              "displayName": "EtexMate Invoice Context",
+              "catalog": "${var.catalog}",
+              "config": {
+                "version": "1.1",
+                "source": "WITH invoice AS (SELECT cost_date, cost_eur FROM ${var.catalog}.gold.ai_foundry_costs_enriched WHERE cost_date >= ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -2) AND cost_date < DATE_TRUNC('MONTH', CURRENT_DATE()) AND is_ai = TRUE AND cost_domain = 'AI Foundry' AND LOWER(TRIM(spoke)) IN ('automation', 'intelligent automation')) SELECT 'EtexMate' AS cost_driver, 'Closed-month Azure invoice' AS cost_basis, ROUND(SUM(CASE WHEN cost_date >= ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -1) THEN cost_eur ELSE 0 END), 2) AS amount_eur, ROUND(SUM(CASE WHEN cost_date >= ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -1) THEN cost_eur ELSE -cost_eur END), 2) AS change_eur FROM invoice",
                 "dimensions": [
                   {
                     "name": "cost_driver",
@@ -94,6 +193,113 @@ resources:
                   {
                     "name": "cost_basis",
                     "expr": "cost_basis"
+                  }
+                ],
+                "measures": [
+                  {
+                    "name": "amount_eur",
+                    "expr": "MAX(amount_eur)"
+                  },
+                  {
+                    "name": "change_eur",
+                    "expr": "MAX(change_eur)"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "copilot_credit_historical",
+              "displayName": "Copilot Credit Historical Periods",
+              "catalog": "${var.catalog}",
+              "config": {
+                "version": "1.1",
+                "source": "SELECT period_label, period_start_date, period_end_date, period_days, CASE WHEN period_start_date < DATE '2026-06-01' THEN 'Jun 2026 and earlier' ELSE DATE_FORMAT(CAST(DATE_TRUNC('MONTH', period_start_date) AS DATE), 'MMM yyyy') END AS reporting_period, total_credits, total_cost_eur FROM ${var.catalog}.gold.copilot_credit_historical_periods",
+                "dimensions": [
+                  {
+                    "name": "period_label",
+                    "expr": "period_label"
+                  },
+                  {
+                    "name": "reporting_period",
+                    "expr": "reporting_period"
+                  },
+                  {
+                    "name": "period_start_date",
+                    "expr": "period_start_date"
+                  },
+                  {
+                    "name": "period_end_date",
+                    "expr": "period_end_date"
+                  },
+                  {
+                    "name": "period_days",
+                    "expr": "period_days"
+                  }
+                ],
+                "measures": [
+                  {
+                    "name": "total_credits",
+                    "expr": "SUM(total_credits)"
+                  },
+                  {
+                    "name": "total_cost_eur",
+                    "expr": "SUM(total_cost_eur)"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "copilot_credit_live",
+              "displayName": "Copilot Credit Live Rolling Snapshots",
+              "catalog": "${var.catalog}",
+              "config": {
+                "version": "1.1",
+                "source": "SELECT snapshot_date, total_credits, total_cost_eur FROM ${var.catalog}.gold.copilot_credit_live_snapshots",
+                "dimensions": [
+                  {
+                    "name": "snapshot_date",
+                    "expr": "snapshot_date"
+                  }
+                ],
+                "measures": [
+                  {
+                    "name": "total_credits",
+                    "expr": "SUM(total_credits)"
+                  },
+                  {
+                    "name": "total_cost_eur",
+                    "expr": "SUM(total_cost_eur)"
+                  },
+                  {
+                    "name": "latest_rolling_30d_credits",
+                    "expr": "MAX_BY(total_credits, snapshot_date)"
+                  },
+                  {
+                    "name": "latest_rolling_30d_cost_eur",
+                    "expr": "MAX_BY(total_cost_eur, snapshot_date)"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "cost_movements",
+              "displayName": "AI Invoice Components and Studio Credit Context",
+              "catalog": "${var.catalog}",
+              "config": {
+                "version": "1.1",
+                "source": "WITH classified AS (SELECT CASE WHEN ai_capability = 'Copilot Studio' THEN 'Copilot Studio (Azure invoice)' WHEN cost_domain = 'Databricks' THEN 'Databricks AI' WHEN cost_domain = 'AI Foundry' THEN 'Azure AI Foundry' WHEN ai_capability = 'GitHub Copilot' THEN 'GitHub Copilot' ELSE 'Other AI invoice' END AS cost_driver, cost_date, cost_eur FROM ${var.catalog}.gold.ai_foundry_costs_enriched WHERE cost_date >= ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -2) AND cost_date < DATE_TRUNC('MONTH', CURRENT_DATE()) AND is_ai = TRUE), invoice_rows AS (SELECT cost_driver, 'Closed-month Azure invoice' AS cost_basis, ROUND(SUM(CASE WHEN cost_date >= ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -1) THEN cost_eur ELSE 0 END), 2) AS amount_eur, ROUND(SUM(CASE WHEN cost_date >= ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -1) THEN cost_eur ELSE -cost_eur END), 2) AS change_eur, 1 AS row_sort_order FROM classified GROUP BY cost_driver), historical_ranked AS (SELECT period_start_date, total_cost_eur, ROW_NUMBER() OVER (ORDER BY period_start_date DESC) AS historical_rank FROM ${var.catalog}.gold.copilot_credit_historical_periods), credit_row AS (SELECT 'Copilot Studio (credit equivalent)' AS cost_driver, CONCAT('Historical credit equivalent | ', DATE_FORMAT(MAX(CASE WHEN historical_rank = 1 THEN period_start_date END), 'MMM yyyy'), ' vs ', DATE_FORMAT(MAX(CASE WHEN historical_rank = 2 THEN period_start_date END), 'MMM yyyy'), ' (not invoiced)') AS cost_basis, ROUND(MAX(CASE WHEN historical_rank = 1 THEN total_cost_eur END), 2) AS amount_eur, ROUND(MAX(CASE WHEN historical_rank = 1 THEN total_cost_eur END) - MAX(CASE WHEN historical_rank = 2 THEN total_cost_eur END), 2) AS change_eur, 2 AS row_sort_order FROM historical_ranked) SELECT * FROM invoice_rows UNION ALL SELECT * FROM credit_row",
+                "dimensions": [
+                  {
+                    "name": "cost_driver",
+                    "expr": "cost_driver"
+                  },
+                  {
+                    "name": "cost_basis",
+                    "expr": "cost_basis"
+                  },
+                  {
+                    "name": "row_sort_order",
+                    "expr": "row_sort_order"
                   }
                 ],
                 "measures": [
@@ -208,7 +414,7 @@ resources:
                   "position": {
                     "x": 0,
                     "y": 1,
-                    "width": 4,
+                    "width": 3,
                     "height": 4
                   }
                 },
@@ -247,7 +453,7 @@ resources:
                         "showTitle": true,
                         "showDescription": true,
                         "title": "Cumulative AI invoice by component",
-                        "description": "Azure AI billed in the selected period, including the current month to date. Studio credits are not invoiced and are excluded."
+                        "description": "Azure AI billed in the selected period, including the current month to date. EtexMate is included in Azure AI Foundry. Studio credits are not invoiced and are excluded."
                       },
                       "encodings": {
                         "columns": [
@@ -276,9 +482,9 @@ resources:
                     }
                   },
                   "position": {
-                    "x": 4,
+                    "x": 3,
                     "y": 1,
-                    "width": 8,
+                    "width": 9,
                     "height": 4
                   }
                 },
@@ -511,7 +717,7 @@ resources:
                       {
                         "name": "main_query",
                         "query": {
-                          "datasetName": "azure_monthly_cost",
+                          "datasetName": "monthly_ai_components_with_credits",
                           "fields": [
                             {
                               "name": "cost_month",
@@ -537,7 +743,7 @@ resources:
                         "showTitle": true,
                         "showDescription": true,
                         "title": "Monthly AI invoice by component (EUR)",
-                        "description": "Closed-month Azure invoice: Databricks AI, EtexMate, other Azure AI Foundry, GitHub Copilot and Copilot Studio. Stacked height is the billed total; click a segment to inspect that component in the KPI cards."
+                        "description": "Closed-month Azure invoice components plus Copilot Studio credit-equivalent values. The turquoise credit segment is not invoiced and is excluded from all billed KPI totals; do not treat a bar containing it as a billed total."
                       },
                       "encodings": {
                         "x": {
@@ -592,6 +798,10 @@ resources:
                               "expression": "`cost_basis`"
                             },
                             {
+                              "name": "row_sort_order",
+                              "expression": "`row_sort_order`"
+                            },
+                            {
                               "name": "measure(amount_eur)",
                               "expression": "MEASURE(`amount_eur`)"
                             },
@@ -603,11 +813,15 @@ resources:
                           "disaggregated": false,
                           "orders": [
                             {
+                              "direction": "ASC",
+                              "expression": "`row_sort_order`"
+                            },
+                            {
                               "direction": "DESC",
                               "expression": "MEASURE(`amount_eur`)"
                             }
                           ],
-                          "limit": 10
+                          "limit": 15
                         }
                       }
                     ],
@@ -617,8 +831,8 @@ resources:
                       "frame": {
                         "showTitle": true,
                         "showDescription": true,
-                        "title": "AI invoice components & Studio credits",
-                        "description": "Invoice rows are last closed month with MoM change. Copilot Studio credit equivalent is cumulative, not invoiced and not included in the billed total."
+                        "title": "Monthly invoice and Copilot credit detail (EUR)",
+                        "description": "All rows show the latest available month and its EUR change from the prior month. Copilot Studio credit equivalent is not invoiced and is excluded from billed totals."
                       },
                       "encodings": {
                         "columns": [
@@ -667,7 +881,7 @@ resources:
                     "x": 0,
                     "y": 16,
                     "width": 12,
-                    "height": 5
+                    "height": 8
                   }
                 },
                 {
@@ -682,7 +896,7 @@ resources:
                   },
                   "position": {
                     "x": 0,
-                    "y": 21,
+                    "y": 24,
                     "width": 6,
                     "height": 3
                   }
@@ -692,16 +906,580 @@ resources:
                     "name": "copilot_reference",
                     "multilineTextboxSpec": {
                       "lines": [
-                        "**Reference dashboard**\n\n### [Copilot agents & credit usage](https://adb-7181820732839861.1.azuredatabricks.net/dashboardsv3/01f1ab7d65c8195f81a0c625d5f52111/published)\n\nCumulative credits and agent governance."
+                        "**Reference dashboard**\n\n### [Copilot agents & credit usage](${var.copilot_dashboard_url})\n\nCumulative credits and agent governance."
                       ],
                       "verticalAlign": "VERTICAL_ALIGN_CENTER"
                     }
                   },
                   "position": {
                     "x": 6,
-                    "y": 21,
+                    "y": 24,
                     "width": 6,
                     "height": 3
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "etexmate_overview",
+              "displayName": "EtexMate Overview",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "etexmate_cumulative_period",
+                    "queries": [
+                      {
+                        "name": "etexmate_cumulative_period_cost_date",
+                        "query": {
+                          "datasetName": "etexmate_cumulative_cost",
+                          "fields": [
+                            {
+                              "name": "cost_date",
+                              "expression": "`cost_date`"
+                            },
+                            {
+                              "name": "cost_date_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "widgetType": "filter-date-range-picker",
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Period | EtexMate cumulative"
+                      },
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "cost_date",
+                            "queryName": "etexmate_cumulative_period_cost_date"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "etexmate_cumulative_total",
+                    "queries": [
+                      {
+                        "name": "etexmate_main_query",
+                        "query": {
+                          "datasetName": "etexmate_cumulative_cost",
+                          "fields": [
+                            {
+                              "name": "measure(total_cost_eur)",
+                              "expression": "MEASURE(`total_cost_eur`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "widgetType": "counter",
+                      "frame": {
+                        "showTitle": true,
+                        "title": "EtexMate billed | selected period"
+                      },
+                      "encodings": {
+                        "value": {
+                          "fieldName": "measure(total_cost_eur)",
+                          "rowNumber": 0,
+                          "format": {
+                            "type": "number-currency",
+                            "currencyCode": "EUR",
+                            "abbreviation": "none",
+                            "decimalPlaces": {
+                              "type": "exact",
+                              "places": 2
+                            }
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "etexmate_main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 1,
+                    "width": 3,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "etexmate_cumulative_components",
+                    "queries": [
+                      {
+                        "name": "etexmate_main_query",
+                        "query": {
+                          "datasetName": "etexmate_cumulative_cost",
+                          "fields": [
+                            {
+                              "name": "cost_driver",
+                              "expression": "`cost_driver`"
+                            },
+                            {
+                              "name": "measure(total_cost_eur)",
+                              "expression": "MEASURE(`total_cost_eur`)"
+                            }
+                          ],
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "DESC",
+                              "expression": "MEASURE(`total_cost_eur`)"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "widgetType": "table",
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": "Cumulative EtexMate invoice",
+                        "description": "Azure billed in the selected period, including the current month to date, in EUR."
+                      },
+                      "encodings": {
+                        "columns": [
+                          {
+                            "fieldName": "cost_driver",
+                            "displayName": "Component"
+                          },
+                          {
+                            "fieldName": "measure(total_cost_eur)",
+                            "displayName": "Cost (EUR)",
+                            "format": {
+                              "type": "number-currency",
+                              "currencyCode": "EUR",
+                              "abbreviation": "none",
+                              "decimalPlaces": {
+                                "type": "exact",
+                                "places": 2
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "data": {
+                        "queryName": "etexmate_main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 6,
+                    "y": 1,
+                    "width": 6,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "etexmate_monthly_section",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## EtexMate closed-month view"
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 5,
+                    "width": 12,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "etexmate_last_closed_month",
+                    "queries": [
+                      {
+                        "name": "etexmate_main_query",
+                        "query": {
+                          "datasetName": "etexmate_monthly_cost",
+                          "fields": [
+                            {
+                              "name": "measure(selected_month_eur)",
+                              "expression": "MEASURE(`selected_month_eur`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "widgetType": "counter",
+                      "frame": {
+                        "showTitle": true,
+                        "title": "EtexMate billed | selected month"
+                      },
+                      "encodings": {
+                        "value": {
+                          "fieldName": "measure(selected_month_eur)",
+                          "rowNumber": 0,
+                          "format": {
+                            "type": "number-currency",
+                            "currencyCode": "EUR",
+                            "abbreviation": "none",
+                            "decimalPlaces": {
+                              "type": "exact",
+                              "places": 2
+                            }
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "etexmate_main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 6,
+                    "width": 3,
+                    "height": 3
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "etexmate_month_over_month",
+                    "queries": [
+                      {
+                        "name": "etexmate_main_query",
+                        "query": {
+                          "datasetName": "etexmate_monthly_cost",
+                          "fields": [
+                            {
+                              "name": "measure(selected_mom_pct)",
+                              "expression": "MEASURE(`selected_mom_pct`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "widgetType": "counter",
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Month-on-month change (%)"
+                      },
+                      "encodings": {
+                        "value": {
+                          "fieldName": "measure(selected_mom_pct)",
+                          "rowNumber": 0,
+                          "format": {
+                            "type": "number-plain",
+                            "decimalPlaces": {
+                              "type": "exact",
+                              "places": 1
+                            }
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "etexmate_main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 3,
+                    "y": 6,
+                    "width": 3,
+                    "height": 3
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "etexmate_calendar_ytd",
+                    "queries": [
+                      {
+                        "name": "etexmate_main_query",
+                        "query": {
+                          "datasetName": "etexmate_monthly_cost",
+                          "fields": [
+                            {
+                              "name": "measure(selected_ytd_eur)",
+                              "expression": "MEASURE(`selected_ytd_eur`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "widgetType": "counter",
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Calendar YTD | selected period"
+                      },
+                      "encodings": {
+                        "value": {
+                          "fieldName": "measure(selected_ytd_eur)",
+                          "rowNumber": 0,
+                          "format": {
+                            "type": "number-currency",
+                            "currencyCode": "EUR",
+                            "abbreviation": "none",
+                            "decimalPlaces": {
+                              "type": "exact",
+                              "places": 2
+                            }
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "etexmate_main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 9,
+                    "y": 6,
+                    "width": 3,
+                    "height": 3
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "etexmate_previous_period_bill",
+                    "queries": [
+                      {
+                        "name": "etexmate_main_query",
+                        "query": {
+                          "datasetName": "etexmate_monthly_cost",
+                          "fields": [
+                            {
+                              "name": "measure(selected_previous_eur)",
+                              "expression": "MEASURE(`selected_previous_eur`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "widgetType": "counter",
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Previous month | same selection"
+                      },
+                      "encodings": {
+                        "value": {
+                          "fieldName": "measure(selected_previous_eur)",
+                          "rowNumber": 0,
+                          "format": {
+                            "type": "number-currency",
+                            "currencyCode": "EUR",
+                            "abbreviation": "none",
+                            "decimalPlaces": {
+                              "type": "exact",
+                              "places": 2
+                            }
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "etexmate_main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 6,
+                    "y": 6,
+                    "width": 3,
+                    "height": 3
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "etexmate_monthly_azure_trend",
+                    "queries": [
+                      {
+                        "name": "etexmate_main_query",
+                        "query": {
+                          "datasetName": "etexmate_monthly_cost",
+                          "fields": [
+                            {
+                              "name": "cost_month",
+                              "expression": "`cost_month`"
+                            },
+                            {
+                              "name": "cost_driver",
+                              "expression": "`cost_driver`"
+                            },
+                            {
+                              "name": "measure(total_cost_eur)",
+                              "expression": "MEASURE(`total_cost_eur`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 3,
+                      "widgetType": "bar",
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": "Monthly EtexMate invoice (EUR)",
+                        "description": "Closed-month Azure invoice for EtexMate only."
+                      },
+                      "encodings": {
+                        "x": {
+                          "fieldName": "cost_month",
+                          "displayName": "Month",
+                          "scale": {
+                            "type": "temporal"
+                          }
+                        },
+                        "y": {
+                          "fieldName": "measure(total_cost_eur)",
+                          "displayName": "Cost (EUR)",
+                          "scale": {
+                            "type": "quantitative"
+                          }
+                        },
+                        "color": {
+                          "fieldName": "cost_driver",
+                          "displayName": "AI component",
+                          "scale": {
+                            "type": "categorical"
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "etexmate_main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 9,
+                    "width": 12,
+                    "height": 7
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "etexmate_last_month_ai_components",
+                    "queries": [
+                      {
+                        "name": "etexmate_main_query",
+                        "query": {
+                          "datasetName": "etexmate_cost_movements",
+                          "fields": [
+                            {
+                              "name": "cost_driver",
+                              "expression": "`cost_driver`"
+                            },
+                            {
+                              "name": "cost_basis",
+                              "expression": "`cost_basis`"
+                            },
+                            {
+                              "name": "measure(amount_eur)",
+                              "expression": "MEASURE(`amount_eur`)"
+                            },
+                            {
+                              "name": "measure(change_eur)",
+                              "expression": "MEASURE(`change_eur`)"
+                            }
+                          ],
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "DESC",
+                              "expression": "MEASURE(`amount_eur`)"
+                            }
+                          ],
+                          "limit": 10
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "widgetType": "table",
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": "EtexMate invoice context",
+                        "description": "Last closed-month EtexMate invoice with month-on-month change in EUR."
+                      },
+                      "encodings": {
+                        "columns": [
+                          {
+                            "fieldName": "cost_driver",
+                            "displayName": "Component"
+                          },
+                          {
+                            "fieldName": "cost_basis",
+                            "displayName": "Basis"
+                          },
+                          {
+                            "fieldName": "measure(amount_eur)",
+                            "displayName": "Amount (EUR)",
+                            "format": {
+                              "type": "number-currency",
+                              "currencyCode": "EUR",
+                              "abbreviation": "none",
+                              "decimalPlaces": {
+                                "type": "exact",
+                                "places": 2
+                              }
+                            }
+                          },
+                          {
+                            "fieldName": "measure(change_eur)",
+                            "displayName": "MoM (EUR)",
+                            "format": {
+                              "type": "number-currency",
+                              "currencyCode": "EUR",
+                              "abbreviation": "none",
+                              "decimalPlaces": {
+                                "type": "exact",
+                                "places": 2
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "data": {
+                        "queryName": "etexmate_main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 16,
+                    "width": 12,
+                    "height": 5
                   }
                 }
               ],
@@ -732,4 +1510,5 @@ resources:
             "applyModeEnabled": false
           }
         }
+
       warehouse_id: ${var.warehouse_id}
