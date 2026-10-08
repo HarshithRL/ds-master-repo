@@ -1,0 +1,13 @@
+{
+  "total_projects": 4348,
+  "llm_calls": 50,
+  "matched": 0,
+  "partial": 33,
+  "new_candidates": 4088,
+  "uncertain": 227,
+  "run_utc": "20260928T151545Z",
+  "model_endpoint": "databricks-gpt-5-4-mini",
+  "salesforce_subtype": "Oil&Gas",
+  "input_opportunities": 1141,
+  "policy": "LLM proposals require human review; New is not proof of absence"
+}

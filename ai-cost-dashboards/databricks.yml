@@ -1,0 +1,137 @@
+bundle:
+  name: ai-cost-dashboards
+
+include:
+  - resources/dashboards/*.yml
+  - resources/jobs/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog that contains the dashboard source data
+  credit_metric_view:
+    description: Copilot metric view that supplies cumulative Studio credit-equivalent cost
+  source_table:
+    description: Fully qualified Azure actual-cost source table
+  policy_id:
+    description: Cluster policy used by the enrichment job
+  gold_refresh_enabled:
+    description: Whether this target is allowed to replace its gold cost table
+  refresh_pause_status:
+    description: Databricks schedule pause status for the enrichment job
+  warehouse_id:
+    description: SQL warehouse ID used by the dashboards
+  dashboard_host:
+    description: Workspace host used in cross-dashboard links
+  copilot_dashboard_url:
+    description: Published Copilot dashboard URL for the deployment target
+    default: https://adb-7181820732839861.1.azuredatabricks.net/dashboardsv3/01f1ab7d65c8195f81a0c625d5f52111/published
+  copilot_credit_history_as_of_date:
+    description: As-of date represented by the one-time historical Copilot credit extracts
+  copilot_credit_refresh_pause_status:
+    description: Databricks schedule pause status for the Executive-only Copilot credit refresh job
+
+targets:
+  D:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/Users/${workspace.current_user.userName}/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_d
+      credit_metric_view: metric_credit_consumption_v2
+      source_table: ingestion_azure_p.costs.azure_actual_cost
+      policy_id: 306312B9730019AB
+      gold_refresh_enabled: "false"
+      refresh_pause_status: PAUSED
+      warehouse_id: 69ada62b2fb9b9e2
+      dashboard_host: adb-7181820732839861.1.azuredatabricks.net
+      copilot_credit_history_as_of_date: "2026-10-08"
+      copilot_credit_refresh_pause_status: UNPAUSED
+
+  T:
+    mode: production
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_d
+      credit_metric_view: metric_credit_consumption_v2
+      source_table: ingestion_azure_p.costs.azure_actual_cost
+      policy_id: 306312B9730019AB
+      gold_refresh_enabled: "false"
+      refresh_pause_status: PAUSED
+      warehouse_id: 69ada62b2fb9b9e2
+      dashboard_host: adb-7181820732839861.1.azuredatabricks.net
+      copilot_credit_history_as_of_date: "2026-10-08"
+      copilot_credit_refresh_pause_status: PAUSED
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: sahil.ailsingani@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: harshith.raghunath@etexgroup.com
+        level: CAN_MANAGE
+      - service_principal_name: 1ff203aa-a0ad-475e-85aa-4eac5c23bdc7
+        level: CAN_MANAGE
+      - group_name: SEC.RBAC.MDP.DATAAUTOMATION.AUTOMATION.DATAANALYST.DEFAULT
+        level: CAN_MANAGE
+      - group_name: SEC.RBAC.MDP.DATAAUTOMATION.AUTOMATION.DATASCIENTIST.DEFAULT
+        level: CAN_MANAGE
+
+  A:
+    mode: production
+    workspace:
+      host: https://adb-4796304964978539.19.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/A
+    variables:
+      catalog: automation_a
+      credit_metric_view: metric_credit_consumption
+      source_table: ingestion_azure_a.costs.azure_actual_cost
+      policy_id: 306312B973005677
+      gold_refresh_enabled: "true"
+      refresh_pause_status: UNPAUSED
+      warehouse_id: 0ef3e37fbbd5b772
+      dashboard_host: adb-4796304964978539.19.azuredatabricks.net
+      copilot_dashboard_url: https://adb-4796304964978539.19.azuredatabricks.net/dashboardsv3/01f1ab7c29e61ceb9ffe27b87bdd6948/published
+      copilot_credit_history_as_of_date: "2026-10-08"
+      copilot_credit_refresh_pause_status: UNPAUSED
+    permissions:
+      - service_principal_name: 9e7c67eb-3d7a-4b0a-8338-f2ecc4d386e8
+        level: CAN_MANAGE
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: sahil.ailsingani@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: harshith.raghunath@etexgroup.com
+        level: CAN_MANAGE
+
+  P:
+    mode: production
+    workspace:
+      host: https://adb-4844910598668398.18.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/P
+    variables:
+      catalog: automation_p
+      credit_metric_view: metric_credit_consumption
+      source_table: ingestion_azure_p.costs.azure_actual_cost
+      policy_id: 306312B973005150
+      gold_refresh_enabled: "true"
+      refresh_pause_status: UNPAUSED
+      warehouse_id: f500d0d670ae024b
+      dashboard_host: adb-4844910598668398.18.azuredatabricks.net
+      copilot_credit_history_as_of_date: "2026-10-08"
+      copilot_credit_refresh_pause_status: UNPAUSED
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: sahil.ailsingani@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: harshith.raghunath@etexgroup.com
+        level: CAN_MANAGE

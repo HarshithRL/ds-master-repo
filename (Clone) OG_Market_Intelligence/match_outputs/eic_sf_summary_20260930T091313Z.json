@@ -1,0 +1,30 @@
+{
+  "total_projects": 4350,
+  "llm_calls": 300,
+  "reused_projects": 3915,
+  "reused_pairs": 100,
+  "evaluated_projects": 435,
+  "candidate_projects": 465,
+  "candidate_pairs": 2042,
+  "completed_pairs": 400,
+  "pending_pairs": 1637,
+  "projects_without_candidates": 3885,
+  "llm_errors": 0,
+  "matched": 4,
+  "partial": 35,
+  "new_candidates": 3897,
+  "uncertain": 414,
+  "possible_pairs": 5263500,
+  "screened_pairs": 26570,
+  "changed_eic_projects": 4,
+  "changed_salesforce_opportunities": 5,
+  "priority_candidate_pairs": 7,
+  "run_utc": "20260930T091313Z",
+  "model_endpoint": "databricks-gpt-5-4-mini",
+  "salesforce_subtypes": {
+    "Oil&Gas": 1142,
+    "Gas": 68
+  },
+  "input_opportunities": 1210,
+  "policy": "LLM proposals require human review; New is not proof of absence"
+}
