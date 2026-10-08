@@ -96,8 +96,8 @@ resources:
                     }
                   },
                   {
-                    "name": "databricks_cost_eur",
-                    "expr": "SUM(CASE WHEN cost_domain = 'Databricks' THEN cost_eur ELSE 0 END)",
+                    "name": "databricks_ai_cost_eur",
+                    "expr": "SUM(CASE WHEN cost_domain = 'Databricks' AND is_ai THEN cost_eur ELSE 0 END)",
                     "format": {
                       "type": "currency",
                       "currencyCode": "EUR",
@@ -717,7 +717,7 @@ resources:
                     "expr": "SUM(quantity)"
                   },
                   {
-                    "name": "ai_cost_eur",
+                    "name": "databricks_ai_cost_eur",
                     "expr": "SUM(CASE WHEN is_ai THEN cost_eur ELSE 0 END)",
                     "format": {
                       "type": "currency",
@@ -727,7 +727,20 @@ resources:
                         "places": 2.0
                       }
                     },
-                    "comment": "Model calls billed as DBUs (Claude via Databricks, model serving)"
+                    "comment": "Azure-billed Databricks services classified as AI, including Claude via Databricks and model serving"
+                  },
+                  {
+                    "name": "databricks_infrastructure_cost_eur",
+                    "expr": "SUM(CASE WHEN COALESCE(is_ai, FALSE) = FALSE THEN cost_eur ELSE 0 END)",
+                    "format": {
+                      "type": "currency",
+                      "currencyCode": "EUR",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 2.0
+                      }
+                    },
+                    "comment": "Azure-billed Databricks platform and infrastructure services not classified as AI"
                   }
                 ]
               }
@@ -1200,8 +1213,8 @@ resources:
                           "datasetName": "overview",
                           "fields": [
                             {
-                              "name": "measure(databricks_cost_eur)",
-                              "expression": "MEASURE(`databricks_cost_eur`)"
+                              "name": "measure(databricks_ai_cost_eur)",
+                              "expression": "MEASURE(`databricks_ai_cost_eur`)"
                             }
                           ],
                           "disaggregated": false
@@ -1214,13 +1227,13 @@ resources:
                       "frame": {
                         "showTitle": true,
                         "title": {
-                          "value": "Databricks",
+                          "value": "Databricks AI",
                           "fields": []
                         }
                       },
                       "encodings": {
                         "value": {
-                          "fieldName": "measure(databricks_cost_eur)",
+                          "fieldName": "measure(databricks_ai_cost_eur)",
                           "rowNumber": 0,
                           "format": {
                             "type": "number-currency",
@@ -1256,8 +1269,8 @@ resources:
                               "expression": "DATE_TRUNC(\"MONTH\", `cost_date`)"
                             },
                             {
-                              "name": "measure(total_cost_eur)",
-                              "expression": "MEASURE(`total_cost_eur`)"
+                              "name": "measure(databricks_ai_cost_eur)",
+                              "expression": "MEASURE(`databricks_ai_cost_eur`)"
                             },
                             {
                               "name": "cost_domain",
@@ -3894,8 +3907,8 @@ resources:
                           "datasetName": "databricks_azure",
                           "fields": [
                             {
-                              "name": "measure(total_cost_eur)",
-                              "expression": "MEASURE(`total_cost_eur`)"
+                              "name": "measure(databricks_ai_cost_eur)",
+                              "expression": "MEASURE(`databricks_ai_cost_eur`)"
                             }
                           ],
                           "disaggregated": false
@@ -3908,18 +3921,18 @@ resources:
                       "frame": {
                         "showTitle": true,
                         "title": {
-                          "value": "Azure-billed Databricks Cost (EUR)",
+                          "value": "Databricks AI (EUR)",
                           "fields": []
                         },
                         "showDescription": true,
                         "description": {
-                          "value": "DBUs, classic cluster VMs, networking. Counted only on this tab.",
+                          "value": "Azure-billed Databricks services classified as AI, including Claude via Databricks and model serving.",
                           "fields": []
                         }
                       },
                       "encodings": {
                         "value": {
-                          "fieldName": "measure(total_cost_eur)",
+                          "fieldName": "measure(databricks_ai_cost_eur)",
                           "rowNumber": 0,
                           "format": {
                             "type": "number-currency",
@@ -3951,8 +3964,8 @@ resources:
                           "datasetName": "databricks_azure",
                           "fields": [
                             {
-                              "name": "measure(ai_cost_eur)",
-                              "expression": "MEASURE(`ai_cost_eur`)"
+                              "name": "measure(databricks_infrastructure_cost_eur)",
+                              "expression": "MEASURE(`databricks_infrastructure_cost_eur`)"
                             }
                           ],
                           "disaggregated": false
@@ -3965,18 +3978,18 @@ resources:
                       "frame": {
                         "showTitle": true,
                         "title": {
-                          "value": "of which Model Calls (EUR)",
+                          "value": "Databricks infrastructure (EUR)",
                           "fields": []
                         },
                         "showDescription": true,
                         "description": {
-                          "value": "Claude via Databricks, model serving",
+                          "value": "Azure-billed Databricks platform and infrastructure services not classified as AI.",
                           "fields": []
                         }
                       },
                       "encodings": {
                         "value": {
-                          "fieldName": "measure(ai_cost_eur)",
+                          "fieldName": "measure(databricks_infrastructure_cost_eur)",
                           "rowNumber": 0,
                           "format": {
                             "type": "number-currency",
