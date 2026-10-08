@@ -7,11 +7,11 @@ resources:
           "datasets": [
             {
               "name": "azure_monthly_cost",
-              "displayName": "Azure AI Monthly Cost by Component",
+              "displayName": "Executive AI Components",
               "catalog": "${var.catalog}",
               "config": {
                 "version": "1.1",
-                "source": "WITH billed AS (SELECT DATE_TRUNC('MONTH', cost_date) AS cost_month, CASE WHEN ai_capability = 'Copilot Studio' THEN 'Copilot Studio (Azure invoice)' WHEN cost_domain = 'Databricks' THEN 'Databricks AI' WHEN cost_domain = 'AI Foundry' THEN 'Azure AI Foundry' WHEN ai_capability = 'GitHub Copilot' THEN 'GitHub Copilot' ELSE 'Other AI invoice' END AS cost_driver, cost_eur FROM ${var.catalog}.gold.ai_foundry_costs_enriched WHERE is_ai = TRUE AND cost_date >= DATE_TRUNC('YEAR', ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -12)) AND cost_date < DATE_TRUNC('MONTH', CURRENT_DATE())), components AS (SELECT cost_month, cost_driver, SUM(cost_eur) AS cost_eur FROM billed GROUP BY 1, 2), monthly AS (SELECT cost_month, SUM(cost_eur) AS total_eur FROM components GROUP BY 1), comparison AS (SELECT m.cost_month, m.total_eur, p.total_eur AS previous_eur, SUM(m.total_eur) OVER (PARTITION BY YEAR(m.cost_month) ORDER BY m.cost_month) AS total_ytd_eur FROM monthly m LEFT JOIN monthly p ON p.cost_month = ADD_MONTHS(m.cost_month, -1)), component_ytd AS (SELECT cost_month, cost_driver, cost_eur, SUM(cost_eur) OVER (PARTITION BY cost_driver, YEAR(cost_month) ORDER BY cost_month) AS component_ytd_eur FROM components) SELECT c.cost_month, c.cost_driver, c.cost_eur, ROUND(m.total_eur, 2) AS total_eur, ROUND(m.previous_eur, 2) AS previous_eur, ROUND(m.total_ytd_eur, 2) AS total_ytd_eur, ROUND(COALESCE(p.cost_eur, 0), 2) AS component_previous_eur, ROUND(c.component_ytd_eur, 2) AS component_ytd_eur, ROUND(100.0 * (c.cost_eur - COALESCE(p.cost_eur, 0)) / NULLIF(p.cost_eur, 0), 1) AS component_change_pct, ROUND(100.0 * (m.total_eur - m.previous_eur) / NULLIF(m.previous_eur, 0), 1) AS change_pct FROM component_ytd c JOIN comparison m ON c.cost_month = m.cost_month LEFT JOIN components p ON p.cost_driver = c.cost_driver AND p.cost_month = ADD_MONTHS(c.cost_month, -1) WHERE c.cost_month >= ADD_MONTHS(DATE_TRUNC('MONTH', CURRENT_DATE()), -12)",
+                "source": "WITH invoice_components AS (SELECT DATE_TRUNC('MONTH', cost_date) AS cost_month, CASE WHEN ai_capability = 'Copilot Studio' THEN 'Copilot Studio (Azure invoice)' WHEN cost_domain = 'Databricks' THEN 'Databricks AI' WHEN cost_domain = 'AI Foundry' THEN 'Azure AI Foundry' WHEN ai_capability = 'GitHub Copilot' THEN 'GitHub Copilot' ELSE 'Other AI invoice' END AS cost_driver, 'Azure invoice' AS cost_basis, TRUE AS is_invoiced, SUM(cost_eur) AS cost_eur FROM ${var.catalog}.gold.ai_foundry_costs_enriched WHERE is_ai = TRUE AND cost_date <= CURRENT_DATE() GROUP BY 1, 2), credit_equivalents AS (SELECT CASE WHEN period_start_date < DATE '2026-06-01' THEN DATE '2026-06-01' ELSE CAST(DATE_TRUNC('MONTH', period_start_date) AS DATE) END AS cost_month, 'Copilot Studio (credit equivalent)' AS cost_driver, 'Credit equivalent' AS cost_basis, FALSE AS is_invoiced, total_cost_eur AS cost_eur FROM ${var.catalog}.gold.copilot_credit_historical_periods), components AS (SELECT * FROM invoice_components UNION ALL SELECT * FROM credit_equivalents), invoice_monthly AS (SELECT cost_month, SUM(CASE WHEN is_invoiced THEN cost_eur ELSE 0 END) AS total_eur FROM components GROUP BY 1), invoice_summary AS (SELECT cost_month, total_eur, LAG(total_eur) OVER (ORDER BY cost_month) AS previous_eur, SUM(total_eur) OVER (PARTITION BY YEAR(cost_month) ORDER BY cost_month) AS total_ytd_eur FROM invoice_monthly), component_summary AS (SELECT cost_month, cost_driver, cost_basis, is_invoiced, cost_eur, LAG(cost_eur) OVER (PARTITION BY cost_driver ORDER BY cost_month) AS previous_eur, SUM(CASE WHEN is_invoiced THEN cost_eur ELSE 0 END) OVER (PARTITION BY cost_driver, YEAR(cost_month) ORDER BY cost_month) AS component_ytd_eur FROM components) SELECT c.cost_month, c.cost_driver, c.cost_basis, c.is_invoiced, c.cost_eur, c.cost_month < DATE_TRUNC('MONTH', CURRENT_DATE()) AS is_closed_month, ROUND(m.total_eur, 2) AS total_eur, ROUND(m.previous_eur, 2) AS previous_eur, ROUND(m.total_ytd_eur, 2) AS total_ytd_eur, ROUND(c.cost_eur, 2) AS component_eur, ROUND(COALESCE(c.previous_eur, 0), 2) AS component_previous_eur, ROUND(c.component_ytd_eur, 2) AS component_ytd_eur, ROUND(100.0 * (c.cost_eur - COALESCE(c.previous_eur, 0)) / NULLIF(c.previous_eur, 0), 1) AS component_change_pct, ROUND(100.0 * (m.total_eur - m.previous_eur) / NULLIF(m.previous_eur, 0), 1) AS change_pct FROM component_summary c JOIN invoice_summary m ON c.cost_month = m.cost_month",
                 "dimensions": [
                   {
                     "name": "cost_month",
@@ -20,12 +20,24 @@ resources:
                   {
                     "name": "cost_driver",
                     "expr": "cost_driver"
+                  },
+                  {
+                    "name": "cost_basis",
+                    "expr": "cost_basis"
+                  },
+                  {
+                    "name": "is_invoiced",
+                    "expr": "is_invoiced"
                   }
                 ],
                 "measures": [
                   {
                     "name": "total_cost_eur",
                     "expr": "SUM(cost_eur)"
+                  },
+                  {
+                    "name": "invoice_total_eur",
+                    "expr": "SUM(CASE WHEN is_invoiced THEN cost_eur ELSE 0 END)"
                   },
                   {
                     "name": "monthly_total_eur",
@@ -37,19 +49,27 @@ resources:
                   },
                   {
                     "name": "selected_month_eur",
-                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(total_eur, cost_month), MAX_BY(cost_eur, cost_month))"
+                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(CASE WHEN is_closed_month THEN total_eur END, cost_month), MAX_BY(CASE WHEN is_closed_month AND is_invoiced THEN component_eur END, cost_month))"
                   },
                   {
                     "name": "selected_mom_pct",
-                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(change_pct, cost_month), MAX_BY(component_change_pct, cost_month))"
+                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(CASE WHEN is_closed_month THEN change_pct END, cost_month), MAX_BY(CASE WHEN is_closed_month AND is_invoiced THEN component_change_pct END, cost_month))"
                   },
                   {
                     "name": "selected_ytd_eur",
-                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(total_ytd_eur, cost_month), MAX_BY(component_ytd_eur, cost_month))"
+                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(CASE WHEN is_closed_month THEN total_ytd_eur END, cost_month), MAX_BY(CASE WHEN is_closed_month AND is_invoiced THEN component_ytd_eur END, cost_month))"
                   },
                   {
                     "name": "selected_previous_eur",
-                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(previous_eur, cost_month), MAX_BY(component_previous_eur, cost_month))"
+                    "expr": "IF(COUNT(DISTINCT cost_driver) > 1, MAX_BY(CASE WHEN is_closed_month THEN previous_eur END, cost_month), MAX_BY(CASE WHEN is_closed_month AND is_invoiced THEN component_previous_eur END, cost_month))"
+                  },
+                  {
+                    "name": "latest_component_eur",
+                    "expr": "MAX_BY(CASE WHEN is_closed_month THEN component_eur END, cost_month)"
+                  },
+                  {
+                    "name": "latest_component_change_eur",
+                    "expr": "MAX_BY(CASE WHEN is_closed_month THEN component_eur - component_previous_eur END, cost_month)"
                   }
                 ]
               }
@@ -350,24 +370,7 @@ resources:
                     "name": "cumulative_period",
                     "queries": [
                       {
-                        "name": "cumulative_period_cost_date",
-                        "query": {
-                          "datasetName": "azure_cumulative_cost",
-                          "fields": [
-                            {
-                              "name": "cost_date",
-                              "expression": "`cost_date`"
-                            },
-                            {
-                              "name": "cost_date_associativity",
-                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                            }
-                          ],
-                          "disaggregated": false
-                        }
-                      },
-                      {
-                        "name": "cumulative_period_monthly_cost_month",
+                        "name": "executive_period_cost_month",
                         "query": {
                           "datasetName": "azure_monthly_cost",
                           "fields": [
@@ -377,40 +380,6 @@ resources:
                             },
                             {
                               "name": "cost_month_associativity",
-                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                            }
-                          ],
-                          "disaggregated": false
-                        }
-                      },
-                      {
-                        "name": "cumulative_period_components_cost_month",
-                        "query": {
-                          "datasetName": "monthly_ai_components_with_credits",
-                          "fields": [
-                            {
-                              "name": "cost_month",
-                              "expression": "`cost_month`"
-                            },
-                            {
-                              "name": "cost_month_associativity",
-                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                            }
-                          ],
-                          "disaggregated": false
-                        }
-                      },
-                      {
-                        "name": "cumulative_period_components_with_credits_cost_date",
-                        "query": {
-                          "datasetName": "cumulative_ai_components_with_credits",
-                          "fields": [
-                            {
-                              "name": "cost_date",
-                              "expression": "`cost_date`"
-                            },
-                            {
-                              "name": "cost_date_associativity",
                               "expression": "COUNT_IF(`associative_filter_predicate_group`)"
                             }
                           ],
@@ -428,20 +397,8 @@ resources:
                       "encodings": {
                         "fields": [
                           {
-                            "fieldName": "cost_date",
-                            "queryName": "cumulative_period_cost_date"
-                          },
-                          {
                             "fieldName": "cost_month",
-                            "queryName": "cumulative_period_monthly_cost_month"
-                          },
-                          {
-                            "fieldName": "cost_month",
-                            "queryName": "cumulative_period_components_cost_month"
-                          },
-                          {
-                            "fieldName": "cost_date",
-                            "queryName": "cumulative_period_components_with_credits_cost_date"
+                            "queryName": "executive_period_cost_month"
                           }
                         ]
                       }
@@ -459,77 +416,9 @@ resources:
                     "name": "executive_cost_component",
                     "queries": [
                       {
-                        "name": "executive_component_cumulative",
-                        "query": {
-                          "datasetName": "azure_cumulative_cost",
-                          "fields": [
-                            {
-                              "name": "cost_driver",
-                              "expression": "`cost_driver`"
-                            },
-                            {
-                              "name": "cost_driver_associativity",
-                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                            }
-                          ],
-                          "disaggregated": false
-                        }
-                      },
-                      {
-                        "name": "executive_component_cumulative_with_credits",
-                        "query": {
-                          "datasetName": "cumulative_ai_components_with_credits",
-                          "fields": [
-                            {
-                              "name": "cost_driver",
-                              "expression": "`cost_driver`"
-                            },
-                            {
-                              "name": "cost_driver_associativity",
-                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                            }
-                          ],
-                          "disaggregated": false
-                        }
-                      },
-                      {
-                        "name": "executive_component_monthly",
+                        "name": "executive_component",
                         "query": {
                           "datasetName": "azure_monthly_cost",
-                          "fields": [
-                            {
-                              "name": "cost_driver",
-                              "expression": "`cost_driver`"
-                            },
-                            {
-                              "name": "cost_driver_associativity",
-                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                            }
-                          ],
-                          "disaggregated": false
-                        }
-                      },
-                      {
-                        "name": "executive_component_monthly_with_credits",
-                        "query": {
-                          "datasetName": "monthly_ai_components_with_credits",
-                          "fields": [
-                            {
-                              "name": "cost_driver",
-                              "expression": "`cost_driver`"
-                            },
-                            {
-                              "name": "cost_driver_associativity",
-                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                            }
-                          ],
-                          "disaggregated": false
-                        }
-                      },
-                      {
-                        "name": "executive_component_movements",
-                        "query": {
-                          "datasetName": "cost_movements",
                           "fields": [
                             {
                               "name": "cost_driver",
@@ -555,23 +444,7 @@ resources:
                         "fields": [
                           {
                             "fieldName": "cost_driver",
-                            "queryName": "executive_component_cumulative"
-                          },
-                          {
-                            "fieldName": "cost_driver",
-                            "queryName": "executive_component_cumulative_with_credits"
-                          },
-                          {
-                            "fieldName": "cost_driver",
-                            "queryName": "executive_component_monthly"
-                          },
-                          {
-                            "fieldName": "cost_driver",
-                            "queryName": "executive_component_monthly_with_credits"
-                          },
-                          {
-                            "fieldName": "cost_driver",
-                            "queryName": "executive_component_movements"
+                            "queryName": "executive_component"
                           }
                         ]
                       }
@@ -591,11 +464,11 @@ resources:
                       {
                         "name": "main_query",
                         "query": {
-                          "datasetName": "azure_cumulative_cost",
+                          "datasetName": "azure_monthly_cost",
                           "fields": [
                             {
-                              "name": "measure(total_cost_eur)",
-                              "expression": "MEASURE(`total_cost_eur`)"
+                              "name": "measure(invoice_total_eur)",
+                              "expression": "MEASURE(`invoice_total_eur`)"
                             }
                           ],
                           "disaggregated": false
@@ -611,7 +484,7 @@ resources:
                       },
                       "encodings": {
                         "value": {
-                          "fieldName": "measure(total_cost_eur)",
+                          "fieldName": "measure(invoice_total_eur)",
                           "rowNumber": 0,
                           "format": {
                             "type": "number-currency",
@@ -643,7 +516,7 @@ resources:
                       {
                         "name": "main_query",
                         "query": {
-                          "datasetName": "cumulative_ai_components_with_credits",
+                          "datasetName": "azure_monthly_cost",
                           "fields": [
                             {
                               "name": "cost_driver",
@@ -935,7 +808,7 @@ resources:
                       {
                         "name": "main_query",
                         "query": {
-                          "datasetName": "monthly_ai_components_with_credits",
+                          "datasetName": "azure_monthly_cost",
                           "fields": [
                             {
                               "name": "cost_month",
@@ -1005,7 +878,7 @@ resources:
                       {
                         "name": "main_query",
                         "query": {
-                          "datasetName": "cost_movements",
+                          "datasetName": "azure_monthly_cost",
                           "fields": [
                             {
                               "name": "cost_driver",
@@ -1016,27 +889,19 @@ resources:
                               "expression": "`cost_basis`"
                             },
                             {
-                              "name": "row_sort_order",
-                              "expression": "`row_sort_order`"
+                              "name": "measure(latest_component_eur)",
+                              "expression": "MEASURE(`latest_component_eur`)"
                             },
                             {
-                              "name": "measure(amount_eur)",
-                              "expression": "MEASURE(`amount_eur`)"
-                            },
-                            {
-                              "name": "measure(change_eur)",
-                              "expression": "MEASURE(`change_eur`)"
+                              "name": "measure(latest_component_change_eur)",
+                              "expression": "MEASURE(`latest_component_change_eur`)"
                             }
                           ],
                           "disaggregated": false,
                           "orders": [
                             {
-                              "direction": "ASC",
-                              "expression": "`row_sort_order`"
-                            },
-                            {
                               "direction": "DESC",
-                              "expression": "MEASURE(`amount_eur`)"
+                              "expression": "MEASURE(`latest_component_eur`)"
                             }
                           ],
                           "limit": 15
@@ -1050,7 +915,7 @@ resources:
                         "showTitle": true,
                         "showDescription": true,
                         "title": "Monthly invoice and Copilot credit detail (EUR)",
-                        "description": "All rows show the latest available month and its EUR change from the prior month. Copilot Studio credit equivalent is not invoiced and is excluded from billed totals."
+                        "description": "All rows show the latest closed month, or the selected month, and its EUR change from the prior month."
                       },
                       "encodings": {
                         "columns": [
@@ -1063,7 +928,7 @@ resources:
                             "displayName": "Basis"
                           },
                           {
-                            "fieldName": "measure(amount_eur)",
+                            "fieldName": "measure(latest_component_eur)",
                             "displayName": "Amount (EUR)",
                             "format": {
                               "type": "number-currency",
@@ -1076,7 +941,7 @@ resources:
                             }
                           },
                           {
-                            "fieldName": "measure(change_eur)",
+                            "fieldName": "measure(latest_component_change_eur)",
                             "displayName": "MoM (EUR)",
                             "format": {
                               "type": "number-currency",
