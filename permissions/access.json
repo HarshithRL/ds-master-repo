@@ -792,6 +792,108 @@
           ]
         }
       ]
+    },
+    {
+      "data_product": "ai-cost-dashboards",
+      "warehouse": true,
+      "consumer_groups": [
+        {
+          "tier": "READ",
+          "grants": [
+            {
+              "catalog": "automation",
+              "privileges": [
+                "USE_CATALOG"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "ai_foundry_costs_enriched",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "copilot_credit_historical_periods",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "copilot_credit_live_snapshots",
+              "privileges": [
+                "SELECT"
+              ]
+            }
+          ],
+          "members": [
+            "satish.chadha@etexgroup.com",
+            "bert.janssens@etexgroup.com",
+            "matthew.harris@etexgroup.com",
+            "diwakar.jadhav@etexgroup.com"
+          ]
+        },
+        {
+          "tier": "WRITE",
+          "grants": [
+            {
+              "catalog": "automation",
+              "privileges": [
+                "USE_CATALOG"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "ai_foundry_costs_enriched",
+              "privileges": [
+                "MODIFY"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "copilot_credit_historical_periods",
+              "privileges": [
+                "MODIFY"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "copilot_credit_live_snapshots",
+              "privileges": [
+                "MODIFY"
+              ]
+            }
+          ],
+          "members": [
+            "satish.chadha@etexgroup.com",
+            "bert.janssens@etexgroup.com",
+            "matthew.harris@etexgroup.com",
+            "diwakar.jadhav@etexgroup.com"
+          ]
+        }
+      ]
     }
   ]
 }
