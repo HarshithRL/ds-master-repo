@@ -6,11 +6,15 @@
       "catalog": "${var.catalog}",
       "config": {
         "version": "1.1",
-        "source": "WITH invoice_components AS (SELECT DATE_TRUNC('MONTH', cost_date) AS cost_month, CASE WHEN ai_capability = 'Copilot Studio' THEN 'Copilot Studio (Azure invoice)' WHEN cost_domain = 'Databricks' THEN 'Databricks AI' WHEN cost_domain = 'AI Foundry' THEN 'Azure AI Foundry' WHEN ai_capability = 'GitHub Copilot' THEN 'GitHub Copilot' ELSE 'Other AI invoice' END AS cost_driver, 'Azure invoice' AS cost_basis, TRUE AS is_invoiced, SUM(cost_eur) AS cost_eur FROM ${var.catalog}.gold.ai_foundry_costs_enriched WHERE is_ai = TRUE AND cost_date <= CURRENT_DATE() GROUP BY 1, 2), credit_equivalents AS (SELECT CASE WHEN period_start_date < DATE '2026-06-01' THEN DATE '2026-06-01' ELSE CAST(DATE_TRUNC('MONTH', period_start_date) AS DATE) END AS cost_month, 'Copilot Studio (credit equivalent)' AS cost_driver, 'Credit equivalent' AS cost_basis, FALSE AS is_invoiced, total_cost_eur AS cost_eur FROM ${var.catalog}.gold.copilot_credit_historical_periods), components AS (SELECT * FROM invoice_components UNION ALL SELECT * FROM credit_equivalents), invoice_monthly AS (SELECT cost_month, SUM(CASE WHEN is_invoiced THEN cost_eur ELSE 0 END) AS total_eur FROM components GROUP BY 1), invoice_summary AS (SELECT cost_month, total_eur, LAG(total_eur) OVER (ORDER BY cost_month) AS previous_eur, SUM(total_eur) OVER (PARTITION BY YEAR(cost_month) ORDER BY cost_month) AS total_ytd_eur FROM invoice_monthly), component_summary AS (SELECT cost_month, cost_driver, cost_basis, is_invoiced, cost_eur, LAG(cost_eur) OVER (PARTITION BY cost_driver ORDER BY cost_month) AS previous_eur, SUM(CASE WHEN is_invoiced THEN cost_eur ELSE 0 END) OVER (PARTITION BY cost_driver, YEAR(cost_month) ORDER BY cost_month) AS component_ytd_eur FROM components) SELECT c.cost_month, c.cost_driver, c.cost_basis, c.is_invoiced, c.cost_eur, c.cost_month < DATE_TRUNC('MONTH', CURRENT_DATE()) AS is_closed_month, ROUND(m.total_eur, 2) AS total_eur, ROUND(m.previous_eur, 2) AS previous_eur, ROUND(m.total_ytd_eur, 2) AS total_ytd_eur, ROUND(c.cost_eur, 2) AS component_eur, ROUND(COALESCE(c.previous_eur, 0), 2) AS component_previous_eur, ROUND(c.component_ytd_eur, 2) AS component_ytd_eur, ROUND(100.0 * (c.cost_eur - COALESCE(c.previous_eur, 0)) / NULLIF(c.previous_eur, 0), 1) AS component_change_pct, ROUND(100.0 * (m.total_eur - m.previous_eur) / NULLIF(m.previous_eur, 0), 1) AS change_pct FROM component_summary c JOIN invoice_summary m ON c.cost_month = m.cost_month",
+        "source": "WITH invoice_components AS (SELECT DATE_TRUNC('MONTH', cost_date) AS cost_month, CASE WHEN ai_capability = 'Copilot Studio' THEN 'Copilot Studio (Azure invoice)' WHEN cost_domain = 'Databricks' THEN 'Databricks AI' WHEN cost_domain = 'AI Foundry' THEN 'Azure AI Foundry' WHEN ai_capability = 'GitHub Copilot' THEN 'GitHub Copilot' ELSE 'Other AI invoice' END AS cost_driver, 'Azure invoice' AS cost_basis, TRUE AS is_invoiced, SUM(cost_eur) AS cost_eur FROM ${var.catalog}.gold.ai_foundry_costs_enriched WHERE is_ai = TRUE AND cost_date <= CURRENT_DATE() GROUP BY 1, 2), credit_equivalents AS (SELECT CASE WHEN period_start_date < DATE '2026-06-01' THEN DATE '2026-06-01' ELSE CAST(DATE_TRUNC('MONTH', period_start_date) AS DATE) END AS cost_month, 'Copilot Studio (credit equivalent)' AS cost_driver, 'Credit equivalent' AS cost_basis, FALSE AS is_invoiced, total_cost_eur AS cost_eur FROM ${var.catalog}.gold.copilot_credit_historical_periods), components AS (SELECT * FROM invoice_components UNION ALL SELECT * FROM credit_equivalents), invoice_monthly AS (SELECT cost_month, SUM(CASE WHEN is_invoiced THEN cost_eur ELSE 0 END) AS total_eur FROM components GROUP BY 1), invoice_summary AS (SELECT cost_month, total_eur, LAG(total_eur) OVER (ORDER BY cost_month) AS previous_eur, SUM(total_eur) OVER (PARTITION BY YEAR(cost_month) ORDER BY cost_month) AS total_ytd_eur FROM invoice_monthly), component_summary AS (SELECT cost_month, cost_driver, cost_basis, is_invoiced, cost_eur, LAG(cost_eur) OVER (PARTITION BY cost_driver ORDER BY cost_month) AS previous_eur, SUM(CASE WHEN is_invoiced THEN cost_eur ELSE 0 END) OVER (PARTITION BY cost_driver, YEAR(cost_month) ORDER BY cost_month) AS component_ytd_eur FROM components) SELECT c.cost_month, DATE_FORMAT(c.cost_month, 'MMMM yyyy') AS cost_month_label, c.cost_driver, c.cost_basis, c.is_invoiced, c.cost_eur, c.cost_month < DATE_TRUNC('MONTH', CURRENT_DATE()) AS is_closed_month, ROUND(m.total_eur, 2) AS total_eur, ROUND(m.previous_eur, 2) AS previous_eur, ROUND(m.total_ytd_eur, 2) AS total_ytd_eur, ROUND(c.cost_eur, 2) AS component_eur, ROUND(COALESCE(c.previous_eur, 0), 2) AS component_previous_eur, ROUND(c.component_ytd_eur, 2) AS component_ytd_eur, ROUND(100.0 * (c.cost_eur - COALESCE(c.previous_eur, 0)) / NULLIF(c.previous_eur, 0), 1) AS component_change_pct, ROUND(100.0 * (m.total_eur - m.previous_eur) / NULLIF(m.previous_eur, 0), 1) AS change_pct FROM component_summary c JOIN invoice_summary m ON c.cost_month = m.cost_month",
         "dimensions": [
           {
             "name": "cost_month",
             "expr": "cost_month"
+          },
+          {
+            "name": "cost_month_label",
+            "expr": "cost_month_label"
           },
           {
             "name": "cost_driver",
@@ -600,11 +604,11 @@
                   "datasetName": "azure_monthly_cost",
                   "fields": [
                     {
-                      "name": "cost_month",
-                      "expression": "`cost_month`"
+                      "name": "cost_month_label",
+                      "expression": "`cost_month_label`"
                     },
                     {
-                      "name": "cost_month_associativity",
+                      "name": "cost_month_label_associativity",
                       "expression": "COUNT_IF(`associative_filter_predicate_group`)"
                     }
                   ],
@@ -622,7 +626,7 @@
               "encodings": {
                 "fields": [
                   {
-                    "fieldName": "cost_month",
+                    "fieldName": "cost_month_label",
                     "queryName": "closed_month_filter_cost_month"
                   }
                 ]

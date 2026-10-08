@@ -48,6 +48,20 @@ targets:
       dashboard_host: adb-7181820732839861.1.azuredatabricks.net
       copilot_credit_history_as_of_date: "2026-10-08"
       copilot_credit_refresh_pause_status: UNPAUSED
+    resources:
+      dashboards:
+        etex_ai_cost_executive_overview:
+          permissions:
+            - group_name: AUTOMATION.AICOSTDASHBOARDS.CONSUMER.WRITE
+              level: CAN_READ
+            - group_name: AUTOMATION.AICOSTDASHBOARDS.CONSUMER.READ
+              level: CAN_READ
+        azure_cost_detail:
+          permissions:
+            - group_name: AUTOMATION.AICOSTDASHBOARDS.CONSUMER.WRITE
+              level: CAN_READ
+            - group_name: AUTOMATION.AICOSTDASHBOARDS.CONSUMER.READ
+              level: CAN_READ
 
   T:
     mode: production
@@ -115,9 +129,13 @@ targets:
           permissions:
             - group_name: AUTOMATION.AICOSTDASHBOARDS.CONSUMER.WRITE
               level: CAN_READ
+            - group_name: AUTOMATION.AICOSTDASHBOARDS.CONSUMER.READ
+              level: CAN_READ
         azure_cost_detail:
           permissions:
             - group_name: AUTOMATION.AICOSTDASHBOARDS.CONSUMER.WRITE
+              level: CAN_READ
+            - group_name: AUTOMATION.AICOSTDASHBOARDS.CONSUMER.READ
               level: CAN_READ
 
   P:
