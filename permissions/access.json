@@ -866,6 +866,7 @@
               "schema": "gold",
               "table": "ai_foundry_costs_enriched",
               "privileges": [
+                "SELECT",
                 "MODIFY"
               ]
             },
@@ -874,6 +875,7 @@
               "schema": "gold",
               "table": "copilot_credit_historical_periods",
               "privileges": [
+                "SELECT",
                 "MODIFY"
               ]
             },
@@ -882,6 +884,7 @@
               "schema": "gold",
               "table": "copilot_credit_live_snapshots",
               "privileges": [
+                "SELECT",
                 "MODIFY"
               ]
             }
