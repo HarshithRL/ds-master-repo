@@ -95,7 +95,7 @@ targets:
       refresh_pause_status: UNPAUSED
       warehouse_id: 0ef3e37fbbd5b772
       dashboard_host: adb-4796304964978539.19.azuredatabricks.net
-      copilot_dashboard_url: https://adb-4796304964978539.19.azuredatabricks.net/dashboardsv3/01f1b1a073d9157e83cdd8262d4c4411/published
+      copilot_dashboard_url: https://adb-4796304964978539.19.azuredatabricks.net/dashboardsv3/01f1ab7c29e61ceb9ffe27b87bdd6948/published
       copilot_credit_history_as_of_date: "2026-10-08"
       copilot_credit_refresh_pause_status: UNPAUSED
     permissions:
