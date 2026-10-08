@@ -63,6 +63,12 @@ targets:
         level: CAN_MANAGE
       - user_name: harshith.raghunath@etexgroup.com
         level: CAN_MANAGE
+    resources:
+      dashboards:
+        agent_dashboard_phase_1:
+          permissions:
+            - group_name: AUTOMATION.AICOSTDASHBOARDS.CONSUMER.WRITE
+              level: CAN_READ
         
 
   P:
