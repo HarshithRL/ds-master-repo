@@ -48,7 +48,7 @@
         "measures": [
           {
             "name": "total_cost_eur",
-            "expr": "SUM(cost_eur)",
+            "expr": "SUM(CASE WHEN cost_domain = 'AI Foundry' THEN cost_eur WHEN cost_domain = 'Copilot' THEN cost_eur WHEN cost_domain = 'Databricks' AND is_ai THEN cost_eur ELSE 0 END)",
             "format": {
               "type": "currency",
               "currencyCode": "EUR",
@@ -1061,12 +1061,12 @@
               "frame": {
                 "showTitle": true,
                 "title": {
-                  "value": "Azure cost (EUR)",
+                  "value": "Total Cost (EUR)",
                   "fields": []
                 },
                 "showDescription": true,
                 "description": {
-                  "value": "AI Foundry, Copilot and Databricks; excludes Infrastructure",
+                  "value": "AI Foundry + Copilot (GitHub + Studio) + Databricks AI",
                   "fields": []
                 }
               },
@@ -1170,7 +1170,7 @@
               "frame": {
                 "showTitle": true,
                 "title": {
-                  "value": "Copilot",
+                  "value": "Copilot (GitHub + Studio)",
                   "fields": []
                 }
               },
@@ -1264,8 +1264,8 @@
                       "expression": "DATE_TRUNC(\"MONTH\", `cost_date`)"
                     },
                     {
-                      "name": "measure(databricks_ai_cost_eur)",
-                      "expression": "MEASURE(`databricks_ai_cost_eur`)"
+                      "name": "measure(total_cost_eur)",
+                      "expression": "MEASURE(`total_cost_eur`)"
                     },
                     {
                       "name": "cost_domain",
