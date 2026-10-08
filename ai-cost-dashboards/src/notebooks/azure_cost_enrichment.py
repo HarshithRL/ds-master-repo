@@ -33,7 +33,17 @@ def relation_type(full_name):
 for schema in ("bronze", "gold"):
     spark.sql(f"DESCRIBE SCHEMA {CATALOG}.{schema}")
 
-spark.table(SOURCE_TABLE).limit(1).collect()
+source_columns = {field.name.lower() for field in spark.table(SOURCE_TABLE).schema.fields}
+
+
+def optional_source_column(column_name, data_type):
+  if column_name.lower() in source_columns:
+    return column_name
+  return f"CAST(NULL AS {data_type})"
+
+
+BATCH_ID_COLUMN = optional_source_column("batch_id", "STRING")
+LOAD_TS_COLUMN = optional_source_column("load_ts", "TIMESTAMP")
 
 for relation in (BRONZE_VIEW, MAPPING_VIEW):
     existing_type = relation_type(relation)
@@ -318,8 +328,8 @@ spark.sql(
       CASE WHEN rg_pattern IS NOT NULL AND raw_application IS NULL THEN TRUE ELSE FALSE END AS application_inferred,
       CASE WHEN rg_pattern IS NOT NULL AND raw_domain IS NULL THEN TRUE ELSE FALSE END AS spoke_inferred,
       CASE WHEN model IS NOT NULL AND raw_deployment IS NULL THEN TRUE ELSE FALSE END AS model_inferred,
-      batch_id,
-      load_ts
+      {BATCH_ID_COLUMN} AS batch_id,
+      {LOAD_TS_COLUMN} AS load_ts
     FROM classified
     """
 )
