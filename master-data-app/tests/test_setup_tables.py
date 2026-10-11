@@ -1,0 +1,189 @@
+import json
+import sys
+import tempfile
+import types
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+
+SOURCE_DIR = Path(__file__).resolve().parents[1] / "src"
+sys.path.insert(0, str(SOURCE_DIR))
+
+
+class RecordingSpark:
+    def __init__(self):
+        self.statements = []
+        self.rows = None
+        self.saved_table = None
+
+    def sql(self, statement):
+        self.statements.append(statement)
+
+    def createDataFrame(self, rows, schema):
+        self.rows = rows
+        self.schema = schema
+        return RecordingDataFrame(self)
+
+
+class RecordingDataFrame:
+    def __init__(self, spark):
+        self.write = RecordingWriter(spark)
+
+
+class RecordingWriter:
+    def __init__(self, spark):
+        self.spark = spark
+
+    def format(self, value):
+        self.format_name = value
+        return self
+
+    def mode(self, value):
+        self.mode_name = value
+        return self
+
+    def option(self, name, value):
+        return self
+
+    def saveAsTable(self, table):
+        self.spark.saved_table = table
+
+
+class FakeBuilder:
+    spark = None
+
+    def getOrCreate(self):
+        return self.spark
+
+
+class FakeSparkSession:
+    builder = FakeBuilder()
+
+
+fake_pyspark = types.ModuleType("pyspark")
+fake_pyspark_sql = types.ModuleType("pyspark.sql")
+fake_pyspark_sql.SparkSession = FakeSparkSession
+fake_pyspark.sql = fake_pyspark_sql
+with patch.dict(sys.modules, {"pyspark": fake_pyspark, "pyspark.sql": fake_pyspark_sql}):
+    from setup_tables import (
+        CONFIGURATION_FILES,
+        load_configuration_snapshot,
+        main,
+        validate_production_configuration,
+    )
+
+
+class FakeWorksheet:
+    def __init__(self, title, rows):
+        self.title = title
+        self.rows = rows
+
+    def iter_rows(self, values_only=False):
+        return iter(self.rows)
+
+
+class FakeWorkbook:
+    def __init__(self, worksheets):
+        self.worksheets = worksheets
+        self.sheetnames = [worksheet.title for worksheet in worksheets]
+
+    def close(self):
+        pass
+
+
+class SetupTablesTests(unittest.TestCase):
+    def test_creates_app_tables_and_overwrites_configuration_snapshot(self):
+        spark = RecordingSpark()
+        FakeBuilder.spark = spark
+
+        snapshot = [("assignment_rules.xlsx", "Members", "[]", "sha", None)]
+        with patch.dict(
+            main.__globals__,
+            {"load_configuration_snapshot": lambda _directory, _catalog: (snapshot, 0)},
+        ):
+            main("automation_d")
+
+        self.assertEqual(len(spark.statements), 3)
+        self.assertIn("automation_d.bronze.master_data_app_requests", spark.statements[0])
+        self.assertIn("automation_d.bronze.master_data_app_request_history", spark.statements[1])
+        self.assertIn("automation_d.bronze.master_data_app_configuration", spark.statements[2])
+        self.assertTrue(all("CREATE SCHEMA" not in statement.upper() for statement in spark.statements))
+        self.assertEqual(spark.saved_table, "automation_d.bronze.master_data_app_configuration")
+        self.assertEqual(spark.rows, snapshot)
+
+    def test_rejects_catalog_outside_the_automation_environments(self):
+        with self.assertRaises(ValueError):
+            main("automation_custom")
+
+    def test_blocks_test_only_configuration_in_acceptance_and_production(self):
+        for catalog in ("automation_a", "automation_p"):
+            with self.subTest(catalog=catalog):
+                with self.assertRaisesRegex(ValueError, "test-only or dummy"):
+                    validate_production_configuration(catalog, ["TEST ONLY dummy configuration"])
+
+    def test_allows_development_configuration(self):
+        validate_production_configuration("automation_d", ["TEST ONLY dummy configuration"])
+
+    def test_snapshot_preserves_every_sheet_and_serializes_required_rows(self):
+        workbook_data = {}
+        expected_sheet_count = 0
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for file_name, required_sheets in CONFIGURATION_FILES.items():
+                (root / file_name).write_bytes(file_name.encode("ascii"))
+                worksheets = [
+                    FakeWorksheet(sheet, [("field", "value"), ("sample", "ok")])
+                    for sheet in required_sheets
+                ]
+                worksheets.append(
+                    FakeWorksheet("README", [("section", "notes"), ("Purpose", "dummy rules")])
+                )
+                workbook_data[file_name] = FakeWorkbook(worksheets)
+                expected_sheet_count += len(worksheets)
+
+            openpyxl = types.ModuleType("openpyxl")
+            openpyxl.load_workbook = lambda path, **_kwargs: workbook_data[Path(path).name]
+            with patch.dict(sys.modules, {"openpyxl": openpyxl}):
+                snapshot, source_row_count = load_configuration_snapshot(root, "automation_d")
+
+        self.assertEqual(len(snapshot), expected_sheet_count)
+        self.assertEqual(source_row_count, sum(len(book.worksheets) * 1 for book in workbook_data.values()))
+        reference_row = next(
+            row
+            for row in snapshot
+            if row[0] == "customer_reference_library.xlsx"
+            and row[1] == "General_Data_Fields"
+        )
+        self.assertEqual(json.loads(reference_row[2]), [{"field": "sample", "value": "ok"}])
+
+    def test_empty_required_sheet_stops_before_table_creation(self):
+        spark = RecordingSpark()
+        FakeBuilder.spark = spark
+        workbook_data = {}
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for file_index, (file_name, required_sheets) in enumerate(CONFIGURATION_FILES.items()):
+                (root / file_name).write_bytes(file_name.encode("ascii"))
+                worksheets = [
+                    FakeWorksheet(
+                        sheet,
+                        [] if file_index == 0 and sheet == "General_Data_Fields"
+                        else [("field", "value"), ("sample", "ok")],
+                    )
+                    for sheet in required_sheets
+                ]
+                workbook_data[file_name] = FakeWorkbook(worksheets)
+
+            openpyxl = types.ModuleType("openpyxl")
+            openpyxl.load_workbook = lambda path, **_kwargs: workbook_data[Path(path).name]
+            with patch.dict(sys.modules, {"openpyxl": openpyxl}):
+                with self.assertRaisesRegex(ValueError, "has no data rows"):
+                    main("automation_d", root)
+
+        self.assertEqual(spark.statements, [])
+
+
+if __name__ == "__main__":
+    unittest.main()

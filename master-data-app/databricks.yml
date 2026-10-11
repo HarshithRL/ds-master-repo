@@ -1,0 +1,83 @@
+bundle:
+  name: master-data-app
+
+include:
+  - resources/jobs/*.yml
+
+variables:
+  catalog:
+    description: Existing environment catalog. The setup job writes only to its bronze schema.
+  policy_id:
+    description: Existing cluster policy used by the setup job.
+
+targets:
+  D:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/Users/${workspace.current_user.userName}/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_d
+      policy_id: 306312B9730019AB
+    resources:
+      apps:
+        master_data_app:
+          name: master-data-app-dev
+          description: Customer master data request app (development)
+          source_code_path: src
+          user_api_scopes:
+            - sql
+          resources:
+            - name: sql-warehouse
+              sql_warehouse:
+                id: 69ada62b2fb9b9e2
+                permission: CAN_USE
+          permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+
+  T:
+    mode: production
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_d
+      policy_id: 306312B9730019AB
+    resources:
+      apps:
+        master_data_app:
+          name: master-data-app-test
+          description: Customer master data request app (test)
+          source_code_path: src
+          user_api_scopes:
+            - sql
+          resources:
+            - name: sql-warehouse
+              sql_warehouse:
+                id: 69ada62b2fb9b9e2
+                permission: CAN_USE
+          permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE
+
+  A:
+    mode: production
+    workspace:
+      host: https://adb-4796304964978539.19.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_a
+      policy_id: 306312B973005677
+
+  P:
+    mode: production
+    workspace:
+      host: https://adb-4844910598668398.18.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_p
+      policy_id: 306312B973005150
