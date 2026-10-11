@@ -72,6 +72,24 @@ targets:
     variables:
       catalog: automation_a
       policy_id: 306312B973005677
+    resources:
+      apps:
+        master_data_app:
+          name: master-data-app-acc
+          description: Customer master data request app (acceptance)
+          source_code_path: src
+          user_api_scopes:
+            - sql
+          resources:
+            - name: sql-warehouse
+              sql_warehouse:
+                id: 0ef3e37fbbd5b772
+                permission: CAN_USE
+          permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE
 
   P:
     mode: production
@@ -81,3 +99,21 @@ targets:
     variables:
       catalog: automation_p
       policy_id: 306312B973005150
+    resources:
+      apps:
+        master_data_app:
+          name: master-data-app-prd
+          description: Customer master data request app (production)
+          source_code_path: src
+          user_api_scopes:
+            - sql
+          resources:
+            - name: sql-warehouse
+              sql_warehouse:
+                id: f500d0d670ae024b
+                permission: CAN_USE
+          permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE
