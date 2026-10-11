@@ -13,11 +13,10 @@ This is an independent Databricks Asset Bundle for the DS-Master-Repo. The share
 
 ## Deployment status
 
-- D and T targets use the shared DEV/TEST automation warehouse.
-- ACC and PRD targets currently deploy the setup job only. Add the correct environment-specific consumer warehouse, app permissions, and table grants before enabling app resources in those targets.
-- The shared pipeline does not supply project-specific warehouse IDs or consumer groups.
+- D and T targets use the shared DEV/TEST automation warehouse. A and P app resources use the environment-specific warehouses declared in `databricks.yml`.
+- The shared CI/CD pipeline deploys the app and setup job for each configured target. App deployment does not run the paused setup job or grant users access to source/request tables; provision the required Unity Catalog grants and consumer access before accepting requests.
 - The existing app's signed notification URL is intentionally not copied into source. Configure notifications through an approved secret resource and set the environment-specific workbench URL before enabling them.
-- The setup job refuses to seed ACC/PRD while the bundled workbooks contain explicit test-only/dummy markers. Replace them with approved production mappings before running the setup job in those environments.
+- The setup job refuses to seed ACC/PRD while the bundled workbooks contain explicit test-only/dummy markers. Replace them with approved environment mappings before running the setup job in those environments; the app requires its configuration table to be populated before it can serve requests.
 - No data is copied from the previous personal-schema request table. Any historical migration needs a separately reviewed, permissioned migration plan.
 
 Validate locally with `databricks bundle validate --target D`. Deploy through the DS-Master-Repo shared CI/CD pipeline; do not deploy ACC or PRD directly from a workstation.
