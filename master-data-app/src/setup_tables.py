@@ -124,7 +124,16 @@ def main(catalog: str, config_dir: str | Path | None = None) -> None:
     if catalog not in ALLOWED_CATALOGS:
         raise ValueError(f"Unsupported Master Data catalog: {catalog}")
 
-    source_dir = Path(config_dir) if config_dir else Path(__file__).resolve().parent / "data"
+    if config_dir:
+        source_dir = Path(config_dir)
+    else:
+        script_path = globals().get("__file__")
+        if not script_path:
+            raise ValueError(
+                "A configuration directory must be supplied when setup_tables.py "
+                "runs in notebook context."
+            )
+        source_dir = Path(script_path).resolve().parent / "data"
     configuration_rows, source_row_count = load_configuration_snapshot(source_dir, catalog)
 
     spark = SparkSession.builder.getOrCreate()

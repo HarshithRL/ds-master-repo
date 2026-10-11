@@ -98,12 +98,21 @@ class SetupTablesTests(unittest.TestCase):
         FakeBuilder.spark = spark
 
         snapshot = [("assignment_rules.xlsx", "Members", "[]", "sha", None)]
+        config_directory = "/Workspace/automation/ds-master-data-app/A/files/src/data"
+        observed = {}
+
+        def fake_load_configuration_snapshot(directory, catalog):
+            observed["directory"] = str(directory)
+            observed["catalog"] = catalog
+            return snapshot, 0
+
         with patch.dict(
             main.__globals__,
-            {"load_configuration_snapshot": lambda _directory, _catalog: (snapshot, 0)},
+            {"load_configuration_snapshot": fake_load_configuration_snapshot, "__file__": None},
         ):
-            main("automation_d")
+            main("automation_d", config_directory)
 
+        self.assertEqual(observed, {"directory": config_directory, "catalog": "automation_d"})
         self.assertEqual(len(spark.statements), 3)
         self.assertIn("automation_d.bronze.master_data_app_requests", spark.statements[0])
         self.assertIn("automation_d.bronze.master_data_app_request_history", spark.statements[1])
@@ -111,6 +120,16 @@ class SetupTablesTests(unittest.TestCase):
         self.assertTrue(all("CREATE SCHEMA" not in statement.upper() for statement in spark.statements))
         self.assertEqual(spark.saved_table, "automation_d.bronze.master_data_app_configuration")
         self.assertEqual(spark.rows, snapshot)
+
+    def test_notebook_context_requires_explicit_configuration_directory(self):
+        spark = RecordingSpark()
+        FakeBuilder.spark = spark
+
+        with patch.dict(main.__globals__, {"__file__": None}):
+            with self.assertRaisesRegex(ValueError, "configuration directory must be supplied"):
+                main("automation_d")
+
+        self.assertEqual(spark.statements, [])
 
     def test_rejects_catalog_outside_the_automation_environments(self):
         with self.assertRaises(ValueError):

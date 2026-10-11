@@ -1,5 +1,5 @@
 bundle:
-  name: master-data-app
+  name: ds-master-data-app
 
 include:
   - resources/jobs/*.yml
@@ -9,6 +9,8 @@ variables:
     description: Existing environment catalog. The setup job writes only to its bronze schema.
   policy_id:
     description: Existing cluster policy used by the setup job.
+  warehouse_id:
+    description: Environment-specific SQL warehouse used by the app.
 
 targets:
   D:
@@ -20,22 +22,6 @@ targets:
     variables:
       catalog: automation_d
       policy_id: 306312B9730019AB
-    resources:
-      apps:
-        master_data_app:
-          name: master-data-app-dev
-          description: Customer master data request app (development)
-          source_code_path: src
-          user_api_scopes:
-            - sql
-          resources:
-            - name: sql-warehouse
-              sql_warehouse:
-                id: 69ada62b2fb9b9e2
-                permission: CAN_USE
-          permissions:
-            - user_name: mustafaarda.bicakci@etexgroup.com
-              level: CAN_MANAGE
 
   T:
     mode: production
@@ -45,10 +31,11 @@ targets:
     variables:
       catalog: automation_d
       policy_id: 306312B9730019AB
+      warehouse_id: 69ada62b2fb9b9e2
     resources:
       apps:
-        master_data_app:
-          name: master-data-app-test
+        ds_master_data_app:
+          name: ds-master-data-app
           description: Customer master data request app (test)
           source_code_path: src
           user_api_scopes:
@@ -56,7 +43,7 @@ targets:
           resources:
             - name: sql-warehouse
               sql_warehouse:
-                id: 69ada62b2fb9b9e2
+                id: ${var.warehouse_id}
                 permission: CAN_USE
           permissions:
             - user_name: mustafaarda.bicakci@etexgroup.com
@@ -72,10 +59,11 @@ targets:
     variables:
       catalog: automation_a
       policy_id: 306312B973005677
+      warehouse_id: 0ef3e37fbbd5b772
     resources:
       apps:
-        master_data_app:
-          name: master-data-app-acc
+        ds_master_data_app:
+          name: ds-master-data-app
           description: Customer master data request app (acceptance)
           source_code_path: src
           user_api_scopes:
@@ -83,7 +71,7 @@ targets:
           resources:
             - name: sql-warehouse
               sql_warehouse:
-                id: 0ef3e37fbbd5b772
+                id: ${var.warehouse_id}
                 permission: CAN_USE
           permissions:
             - user_name: mustafaarda.bicakci@etexgroup.com
@@ -99,10 +87,11 @@ targets:
     variables:
       catalog: automation_p
       policy_id: 306312B973005150
+      warehouse_id: f500d0d670ae024b
     resources:
       apps:
-        master_data_app:
-          name: master-data-app-prd
+        ds_master_data_app:
+          name: ds-master-data-app
           description: Customer master data request app (production)
           source_code_path: src
           user_api_scopes:
@@ -110,7 +99,7 @@ targets:
           resources:
             - name: sql-warehouse
               sql_warehouse:
-                id: f500d0d670ae024b
+                id: ${var.warehouse_id}
                 permission: CAN_USE
           permissions:
             - user_name: mustafaarda.bicakci@etexgroup.com
