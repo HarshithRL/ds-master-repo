@@ -897,6 +897,102 @@
           ]
         }
       ]
+    },
+    {
+      "data_product": "ds-master-data-app",
+      "warehouse": false,
+      "consumer_groups": [
+        {
+          "tier": "READ",
+          "grants": [
+            {
+              "catalog": "automation",
+              "privileges": [
+                "USE_CATALOG"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "master_data_app_configuration",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "master_data_app_requests",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "master_data_app_request_history",
+              "privileges": [
+                "SELECT"
+              ]
+            }
+          ],
+          "members": [
+            "laura.valuckiene@etexgroup.com",
+            "sebastien.lentz@etexgroup.com",
+            "sigita.grockiene@etexgroup.com",
+            "mustafaarda.bicakci@etexgroup.com",
+            "anastasija.lebedeva@etexgroup.com"
+          ]
+        },
+        {
+          "tier": "WRITE",
+          "grants": [
+            {
+              "catalog": "automation",
+              "privileges": [
+                "USE_CATALOG"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "master_data_app_requests",
+              "privileges": [
+                "MODIFY"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "master_data_app_request_history",
+              "privileges": [
+                "MODIFY"
+              ]
+            }
+          ],
+          "members": [
+            "laura.valuckiene@etexgroup.com",
+            "sebastien.lentz@etexgroup.com",
+            "sigita.grockiene@etexgroup.com",
+            "mustafaarda.bicakci@etexgroup.com",
+            "anastasija.lebedeva@etexgroup.com"
+          ]
+        }
+      ]
     }
   ]
 }
