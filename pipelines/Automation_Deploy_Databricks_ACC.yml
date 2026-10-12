@@ -26,3 +26,6 @@ stages:
       dbxProfile: ${{ variables.DBX_PROFILE }}
       enablePostDeploy: true
       enableRollbackOnFailure: true
+  - template: templates/deploy_master_data_app.yml
+    parameters:
+      target: A

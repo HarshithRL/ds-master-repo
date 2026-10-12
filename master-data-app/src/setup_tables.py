@@ -38,7 +38,7 @@ def validate_production_configuration(catalog: str, workbook_values: list[str]) 
         for marker in PRODUCTION_BLOCKERS
     ):
         raise ValueError(
-            "ACC/PRD configuration seeding is blocked because the bundled workbooks "
+            "ACC/PRD configuration seeding is blocked because the supplied workbooks "
             "contain test-only or dummy configuration. Replace them with approved "
             "production rules before running this job."
         )
@@ -65,6 +65,7 @@ def load_configuration_snapshot(
     loaded_at = datetime.now(timezone.utc)
     snapshot = []
     workbook_values = []
+    blocker_locations = []
     row_count = 0
 
     for file_name, required_sheets in CONFIGURATION_FILES.items():
@@ -89,7 +90,7 @@ def load_configuration_snapshot(
                     _cell_text(value).strip() or f"Unnamed: {index}"
                     for index, value in enumerate(header)
                 ]
-                for values in iterator:
+                for row_number, values in enumerate(iterator, start=2):
                     values = list(values)
                     record = {
                         column: _cell_text(values[index] if index < len(values) else None)
@@ -98,6 +99,11 @@ def load_configuration_snapshot(
                     if any(value.strip() for value in record.values()):
                         records.append(record)
                         workbook_values.extend(record.values())
+                        for column, value in record.items():
+                            if any(marker in value.casefold() for marker in PRODUCTION_BLOCKERS):
+                                blocker_locations.append(
+                                    f"{file_name}/{worksheet.title}: row {row_number}, column {column}"
+                                )
 
             if worksheet.title in required_sheets and not records:
                 raise ValueError(f"Required sheet {file_name}/{worksheet.title} has no data rows.")
@@ -114,7 +120,14 @@ def load_configuration_snapshot(
 
         workbook.close()
 
-    validate_production_configuration(catalog, workbook_values)
+    try:
+        validate_production_configuration(catalog, workbook_values)
+    except ValueError as error:
+        locations = "; ".join(blocker_locations[:5])
+        raise ValueError(
+            f"{error} Source directory: {root}. "
+            f"Found {len(blocker_locations)} blocked cells. First locations: {locations}"
+        ) from error
     if not snapshot:
         raise ValueError("No configuration rows were found in the supplied workbooks.")
     return snapshot, row_count
