@@ -1,4 +1,4 @@
-# Master Data App 
+# Master Data App  
 
 This is an independent Databricks Asset Bundle for the DS-Master-Repo. The shared repo pipeline discovers this folder and deploys its bundle to TEST, ACC, and PRD.
 
