@@ -1,7 +1,7 @@
 resources:
   jobs:
     master_data_app_setup_tables:
-      name: "Master Data App - Setup and Seed Bronze Tables"
+      name: "ds-master-data-app - Setup and Seed Bronze Tables"
       tags:
         project: master-data-app
         purpose: setup-and-seed
