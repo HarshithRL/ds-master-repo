@@ -1,0 +1,108 @@
+bundle:
+  name: ds-master-data-app
+
+include:
+  - resources/jobs/*.yml
+
+variables:
+  catalog:
+    description: Existing environment catalog. The setup job writes only to its bronze schema.
+  policy_id:
+    description: Existing cluster policy used by the setup job.
+  warehouse_id:
+    description: Environment-specific SQL warehouse used by the app.
+
+targets:
+  D:
+    mode: development
+    default: true
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/Users/${workspace.current_user.userName}/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_d
+      policy_id: 306312B9730019AB
+
+  T:
+    mode: production
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_d
+      policy_id: 306312B9730019AB
+      warehouse_id: 69ada62b2fb9b9e2
+    resources:
+      apps:
+        ds_master_data_app:
+          name: ds-master-data-app
+          description: Customer master data request app (test)
+          source_code_path: src
+          user_api_scopes:
+            - sql
+          resources:
+            - name: sql-warehouse
+              sql_warehouse:
+                id: ${var.warehouse_id}
+                permission: CAN_USE
+          permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE
+
+  A:
+    mode: production
+    workspace:
+      host: https://adb-4796304964978539.19.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_a
+      policy_id: 306312B973005677
+      warehouse_id: 0ef3e37fbbd5b772
+    resources:
+      apps:
+        ds_master_data_app:
+          name: ds-master-data-app
+          description: Customer master data request app (acceptance)
+          source_code_path: src
+          user_api_scopes:
+            - sql
+          resources:
+            - name: sql-warehouse
+              sql_warehouse:
+                id: ${var.warehouse_id}
+                permission: CAN_USE
+          permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE
+
+  P:
+    mode: production
+    workspace:
+      host: https://adb-4844910598668398.18.azuredatabricks.net
+      root_path: /Workspace/automation/${bundle.name}/${bundle.target}
+    variables:
+      catalog: automation_p
+      policy_id: 306312B973005150
+      warehouse_id: f500d0d670ae024b
+    resources:
+      apps:
+        ds_master_data_app:
+          name: ds-master-data-app
+          description: Customer master data request app (production)
+          source_code_path: src
+          user_api_scopes:
+            - sql
+          resources:
+            - name: sql-warehouse
+              sql_warehouse:
+                id: ${var.warehouse_id}
+                permission: CAN_USE
+          permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE
