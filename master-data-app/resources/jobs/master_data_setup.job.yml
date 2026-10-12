@@ -15,7 +15,7 @@ resources:
             python_file: ../../src/setup_tables.py
             parameters:
               - ${var.catalog}
-              - ${workspace.root_path}/files/src/data
+              - /Volumes/${var.catalog}/bronze/bronze_volume/master_data_app
           job_cluster_key: setup_cluster
           libraries:
             - pypi:

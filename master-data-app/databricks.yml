@@ -11,6 +11,7 @@ variables:
     description: Existing cluster policy used by the setup job.
   warehouse_id:
     description: Environment-specific SQL warehouse used by the app.
+    default: "69ada62b2fb9b9e2"
 
 targets:
   D:
