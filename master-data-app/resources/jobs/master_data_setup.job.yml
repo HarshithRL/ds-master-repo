@@ -30,8 +30,3 @@ resources:
               spark.master: "local[*]"
             policy_id: ${var.policy_id}
             data_security_mode: USER_ISOLATION
-      permissions:
-        - user_name: mustafaarda.bicakci@etexgroup.com
-          level: CAN_MANAGE
-        - user_name: pierre.delaguiche@etexgroup.com
-          level: CAN_MANAGE

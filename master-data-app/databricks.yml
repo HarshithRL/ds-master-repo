@@ -24,6 +24,15 @@ targets:
       catalog: automation_d
       policy_id: 306312B9730019AB
 
+    resources:
+      jobs:
+        master_data_app_setup_tables:
+          permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE
+
   T:
     mode: production
     workspace:
@@ -33,6 +42,11 @@ targets:
       catalog: automation_d
       policy_id: 306312B9730019AB
       warehouse_id: 69ada62b2fb9b9e2
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
     resources:
       apps:
         ds_master_data_app:
@@ -46,11 +60,6 @@ targets:
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: CAN_USE
-          permissions:
-            - user_name: mustafaarda.bicakci@etexgroup.com
-              level: CAN_MANAGE
-            - user_name: pierre.delaguiche@etexgroup.com
-              level: CAN_MANAGE
 
   A:
     mode: production
@@ -61,6 +70,11 @@ targets:
       catalog: automation_a
       policy_id: 306312B973005677
       warehouse_id: 0ef3e37fbbd5b772
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
     resources:
       apps:
         ds_master_data_app:
@@ -74,11 +88,6 @@ targets:
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: CAN_USE
-          permissions:
-            - user_name: mustafaarda.bicakci@etexgroup.com
-              level: CAN_MANAGE
-            - user_name: pierre.delaguiche@etexgroup.com
-              level: CAN_MANAGE
 
   P:
     mode: production
@@ -89,6 +98,11 @@ targets:
       catalog: automation_p
       policy_id: 306312B973005150
       warehouse_id: f500d0d670ae024b
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
     resources:
       apps:
         ds_master_data_app:
@@ -102,8 +116,3 @@ targets:
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: CAN_USE
-          permissions:
-            - user_name: mustafaarda.bicakci@etexgroup.com
-              level: CAN_MANAGE
-            - user_name: pierre.delaguiche@etexgroup.com
-              level: CAN_MANAGE
