@@ -144,6 +144,40 @@ class SetupTablesTests(unittest.TestCase):
     def test_allows_development_configuration(self):
         validate_production_configuration("automation_d", ["TEST ONLY dummy configuration"])
 
+    def test_seed_blocker_reports_source_and_cell_before_any_table_write(self):
+        spark = RecordingSpark()
+        FakeBuilder.spark = spark
+        workbook_data = {}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for file_name, required_sheets in CONFIGURATION_FILES.items():
+                (root / file_name).write_bytes(file_name.encode("ascii"))
+                worksheets = [
+                    FakeWorksheet(
+                        sheet,
+                        [("field", "notes"), ("sample", "TEST ONLY dummy configuration")]
+                        if file_name == "customer_form_rules.xlsx" and sheet == "Form_Fields"
+                        else [("field", "notes"), ("sample", "approved")],
+                    )
+                    for sheet in required_sheets
+                ]
+                workbook_data[file_name] = FakeWorkbook(worksheets)
+
+            openpyxl = types.ModuleType("openpyxl")
+            openpyxl.load_workbook = lambda path, **_kwargs: workbook_data[Path(path).name]
+            with patch.dict(sys.modules, {"openpyxl": openpyxl}):
+                for catalog in ("automation_a", "automation_p"):
+                    with self.subTest(catalog=catalog):
+                        with self.assertRaises(ValueError) as raised:
+                            main(catalog, root)
+                        message = str(raised.exception)
+                        self.assertIn(str(root), message)
+                        self.assertIn("Found 1 blocked cells", message)
+                        self.assertIn("customer_form_rules.xlsx/Form_Fields: row 2, column notes", message)
+
+        self.assertEqual(spark.statements, [])
+        self.assertIsNone(spark.saved_table)
+
     def test_snapshot_preserves_every_sheet_and_serializes_required_rows(self):
         workbook_data = {}
         expected_sheet_count = 0
