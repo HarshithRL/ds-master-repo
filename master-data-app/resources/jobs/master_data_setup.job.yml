@@ -1,7 +1,7 @@
 resources:
   jobs:
     master_data_app_setup_tables:
-      name: "Master Data App - Setup and Seed Bronze Tables"
+      name: "ds-master-data-app - Setup and Seed Bronze Tables"
       tags:
         project: master-data-app
         purpose: setup-and-seed
@@ -15,7 +15,7 @@ resources:
             python_file: ../../src/setup_tables.py
             parameters:
               - ${var.catalog}
-              - ${workspace.root_path}/files/src/data
+              - /Volumes/${var.catalog}/bronze/bronze_volume/master_data_app
           job_cluster_key: setup_cluster
           libraries:
             - pypi:
@@ -30,8 +30,3 @@ resources:
               spark.master: "local[*]"
             policy_id: ${var.policy_id}
             data_security_mode: USER_ISOLATION
-      permissions:
-        - user_name: mustafaarda.bicakci@etexgroup.com
-          level: CAN_MANAGE
-        - user_name: pierre.delaguiche@etexgroup.com
-          level: CAN_MANAGE
