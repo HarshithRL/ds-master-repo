@@ -9,17 +9,24 @@ from databricks.sdk.service.workspace import ImportFormat
 
 ROOT = Path(__file__).resolve().parents[1]
 REMOTE = "/Workspace/Users/mustafaarda.bicakci@etexgroup.com/DS-Master-Repo/industry-sales-dashboards"
-EXCLUDED = {".databricks", "__pycache__", "validation"}
+EXCLUDED = {".databricks", "__pycache__", "validation", ".venv-allocation"}
+DEV_HOST = "https://adb-7181820732839861.1.azuredatabricks.net"
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--profile", default="DEFAULT")
+    parser.add_argument("--profile", default="DEFAULT", choices=("DEFAULT",))
+    parser.add_argument("--files", nargs="+")
     args = parser.parse_args()
     workspace = WorkspaceClient(profile=args.profile)
+    if workspace.config.host.rstrip("/") != DEV_HOST:
+        raise ValueError("Master source uploads are DEV-only")
     manifest = []
-    for local in sorted(ROOT.rglob("*")):
+    selected = [ROOT / relative for relative in args.files] if args.files else ROOT.rglob("*")
+    for local in sorted(selected):
         relative = local.relative_to(ROOT)
+        if ".." in relative.parts:
+            raise ValueError(f"Path outside project: {relative}")
         if not local.is_file() or any(part in EXCLUDED for part in relative.parts):
             continue
         if local.suffix == ".pyc":

@@ -20,7 +20,7 @@ class DashboardPreservationTests(unittest.TestCase):
                     (ROOT / "source_dashboards" / f"{key}.metadata.json").read_text()
                 )
                 original = json.loads(metadata["serialized_dashboard"])
-                transformed = renderer.parameterize(original)
+                transformed = renderer.prepare_dashboard(original, key)
                 self.assertEqual(original["pages"], transformed["pages"])
                 self.assertEqual(original.keys(), transformed.keys())
                 self.assertEqual(
@@ -65,6 +65,31 @@ class DashboardPreservationTests(unittest.TestCase):
                 user_name = entry.get("user_name")
                 if user_name and user_name not in renderer.MANAGERS:
                     self.assertIn(f"user_name: {user_name}", resource)
+
+    def test_only_allocation_query_changes_to_gold_snapshot(self):
+        for key in renderer.DASHBOARDS:
+            metadata = json.loads((ROOT / "source_dashboards" / f"{key}.metadata.json").read_text())
+            original = json.loads(metadata["serialized_dashboard"])
+            baseline = renderer.parameterize(original)
+            transformed = renderer.prepare_dashboard(original, key)
+            for before, after in zip(baseline["datasets"], transformed["datasets"], strict=True):
+                if key == "open_orders" and before["name"] == "ds_overview_allocation":
+                    self.assertEqual(after["queryLines"], [
+                        "SELECT scope, cs_team, segment, plant, bucket, value_eur\n",
+                        "FROM ${var.catalog}.gold.${var.allocation_table_name}\n",
+                    ])
+                    self.assertEqual(
+                        {name: value for name, value in before.items() if name != "queryLines"},
+                        {name: value for name, value in after.items() if name != "queryLines"},
+                    )
+                else:
+                    self.assertEqual(before, after)
+
+    def test_job_calculation_keeps_the_exact_original_business_sql(self):
+        metadata = json.loads((ROOT / "source_dashboards/open_orders.metadata.json").read_text())
+        dataset = next(item for item in json.loads(metadata["serialized_dashboard"])["datasets"] if item["name"] == "ds_overview_allocation")
+        expected = "".join(renderer.parameterize(dataset)["queryLines"])
+        self.assertEqual((ROOT / "src/config/open_orders_allocation.sql").read_text(), expected)
 
 
 if __name__ == "__main__":

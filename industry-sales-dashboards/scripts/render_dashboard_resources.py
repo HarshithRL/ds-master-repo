@@ -48,6 +48,17 @@ def parameterize(value):
     return value
 
 
+def prepare_dashboard(original, key):
+    dashboard = parameterize(original)
+    if key == "open_orders":
+        allocation = next(item for item in dashboard["datasets"] if item["name"] == "ds_overview_allocation")
+        allocation["queryLines"] = [
+            "SELECT scope, cs_team, segment, plant, bucket, value_eur\n",
+            "FROM ${var.catalog}.gold.${var.allocation_table_name}\n",
+        ]
+    return dashboard
+
+
 def render(key):
     metadata = json.loads(
         (ROOT / "source_dashboards" / f"{key}.metadata.json").read_text()
@@ -60,7 +71,7 @@ def render(key):
     )
     if counts != DASHBOARDS[key]:
         raise ValueError(f"Source dashboard shape changed: {key}: {counts}")
-    dashboard = parameterize(original)
+    dashboard = prepare_dashboard(original, key)
     serialized = json.dumps(dashboard, indent=2, ensure_ascii=True)
     if "supply_chain_sandbox_d" in serialized or "synapse-prd" in serialized:
         raise ValueError(f"Unparameterized source reference in {key}")
@@ -119,7 +130,9 @@ def main():
     tables = set()
     pattern = re.compile(r"`\$\{var\.source_catalog\}`\.pbi\.(?:`([^`]+)`|([a-zA-Z_][a-zA-Z0-9_]*))")
     for key in DASHBOARDS:
-        for match in pattern.finditer(render(key)):
+        metadata = json.loads((ROOT / "source_dashboards" / f"{key}.metadata.json").read_text())
+        original = parameterize(json.loads(metadata["serialized_dashboard"]))
+        for match in pattern.finditer(json.dumps(original)):
             tables.add(match.group(1) or match.group(2))
     if not tables:
         raise ValueError("No source tables found in native dashboard definitions")
@@ -141,6 +154,16 @@ def main():
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_text(content)
         print(f"{'Checked' if args.check else 'Rendered'} {filename}")
+    metadata = json.loads((ROOT / "source_dashboards/open_orders.metadata.json").read_text())
+    allocation = next(item for item in json.loads(metadata["serialized_dashboard"])["datasets"] if item["name"] == "ds_overview_allocation")
+    allocation_sql = "".join(parameterize(allocation)["queryLines"])
+    destination = ROOT / "src/config/open_orders_allocation.sql"
+    if args.check:
+        if not destination.exists() or destination.read_text() != allocation_sql:
+            raise ValueError(f"Stale allocation calculation: {destination}")
+    else:
+        destination.write_text(allocation_sql)
+    print(f"{'Checked' if args.check else 'Rendered'} allocation calculation")
 
 
 if __name__ == "__main__":
