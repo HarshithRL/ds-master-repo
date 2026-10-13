@@ -901,7 +901,7 @@
       ]
     },
     {
-      "data_product": "ds-master-data-app",
+      "data_product": "master-data-app",
       "warehouse": false,
       "consumer_groups": [
         {
