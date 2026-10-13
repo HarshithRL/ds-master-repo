@@ -21,7 +21,7 @@ The existing bundle, app YAML, warehouse resources and shared pipeline are retai
 - The job does not create catalogs or schemas; the existing `bronze` schema must already be present. Request and history tables remain empty until app activity creates records.
 - The app reads company, field, credit, and assignment rules from the populated configuration table. Customer records are still queried live with the visitor's token from the source table mapped in the reference workbook.
 - The app uses the visitor's forwarded Databricks token and requires the `sql` user authorization scope. Consumers also need appropriate warehouse and Unity Catalog privileges for source and request tables.
-- The consumer READ/WRITE groups in `permissions/access.json` hold the planned data grants. App-level group `CAN_USE` is intentionally deferred until the group mapping is finalized.
+- The consumer READ/WRITE groups in `permissions/access.json` hold the planned data grants. ACC/PRD app resources grant `CAN_USE` to `AUTOMATION.MASTERDATAAPP.CONSUMER.WRITE` and `AUTOMATION.MASTERDATAAPP.CONSUMER.READ`, applied by the shared deployment pipeline. These groups must exist in each target workspace. App access does not itself grant warehouse or Unity Catalog privileges; the existing managers and TEST/DEV permissions are unchanged.
 - Run the setup job once per environment before starting the app. Its identity needs `USE_CATALOG`, `USE_SCHEMA`, `READ_VOLUME` on the config volume, and permission to create/write the app tables in the existing bronze schema; app users need SELECT on configuration and MODIFY on requests/history.
 
 ## Deployment status
