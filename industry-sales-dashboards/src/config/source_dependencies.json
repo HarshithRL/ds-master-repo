@@ -1,0 +1,18 @@
+{
+  "pbi_tables": [
+    "dbx_date_delivery",
+    "dbx_dim_customer",
+    "dbx_dim_material",
+    "dbx_dim_order_reason_desc",
+    "dbx_dim_plant",
+    "dbx_dim_product_hierarchy",
+    "dbx_dim_rejection_reason",
+    "dbx_dim_sales_organization",
+    "dbx_dim_users",
+    "dbx_fact_billing_document_line_item",
+    "dbx_fact_o2c_-_self_service_-_sales_orders",
+    "dbx_fact_sales_distribution_delivery_item",
+    "dbx_fact_sales_distribution_sales_document_item",
+    "dbx_fact_sales_distribution_schedule_line"
+  ]
+}

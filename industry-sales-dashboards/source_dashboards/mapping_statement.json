@@ -1,0 +1,589 @@
+{
+  "manifest": {
+    "chunks": [
+      {
+        "chunk_index": 0,
+        "row_count": 108,
+        "row_offset": 0
+      }
+    ],
+    "format": "JSON_ARRAY",
+    "schema": {
+      "column_count": 3,
+      "columns": [
+        {
+          "name": "sales_org_code",
+          "position": 0,
+          "type_name": "STRING",
+          "type_text": "STRING"
+        },
+        {
+          "name": "sales_organization",
+          "position": 1,
+          "type_name": "STRING",
+          "type_text": "STRING"
+        },
+        {
+          "name": "cs_team",
+          "position": 2,
+          "type_name": "STRING",
+          "type_text": "STRING"
+        }
+      ]
+    },
+    "total_chunk_count": 1,
+    "total_row_count": 108,
+    "truncated": false
+  },
+  "result": {
+    "chunk_index": 0,
+    "data_array": [
+      [
+        "6701",
+        "Skamol DK IO Home",
+        "Skamol"
+      ],
+      [
+        "6702",
+        "Skamol DK IO Export",
+        "Skamol"
+      ],
+      [
+        "6761",
+        "Skamol EE IO Home",
+        "Skamol"
+      ],
+      [
+        "6762",
+        "Skamol EE IO Export",
+        "Skamol"
+      ],
+      [
+        "6781",
+        "Skamol Shanghai",
+        "Skamol"
+      ],
+      [
+        "6901",
+        "Skamol APAC IO Home",
+        "Skamol"
+      ],
+      [
+        "6902",
+        "Skamol APAC IO Export",
+        "Skamol"
+      ],
+      [
+        "6804",
+        "Promat US Ind Home",
+        "US"
+      ],
+      [
+        "6805",
+        "Promat US Ind Export",
+        "US"
+      ],
+      [
+        "6801",
+        "Promat US EBP Home",
+        "Not Assigned"
+      ],
+      [
+        "6802",
+        "Promat US EBP Export",
+        "Not Assigned"
+      ],
+      [
+        "2327",
+        "EBP Romania IO Home",
+        "Not Assigned"
+      ],
+      [
+        "2328",
+        "EBP Romania IO Export",
+        "Not Assigned"
+      ],
+      [
+        "5344",
+        "Marley BS Ind Home",
+        "Not Assigned"
+      ],
+      [
+        "5345",
+        "Marley BS Ind Export",
+        "Not Assigned"
+      ],
+      [
+        "6104",
+        "Promat NV IO Home",
+        "Not Assigned"
+      ],
+      [
+        "6105",
+        "Promat NV IO Export",
+        "Not Assigned"
+      ],
+      [
+        "6124",
+        "Promat BV IO Home",
+        "Not Assigned"
+      ],
+      [
+        "6125",
+        "Promat BV IO Export",
+        "Not Assigned"
+      ],
+      [
+        "6164",
+        "Promat GL IO Home",
+        "Not Assigned"
+      ],
+      [
+        "6165",
+        "Promat GL IO Export",
+        "Not Assigned"
+      ],
+      [
+        "6203",
+        "Promat DE IC",
+        "Not Assigned"
+      ],
+      [
+        "6204",
+        "Promat DE IO Home",
+        "Not Assigned"
+      ],
+      [
+        "6205",
+        "Promat DE IO Export",
+        "Not Assigned"
+      ],
+      [
+        "6206",
+        "Promat DE OEM Home",
+        "Not Assigned"
+      ],
+      [
+        "6207",
+        "Promat DE OEM Export",
+        "Not Assigned"
+      ],
+      [
+        "6324",
+        "Comais IO Home",
+        "Not Assigned"
+      ],
+      [
+        "6325",
+        "Comais IO Export",
+        "Not Assigned"
+      ],
+      [
+        "6404",
+        "Promat SAS IO Home",
+        "Not Assigned"
+      ],
+      [
+        "6405",
+        "Promat SAS IO Export",
+        "Not Assigned"
+      ],
+      [
+        "6421",
+        "Promat IB TC Home",
+        "Not Assigned"
+      ],
+      [
+        "6422",
+        "Promat IB TC Export",
+        "Not Assigned"
+      ],
+      [
+        "6444",
+        "Promat ApS IO Home",
+        "Not Assigned"
+      ],
+      [
+        "6445",
+        "Promat ApS IO Export",
+        "Not Assigned"
+      ],
+      [
+        "6461",
+        "Projiso Esp PCI",
+        "Not Assigned"
+      ],
+      [
+        "6481",
+        "Promat Invers. S.L.",
+        "Not Assigned"
+      ],
+      [
+        "6504",
+        "Promat AT IO Home",
+        "Not Assigned"
+      ],
+      [
+        "6505",
+        "Promat AT IO Export",
+        "Not Assigned"
+      ],
+      [
+        "6591",
+        "Promat ME EBP Home",
+        "Not Assigned"
+      ],
+      [
+        "6592",
+        "Promat ME EBP Export",
+        "Not Assigned"
+      ],
+      [
+        "7706",
+        "Siniat Italy IO Home",
+        "Not Assigned"
+      ],
+      [
+        "8406",
+        "Etex BP IO Home",
+        "Not Assigned"
+      ],
+      [
+        "5504",
+        "Etex Australia IO",
+        "Asia"
+      ],
+      [
+        "6594",
+        "Promat ME IO Home",
+        "Asia"
+      ],
+      [
+        "6595",
+        "Promat ME IO Export",
+        "Asia"
+      ],
+      [
+        "6881",
+        "PSL IO Building Home",
+        "Asia"
+      ],
+      [
+        "6882",
+        "PSL IO Building Export",
+        "Asia"
+      ],
+      [
+        "6884",
+        "PSL IO Tunnel Home",
+        "Asia"
+      ],
+      [
+        "6885",
+        "PSL IO Tunnel Export",
+        "Asia"
+      ],
+      [
+        "6921",
+        "PIAP IO Building Home",
+        "Asia"
+      ],
+      [
+        "6922",
+        "PIAP IO Building Export",
+        "Asia"
+      ],
+      [
+        "6924",
+        "PIAP IO Tunnel Home",
+        "Asia"
+      ],
+      [
+        "6925",
+        "PIAP IO Tunnel Export",
+        "Asia"
+      ],
+      [
+        "6944",
+        "Promat SG IO Home",
+        "Asia"
+      ],
+      [
+        "6945",
+        "Promat SG IO Export",
+        "Asia"
+      ],
+      [
+        "6951",
+        "PSG IO Building Home",
+        "Asia"
+      ],
+      [
+        "6952",
+        "PSG IO Building Export",
+        "Asia"
+      ],
+      [
+        "6954",
+        "PSG IO Tunnel Home",
+        "Asia"
+      ],
+      [
+        "6955",
+        "PSG IO Tunnel Export",
+        "Asia"
+      ],
+      [
+        "6961",
+        "EMY IO Building Home",
+        "Asia"
+      ],
+      [
+        "6962",
+        "EMY IO Building Export",
+        "Asia"
+      ],
+      [
+        "6964",
+        "EMY IO Tunnel Home",
+        "Asia"
+      ],
+      [
+        "6965",
+        "EMY IO Tunnel Export",
+        "Asia"
+      ],
+      [
+        "6984",
+        "Promat AUS IO Home",
+        "Asia"
+      ],
+      [
+        "6985",
+        "Promat AUS IO Export",
+        "Asia"
+      ],
+      [
+        "8461",
+        "FSi Ltd IO Home",
+        "FSi"
+      ],
+      [
+        "8462",
+        "FSi Ltd IO Export",
+        "FSi"
+      ],
+      [
+        "1904",
+        "Promat DE Ind Home",
+        "Europe"
+      ],
+      [
+        "1905",
+        "Promat DE Ind Export",
+        "Europe"
+      ],
+      [
+        "1906",
+        "Promat DE OEM Home",
+        "Europe"
+      ],
+      [
+        "1907",
+        "Promat DE OEM Export",
+        "Europe"
+      ],
+      [
+        "2148",
+        "Promat PL IO",
+        "Europe"
+      ],
+      [
+        "2149",
+        "Promat PL IO Export",
+        "Europe"
+      ],
+      [
+        "2601",
+        "Etex BG IO Home",
+        "Europe"
+      ],
+      [
+        "5201",
+        "EGBS IO Home",
+        "Europe"
+      ],
+      [
+        "5203",
+        "EGBS IO Export",
+        "Europe"
+      ],
+      [
+        "5206",
+        "EGBS CLAD Home",
+        "Europe"
+      ],
+      [
+        "5207",
+        "EGBS CLAD Export",
+        "Europe"
+      ],
+      [
+        "6004",
+        "Prom.Int. IO Home",
+        "Europe"
+      ],
+      [
+        "6005",
+        "Prom.Int. IO Export",
+        "Europe"
+      ],
+      [
+        "6051",
+        "Microtherm TC Home",
+        "Europe"
+      ],
+      [
+        "6052",
+        "Microtherm TC Export",
+        "Europe"
+      ],
+      [
+        "6054",
+        "Microtherm IO Home",
+        "Europe"
+      ],
+      [
+        "6055",
+        "Microtherm IO Export",
+        "Europe"
+      ],
+      [
+        "6144",
+        "Promat UK IO Home",
+        "Europe"
+      ],
+      [
+        "6145",
+        "Promat UK IO Export",
+        "Europe"
+      ],
+      [
+        "6146",
+        "Promat UK SG Home",
+        "Europe"
+      ],
+      [
+        "6147",
+        "Promat UK SG Export",
+        "Europe"
+      ],
+      [
+        "6148",
+        "Promat UK WKSP Home",
+        "Europe"
+      ],
+      [
+        "6149",
+        "Promat UK WKSP Export",
+        "Europe"
+      ],
+      [
+        "6184",
+        "Promat Service IO",
+        "Europe"
+      ],
+      [
+        "6185",
+        "Promat Service IO Export",
+        "Europe"
+      ],
+      [
+        "6304",
+        "Promat IT IO Home",
+        "Europe"
+      ],
+      [
+        "6305",
+        "Promat IT IO Export",
+        "Europe"
+      ],
+      [
+        "6306",
+        "Promat IT IO France",
+        "Europe"
+      ],
+      [
+        "6307",
+        "SEE Sales Industry",
+        "Europe"
+      ],
+      [
+        "6424",
+        "Promat IB IO Home",
+        "Europe"
+      ],
+      [
+        "6425",
+        "Promat IB IO Export",
+        "Europe"
+      ],
+      [
+        "6524",
+        "Etex Industry Home",
+        "Europe"
+      ],
+      [
+        "6525",
+        "Etex Industry Export",
+        "Europe"
+      ],
+      [
+        "6574",
+        "Promat CZ IO Home",
+        "Europe"
+      ],
+      [
+        "6575",
+        "Promat CZ IO Export",
+        "Europe"
+      ],
+      [
+        "6644",
+        "Promat PL IO",
+        "Europe"
+      ],
+      [
+        "6645",
+        "Promat PL IO Export",
+        "Europe"
+      ],
+      [
+        "7464",
+        "Siniat BV IO Home",
+        "Europe"
+      ],
+      [
+        "7541",
+        "Etex Norway IO Home",
+        "Europe"
+      ],
+      [
+        "9506",
+        "Promat Industrie",
+        "Europe"
+      ],
+      [
+        "9507",
+        "Promat Industrie Export",
+        "Europe"
+      ]
+    ],
+    "row_count": 108,
+    "row_offset": 0
+  },
+  "statement_id": "01f1c6f1-542b-10a4-ab9c-5ef349a50fa7",
+  "status": {
+    "state": "SUCCEEDED"
+  }
+}
