@@ -1,0 +1,58 @@
+resources:
+  jobs:
+    industry_sales_refresh:
+      name: industry-sales-dashboards-refresh-${bundle.target}
+      max_concurrent_runs: 1
+      timeout_seconds: 7200
+      schedule:
+        quartz_cron_expression: 0 30 6 * * ?
+        timezone_id: Europe/Brussels
+        pause_status: ${var.refresh_pause_status}
+      tasks:
+        - task_key: refresh_cs_team_mapping
+          notebook_task:
+            notebook_path: ../../src/notebooks/refresh_cs_team_mapping.py
+            base_parameters:
+              catalog: ${var.catalog}
+              source_catalog: ${var.source_catalog}
+              config_path: ${workspace.file_path}/src/config
+              target: ${bundle.target}
+              mapping_table_name: ${var.mapping_table_name}
+          job_cluster_key: mapping_cluster
+          max_retries: 1
+          min_retry_interval_millis: 60000
+        - task_key: refresh_open_orders
+          depends_on:
+            - task_key: refresh_cs_team_mapping
+          dashboard_task:
+            dashboard_id: ${resources.dashboards.industry_open_orders.id}
+            warehouse_id: ${var.warehouse_id}
+          max_retries: 1
+          min_retry_interval_millis: 60000
+        - task_key: refresh_quotations
+          depends_on:
+            - task_key: refresh_cs_team_mapping
+            - task_key: refresh_open_orders
+          dashboard_task:
+            dashboard_id: ${resources.dashboards.industry_quotations.id}
+            warehouse_id: ${var.warehouse_id}
+          max_retries: 1
+          min_retry_interval_millis: 60000
+      job_clusters:
+        - job_cluster_key: mapping_cluster
+          new_cluster:
+            spark_version: 15.4.x-scala2.12
+            node_type_id: Standard_DS3_v2
+            policy_id: ${var.policy_id}
+            data_security_mode: USER_ISOLATION
+            runtime_engine: PHOTON
+            enable_elastic_disk: true
+            azure_attributes:
+              first_on_demand: 1
+              availability: SPOT_WITH_FALLBACK_AZURE
+              spot_bid_max_price: 100
+            autoscale:
+              min_workers: 1
+              max_workers: 2
+      queue:
+        enabled: true

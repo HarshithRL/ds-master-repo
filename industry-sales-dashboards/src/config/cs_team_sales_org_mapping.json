@@ -1,0 +1,546 @@
+{
+  "source": "supply_chain_sandbox_d.datamodel.cs_team_sales_org_mapping",
+  "source_statement_id": "01f1c6f1-542b-10a4-ab9c-5ef349a50fa7",
+  "rows": [
+    {
+      "sales_org_code": "6701",
+      "sales_organization": "Skamol DK IO Home",
+      "cs_team": "Skamol"
+    },
+    {
+      "sales_org_code": "6702",
+      "sales_organization": "Skamol DK IO Export",
+      "cs_team": "Skamol"
+    },
+    {
+      "sales_org_code": "6761",
+      "sales_organization": "Skamol EE IO Home",
+      "cs_team": "Skamol"
+    },
+    {
+      "sales_org_code": "6762",
+      "sales_organization": "Skamol EE IO Export",
+      "cs_team": "Skamol"
+    },
+    {
+      "sales_org_code": "6781",
+      "sales_organization": "Skamol Shanghai",
+      "cs_team": "Skamol"
+    },
+    {
+      "sales_org_code": "6901",
+      "sales_organization": "Skamol APAC IO Home",
+      "cs_team": "Skamol"
+    },
+    {
+      "sales_org_code": "6902",
+      "sales_organization": "Skamol APAC IO Export",
+      "cs_team": "Skamol"
+    },
+    {
+      "sales_org_code": "6804",
+      "sales_organization": "Promat US Ind Home",
+      "cs_team": "US"
+    },
+    {
+      "sales_org_code": "6805",
+      "sales_organization": "Promat US Ind Export",
+      "cs_team": "US"
+    },
+    {
+      "sales_org_code": "6801",
+      "sales_organization": "Promat US EBP Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6802",
+      "sales_organization": "Promat US EBP Export",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "2327",
+      "sales_organization": "EBP Romania IO Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "2328",
+      "sales_organization": "EBP Romania IO Export",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "5344",
+      "sales_organization": "Marley BS Ind Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "5345",
+      "sales_organization": "Marley BS Ind Export",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6104",
+      "sales_organization": "Promat NV IO Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6105",
+      "sales_organization": "Promat NV IO Export",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6124",
+      "sales_organization": "Promat BV IO Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6125",
+      "sales_organization": "Promat BV IO Export",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6164",
+      "sales_organization": "Promat GL IO Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6165",
+      "sales_organization": "Promat GL IO Export",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6203",
+      "sales_organization": "Promat DE IC",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6204",
+      "sales_organization": "Promat DE IO Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6205",
+      "sales_organization": "Promat DE IO Export",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6206",
+      "sales_organization": "Promat DE OEM Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6207",
+      "sales_organization": "Promat DE OEM Export",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6324",
+      "sales_organization": "Comais IO Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6325",
+      "sales_organization": "Comais IO Export",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6404",
+      "sales_organization": "Promat SAS IO Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6405",
+      "sales_organization": "Promat SAS IO Export",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6421",
+      "sales_organization": "Promat IB TC Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6422",
+      "sales_organization": "Promat IB TC Export",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6444",
+      "sales_organization": "Promat ApS IO Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6445",
+      "sales_organization": "Promat ApS IO Export",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6461",
+      "sales_organization": "Projiso Esp PCI",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6481",
+      "sales_organization": "Promat Invers. S.L.",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6504",
+      "sales_organization": "Promat AT IO Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6505",
+      "sales_organization": "Promat AT IO Export",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6591",
+      "sales_organization": "Promat ME EBP Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "6592",
+      "sales_organization": "Promat ME EBP Export",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "7706",
+      "sales_organization": "Siniat Italy IO Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "8406",
+      "sales_organization": "Etex BP IO Home",
+      "cs_team": "Not Assigned"
+    },
+    {
+      "sales_org_code": "5504",
+      "sales_organization": "Etex Australia IO",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6594",
+      "sales_organization": "Promat ME IO Home",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6595",
+      "sales_organization": "Promat ME IO Export",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6881",
+      "sales_organization": "PSL IO Building Home",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6882",
+      "sales_organization": "PSL IO Building Export",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6884",
+      "sales_organization": "PSL IO Tunnel Home",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6885",
+      "sales_organization": "PSL IO Tunnel Export",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6921",
+      "sales_organization": "PIAP IO Building Home",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6922",
+      "sales_organization": "PIAP IO Building Export",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6924",
+      "sales_organization": "PIAP IO Tunnel Home",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6925",
+      "sales_organization": "PIAP IO Tunnel Export",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6944",
+      "sales_organization": "Promat SG IO Home",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6945",
+      "sales_organization": "Promat SG IO Export",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6951",
+      "sales_organization": "PSG IO Building Home",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6952",
+      "sales_organization": "PSG IO Building Export",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6954",
+      "sales_organization": "PSG IO Tunnel Home",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6955",
+      "sales_organization": "PSG IO Tunnel Export",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6961",
+      "sales_organization": "EMY IO Building Home",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6962",
+      "sales_organization": "EMY IO Building Export",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6964",
+      "sales_organization": "EMY IO Tunnel Home",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6965",
+      "sales_organization": "EMY IO Tunnel Export",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6984",
+      "sales_organization": "Promat AUS IO Home",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "6985",
+      "sales_organization": "Promat AUS IO Export",
+      "cs_team": "Asia"
+    },
+    {
+      "sales_org_code": "8461",
+      "sales_organization": "FSi Ltd IO Home",
+      "cs_team": "FSi"
+    },
+    {
+      "sales_org_code": "8462",
+      "sales_organization": "FSi Ltd IO Export",
+      "cs_team": "FSi"
+    },
+    {
+      "sales_org_code": "1904",
+      "sales_organization": "Promat DE Ind Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "1905",
+      "sales_organization": "Promat DE Ind Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "1906",
+      "sales_organization": "Promat DE OEM Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "1907",
+      "sales_organization": "Promat DE OEM Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "2148",
+      "sales_organization": "Promat PL IO",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "2149",
+      "sales_organization": "Promat PL IO Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "2601",
+      "sales_organization": "Etex BG IO Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "5201",
+      "sales_organization": "EGBS IO Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "5203",
+      "sales_organization": "EGBS IO Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "5206",
+      "sales_organization": "EGBS CLAD Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "5207",
+      "sales_organization": "EGBS CLAD Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6004",
+      "sales_organization": "Prom.Int. IO Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6005",
+      "sales_organization": "Prom.Int. IO Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6051",
+      "sales_organization": "Microtherm TC Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6052",
+      "sales_organization": "Microtherm TC Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6054",
+      "sales_organization": "Microtherm IO Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6055",
+      "sales_organization": "Microtherm IO Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6144",
+      "sales_organization": "Promat UK IO Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6145",
+      "sales_organization": "Promat UK IO Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6146",
+      "sales_organization": "Promat UK SG Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6147",
+      "sales_organization": "Promat UK SG Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6148",
+      "sales_organization": "Promat UK WKSP Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6149",
+      "sales_organization": "Promat UK WKSP Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6184",
+      "sales_organization": "Promat Service IO",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6185",
+      "sales_organization": "Promat Service IO Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6304",
+      "sales_organization": "Promat IT IO Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6305",
+      "sales_organization": "Promat IT IO Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6306",
+      "sales_organization": "Promat IT IO France",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6307",
+      "sales_organization": "SEE Sales Industry",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6424",
+      "sales_organization": "Promat IB IO Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6425",
+      "sales_organization": "Promat IB IO Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6524",
+      "sales_organization": "Etex Industry Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6525",
+      "sales_organization": "Etex Industry Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6574",
+      "sales_organization": "Promat CZ IO Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6575",
+      "sales_organization": "Promat CZ IO Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6644",
+      "sales_organization": "Promat PL IO",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "6645",
+      "sales_organization": "Promat PL IO Export",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "7464",
+      "sales_organization": "Siniat BV IO Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "7541",
+      "sales_organization": "Etex Norway IO Home",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "9506",
+      "sales_organization": "Promat Industrie",
+      "cs_team": "Europe"
+    },
+    {
+      "sales_org_code": "9507",
+      "sales_organization": "Promat Industrie Export",
+      "cs_team": "Europe"
+    }
+  ]
+}
