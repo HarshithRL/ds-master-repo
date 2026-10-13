@@ -41,7 +41,7 @@ USER_GUIDE_FILE = BASE_DIR / "docs" / "user_guide.pdf"
 # =============================================================================
 
 PAGE_ICON_FILE = "assets/axiom_icon.png"
-HEADER_LOGO_FILE = "assets/axiom_logo.svg"
+HEADER_LOGO_FILE = "assets/axiom_logo.png"
 
 # =============================================================================
 # ATTACHMENT LIMITS
