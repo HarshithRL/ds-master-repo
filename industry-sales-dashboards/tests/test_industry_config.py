@@ -11,6 +11,18 @@ SPEC.loader.exec_module(config)
 
 
 class IndustryConfigurationTests(unittest.TestCase):
+    def test_ad_hoc_validation_rejects_acc_prd_and_other_jobs(self):
+        config.validate_dev_validation_job(config.DEV_VALIDATION_HOST, config.DEV_VALIDATION_JOB_ID)
+        config.validate_dev_validation_job(config.DEV_VALIDATION_HOST + "/", config.DEV_VALIDATION_JOB_ID)
+        for host, job_id in (
+            ("https://adb-4796304964978539.19.azuredatabricks.net", 782785572146675),
+            ("https://adb-4844910598668398.18.azuredatabricks.net", 51727892682554),
+            ("https://adb-4796304964978539.19.azuredatabricks.net", config.DEV_VALIDATION_JOB_ID),
+            (config.DEV_VALIDATION_HOST, 782785572146675),
+        ):
+            with self.subTest(host=host, job_id=job_id), self.assertRaises(ValueError):
+                config.validate_dev_validation_job(host, job_id)
+
     def test_original_mapping_is_complete_unique_and_unchanged(self):
         capture = json.loads((ROOT / "source_dashboards" / "mapping_statement.json").read_text())
         rows = [dict(zip(config.MAPPING_COLUMNS, values, strict=True)) for values in capture["result"]["data_array"]]

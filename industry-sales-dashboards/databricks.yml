@@ -11,6 +11,7 @@ sync:
     - tests/**
     - scripts/**
     - validation/**
+    - .venv-allocation/**
 
 variables:
   catalog:
@@ -27,6 +28,9 @@ variables:
   mapping_table_name:
     description: Bundle-owned lookup table name within each fixed schema
     default: industry_sales_cs_team_sales_org_mapping
+  allocation_table_name:
+    description: Allocation gold snapshot populated before the Open Orders refresh
+    default: industry_sales_open_orders_allocation
 
 permissions:
   - user_name: mustafaarda.bicakci@etexgroup.com
@@ -53,6 +57,7 @@ targets:
       warehouse_id: 69ada62b2fb9b9e2
       refresh_pause_status: PAUSED
       mapping_table_name: industry_sales_cs_team_sales_org_mapping_dev
+      allocation_table_name: industry_sales_open_orders_allocation_dev
 
   T:
     mode: production
