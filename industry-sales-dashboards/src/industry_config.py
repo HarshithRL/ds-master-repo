@@ -13,6 +13,13 @@ TARGET_CATALOGS = {
     "A": "automation_a",
     "P": "automation_p",
 }
+DEV_VALIDATION_HOST = "https://adb-7181820732839861.1.azuredatabricks.net"
+DEV_VALIDATION_JOB_ID = 38702778571616
+
+
+def validate_dev_validation_job(host, job_id):
+    if host.rstrip("/") != DEV_VALIDATION_HOST or job_id != DEV_VALIDATION_JOB_ID:
+        raise ValueError("Ad hoc validation is DEV-only; ACC/PRD changes require the user's pipeline")
 
 
 def validate_table_name(table_name, target):

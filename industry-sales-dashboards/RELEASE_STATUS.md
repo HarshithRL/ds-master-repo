@@ -1,5 +1,21 @@
 # Release Status - 2026-10-13
 
+## Latest Source Update - 2026-10-14
+
+This section supersedes the earlier source/configuration status below. It describes the commit-ready source change, not a successful runtime deployment.
+
+- At the user's request, the allocation performance change is prepared for upload to the DEV DS-Master-Repo Git Folder only. The user commits/pushes and promotes through the existing pipeline. No ACC/PRD deployment or direct dashboard update is part of this upload.
+- The source job now has four tasks: mapping -> allocation materialization -> Open Orders refresh -> Quotations refresh. The new Spark Python task preserves the original 18 CTE calculations, fixes the business date once, and uses eager checkpoints to avoid plan expansion. Its SQL parser dependency is pinned to sqlglot 27.20.0. No schema creation is added.
+- Only Open Orders dataset `ds_overview_allocation` switches to a local gold snapshot. Its six result columns, measures, pages, widgets, and filters are preserved. DEV uses `automation_d.gold.industry_sales_open_orders_allocation_dev`; T/A/P use their target catalogs without the `_dev` suffix. Other Open Orders and all Quotations datasets are unchanged.
+- Twenty-one local tests pass, including the full original allocation SQL versus staged Spark execution on native-column fixtures, exact duplicate/fractional/date-boundary equivalence, and unchanged widget/measure definitions. Deterministic resource checks and D/T bundle validation pass.
+- The duplicate/union fixture uses fixed-precision decimals so its exact comparison is not sensitive to distributed DOUBLE addition order. The separate full native-query fixture retains fractional DOUBLE inputs. These finite fixtures do not establish bit-identical floating-point sums for every live dataset; native type, quantity reconciliation, and material KPI difference checks remain part of DEV acceptance. Production SQL expressions and source quantity types were not changed to make tests pass.
+- These tests are not live-data performance certification. A successful source-frozen DEV materialization, gold write/read validation, measured KPI query duration, freshness check, reader access, and authenticated browser rendering are still required before promotion. Live DEV dashboards/jobs are not updated merely by uploading this Git Folder source.
+- Snapshot readers need SELECT on the new gold allocation table. The first materialization must succeed before the dataset can load. Values represent the recorded allocation business date, not per-widget CURRENT_DATE recomputation. A failed refresh retains the previous snapshot; it must not be labeled current.
+- Two assistant-created ACC allocation probes were canceled and their temporary task removed after the user specified DEV-only testing. No ACC/PRD dashboard SQL was switched to a candidate table. The prototype is not runtime-certified from those incomplete probes.
+- The verified original allocation plan contained 120 distinct foreign JDBC scan operators and 1,347 total operators. Active statements had read over 117 million rows; the local mapping count returned 108 successfully. This is evidence of expensive query expansion, not proof that every spinner has the same cause.
+
+The previous sections are historical receipts and must not be interpreted as a current promotion approval.
+
 ## Implemented And Placed In Master Repo
 
 - New top-level `industry-sales-dashboards` bundle under the existing DEV Git Folder `/Workspace/Users/mustafaarda.bicakci@etexgroup.com/DS-Master-Repo`.
