@@ -1,0 +1,4124 @@
+resources:
+  dashboards:
+    industry_quotations:
+      display_name: "Industry Division \u2014 Quotations Dashboard"
+      warehouse_id: ${var.warehouse_id}
+      embed_credentials: false
+      permissions:
+        - user_name: david.hillier@etexgroup.com
+          level: CAN_READ
+        - user_name: federico.nidini@etexgroup.com
+          level: CAN_READ
+        - user_name: francois.leclercq@etexgroup.com
+          level: CAN_MANAGE
+        - user_name: iwona.lipinska@etexgroup.com
+          level: CAN_READ
+        - user_name: kamil.darczuk@etexgroup.com
+          level: CAN_READ
+        - user_name: kurt.avermate@etexgroup.com
+          level: CAN_READ
+        - user_name: roberta.villa@etexgroup.com
+          level: CAN_READ
+        - user_name: santiago.salvagno@etexgroup.com
+          level: CAN_READ
+        - user_name: sarah.drostel@etexgroup.com
+          level: CAN_READ
+      serialized_dashboard: |-
+        {
+          "datasets": [
+            {
+              "name": "ds_quotations",
+              "displayName": "ds_quotations",
+              "queryLines": [
+                "WITH q AS (\n",
+                "  SELECT\n",
+                "    DATE_TRUNC('month', TO_DATE(CAST(i.`Created On` AS STRING), 'yyyyMMdd')) AS month_date,\n",
+                "    COALESCE(csm.`cs_team`, 'Unmapped') AS cs_team,\n",
+                "    i.`Sales Document Number` AS quote_number,\n",
+                "    ROUND(SUM(i.`Measure Net Value in Euro`), 0) AS quote_value,\n",
+                "    MAX(i.`Quotation Valid To`) AS valid_to_int,\n",
+                "    MAX(\n",
+                "      CASE\n",
+                "        WHEN COALESCE(i.`Reason for Rejection`, '') != '' THEN 1\n",
+                "        ELSE 0\n",
+                "      END\n",
+                "    ) AS is_rejected,\n",
+                "    MAX(i.`Order Reason`) AS order_reason\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` i\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON i.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "      LEFT JOIN ${var.catalog}.gold.${var.mapping_table_name} csm\n",
+                "        ON sorg.`Sales_Organization ID` = csm.`sales_org_code`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND i.`Sales Document Type` = 'YQT'\n",
+                "    AND i.`Created On` >= CAST(DATE_FORMAT(ADD_MONTHS(CURRENT_DATE(), -12), 'yyyyMMdd') AS INT)\n",
+                "    AND (\n",
+                "      :segment_filter IS NULL\n",
+                "      OR CARDINALITY(:segment_filter) = 0\n",
+                "      OR array_contains(:segment_filter, i.`Application area Description`)\n",
+                "    )\n",
+                "  GROUP BY\n",
+                "    1,\n",
+                "    2,\n",
+                "    3\n",
+                "),\n",
+                "converted AS (\n",
+                "  SELECT DISTINCT\n",
+                "    o.`Quote Number` AS quote_number\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` o\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON o.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND o.`Sales Document Type` IN ('YOR', 'YSO', 'YKE', 'YKB')\n",
+                "    AND COALESCE(o.`Quote Number`, '') != ''\n",
+                "    AND o.`Created On` >= CAST(CONCAT(YEAR(CURRENT_DATE()) - 2, '0101') AS INT)\n",
+                ")\n",
+                "SELECT\n",
+                "  q.month_date,\n",
+                "  q.cs_team,\n",
+                "  COUNT(DISTINCT q.quote_number) AS total_quotes,\n",
+                "  SUM(q.quote_value) AS total_quote_value,\n",
+                "  COUNT(DISTINCT\n",
+                "    CASE\n",
+                "      WHEN c.quote_number IS NOT NULL OR q.order_reason = '24' THEN q.quote_number\n",
+                "    END\n",
+                "  ) AS converted_quotes,\n",
+                "  COUNT(DISTINCT\n",
+                "    CASE\n",
+                "      WHEN\n",
+                "        c.quote_number IS NULL\n",
+                "        AND q.is_rejected = 0\n",
+                "        AND COALESCE(q.order_reason, '') NOT IN ('24', '25')\n",
+                "        AND q.valid_to_int > 0\n",
+                "        AND TO_DATE(CAST(q.valid_to_int AS STRING), 'yyyyMMdd') >= CURRENT_DATE()\n",
+                "      THEN\n",
+                "        q.quote_number\n",
+                "    END\n",
+                "  ) AS open_quotes,\n",
+                "  COUNT(DISTINCT\n",
+                "    CASE\n",
+                "      WHEN\n",
+                "        c.quote_number IS NULL\n",
+                "        AND q.is_rejected = 0\n",
+                "        AND COALESCE(q.order_reason, '') NOT IN ('24', '25')\n",
+                "        AND (\n",
+                "          q.valid_to_int = 0\n",
+                "          OR TO_DATE(CAST(q.valid_to_int AS STRING), 'yyyyMMdd') < CURRENT_DATE()\n",
+                "        )\n",
+                "      THEN\n",
+                "        q.quote_number\n",
+                "    END\n",
+                "  ) AS expired_quotes,\n",
+                "  COUNT(DISTINCT\n",
+                "    CASE\n",
+                "      WHEN q.is_rejected = 1 OR q.order_reason = '25' THEN q.quote_number\n",
+                "    END\n",
+                "  ) AS rejected_quotes\n",
+                "FROM\n",
+                "  q\n",
+                "    LEFT JOIN converted c\n",
+                "      ON c.quote_number = q.quote_number\n",
+                "GROUP BY\n",
+                "  1,\n",
+                "  2"
+              ],
+              "parameters": [
+                {
+                  "displayName": "Segment Filter",
+                  "keyword": "segment_filter",
+                  "dataType": "STRING",
+                  "complexType": "MULTI",
+                  "defaultSelection": {
+                    "values": {
+                      "dataType": "STRING"
+                    }
+                  }
+                }
+              ],
+              "columns": [
+                {
+                  "displayName": "Conversion Rate %",
+                  "description": "",
+                  "expression": "SUM(`converted_quotes`) * 100.0 / NULLIF(SUM(`total_quotes`), 0)"
+                }
+              ]
+            },
+            {
+              "name": "ds_quotations_detail",
+              "displayName": "ds_quotations_detail",
+              "queryLines": [
+                "WITH quotes AS (\n",
+                "  SELECT\n",
+                "    i.`Sales Document Number` AS quote_id,\n",
+                "    MAX(i.`Sales Document Type Description`) AS doc_type,\n",
+                "    TO_DATE(CAST(MAX(i.`Created On`) AS STRING), 'yyyyMMdd') AS created_date,\n",
+                "    TO_DATE(CAST(MAX(i.`Quotation Valid From`) AS STRING), 'yyyyMMdd') AS valid_from,\n",
+                "    TO_DATE(CAST(MAX(i.`Quotation Valid To`) AS STRING), 'yyyyMMdd') AS valid_to,\n",
+                "    MAX(COALESCE(c.`Name 1`, i.`Sold To Party`)) AS customer,\n",
+                "    MAX(c.`Country`) AS country,\n",
+                "    MAX(COALESCE(csm.`cs_team`, 'Unmapped')) AS cs_team,\n",
+                "    MAX(COALESCE(ph.`L2 Product Description`, 'Unknown')) AS product_group,\n",
+                "    ROUND(SUM(i.`Measure Net Value in Euro`), 0) AS quote_value,\n",
+                "    MAX(\n",
+                "      COALESCE(rr.`Rejection Reason Description`, i.`Reason for Rejection`, '')\n",
+                "    ) AS rejection_reason,\n",
+                "    MAX(\n",
+                "      CASE\n",
+                "        WHEN COALESCE(i.`Reason for Rejection`, '') != '' THEN 1\n",
+                "        ELSE 0\n",
+                "      END\n",
+                "    ) AS is_rejected,\n",
+                "    MAX(i.`Order Reason`) AS order_reason,\n",
+                "    MAX(COALESCE(se.`User Name`, i.`Sales Employee`)) AS sales_manager\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` i\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON i.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "      LEFT JOIN ${var.catalog}.gold.${var.mapping_table_name} csm\n",
+                "        ON sorg.`Sales_Organization ID` = csm.`sales_org_code`\n",
+                "      LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_customer` c\n",
+                "        ON i.`Customer Key` = c.`Customer Key`\n",
+                "      LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_material` m\n",
+                "        ON i.`Material Key` = m.`Material Key`\n",
+                "      LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_product_hierarchy` ph\n",
+                "        ON ph.`Material Code` = m.`Material Code`\n",
+                "      LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_rejection_reason` rr\n",
+                "        ON rr.`Rejection Reason Id` = i.`Reason for Rejection`\n",
+                "      LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_users` se\n",
+                "        ON i.`Sales Employee` = se.`User ID`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND i.`Sales Document Type` = 'YQT'\n",
+                "    AND i.`Created On` >= CAST(DATE_FORMAT(ADD_MONTHS(CURRENT_DATE(), -12), 'yyyyMMdd') AS INT)\n",
+                "    AND (\n",
+                "      :segment_filter IS NULL\n",
+                "      OR CARDINALITY(:segment_filter) = 0\n",
+                "      OR array_contains(:segment_filter, i.`Application area Description`)\n",
+                "    )\n",
+                "  GROUP BY\n",
+                "    1\n",
+                "),\n",
+                "converted AS (\n",
+                "  SELECT DISTINCT\n",
+                "    o.`Quote Number` AS quote_number\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` o\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON o.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND o.`Sales Document Type` IN ('YOR', 'YSO', 'YKE', 'YKB')\n",
+                "    AND COALESCE(o.`Quote Number`, '') != ''\n",
+                "    AND o.`Created On` >= CAST(CONCAT(YEAR(CURRENT_DATE()) - 2, '0101') AS INT)\n",
+                ")\n",
+                "SELECT\n",
+                "  q.quote_id,\n",
+                "  q.doc_type,\n",
+                "  q.created_date,\n",
+                "  q.valid_from,\n",
+                "  q.valid_to,\n",
+                "  q.customer,\n",
+                "  q.country,\n",
+                "  q.cs_team,\n",
+                "  q.product_group,\n",
+                "  q.quote_value,\n",
+                "  q.rejection_reason,\n",
+                "  q.sales_manager,\n",
+                "  CASE\n",
+                "    WHEN c.quote_number IS NOT NULL OR q.order_reason = '24' THEN 'Converted'\n",
+                "    WHEN q.is_rejected = 1 OR q.order_reason = '25' THEN 'Rejected'\n",
+                "    WHEN q.valid_to < CURRENT_DATE() THEN 'Expired'\n",
+                "    ELSE 'Open'\n",
+                "  END AS status,\n",
+                "  COALESCE(orr.`Description`, q.order_reason) AS order_reason\n",
+                "FROM\n",
+                "  quotes q\n",
+                "    LEFT JOIN converted c\n",
+                "      ON c.quote_number = q.quote_id\n",
+                "    LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_order_reason_desc` orr\n",
+                "      ON q.order_reason = orr.`Order Reason Code`\n",
+                "      AND orr.`Language Code` = 'E'\n",
+                "ORDER BY\n",
+                "  q.created_date DESC"
+              ],
+              "parameters": [
+                {
+                  "displayName": "Segment Filter",
+                  "keyword": "segment_filter",
+                  "dataType": "STRING",
+                  "complexType": "MULTI",
+                  "defaultSelection": {
+                    "values": {
+                      "dataType": "STRING"
+                    }
+                  }
+                }
+              ],
+              "columns": [
+                {
+                  "displayName": "Value Category",
+                  "description": "",
+                  "expression": "CASE WHEN `quote_value` < 1000 THEN 'Small (< 1k)' WHEN `quote_value` < 5000 THEN 'Medium (1k-5k)' WHEN `quote_value` < 25000 THEN 'Large (5k-25k)' WHEN `quote_value` < 100000 THEN 'Key (25k-100k)' ELSE 'Strategic (100k+)' END"
+                }
+              ]
+            },
+            {
+              "name": "ds_segment_options",
+              "displayName": "ds_segment_options",
+              "queryLines": [
+                "SELECT DISTINCT\n",
+                "  item.`Application area Description` AS segment\n",
+                "FROM\n",
+                "  `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` item\n",
+                "WHERE\n",
+                "  item.`Sales Document Type` IN ('YOR', 'YSO', 'YKE', 'YKB')\n",
+                "  AND item.`Application area Description` IS NOT NULL\n",
+                "  AND TRIM(item.`Application area Description`) != ''\n",
+                "ORDER BY\n",
+                "  1"
+              ]
+            },
+            {
+              "name": "ds_expiring_quotes",
+              "displayName": "ds_expiring_quotes",
+              "queryLines": [
+                "WITH quotes AS (\n",
+                "  SELECT\n",
+                "    i.`Sales Document Number` AS quote_id,\n",
+                "    TO_DATE(CAST(MAX(i.`Created On`) AS STRING), 'yyyyMMdd') AS created_date,\n",
+                "    TO_DATE(CAST(MAX(i.`Quotation Valid To`) AS STRING), 'yyyyMMdd') AS valid_to,\n",
+                "    MAX(COALESCE(c.`Name 1`, i.`Sold To Party`)) AS customer,\n",
+                "    MAX(c.`Country`) AS country,\n",
+                "    MAX(COALESCE(csm.`cs_team`, 'Unmapped')) AS cs_team,\n",
+                "    MAX(COALESCE(ph.`L2 Product Description`, 'Unknown')) AS product_group,\n",
+                "    MAX(i.`Application area Description`) AS segment,\n",
+                "    ROUND(SUM(i.`Measure Net Value in Euro`), 0) AS quote_value,\n",
+                "    MAX(COALESCE(se.`User Name`, i.`Sales Employee`)) AS sales_manager,\n",
+                "    MAX(\n",
+                "      CASE\n",
+                "        WHEN COALESCE(i.`Reason for Rejection`, '') != '' THEN 1\n",
+                "        ELSE 0\n",
+                "      END\n",
+                "    ) AS is_rejected,\n",
+                "    MAX(i.`Order Reason`) AS order_reason\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` i\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON i.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "      LEFT JOIN ${var.catalog}.gold.${var.mapping_table_name} csm\n",
+                "        ON sorg.`Sales_Organization ID` = csm.`sales_org_code`\n",
+                "      LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_customer` c\n",
+                "        ON i.`Customer Key` = c.`Customer Key`\n",
+                "      LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_material` m\n",
+                "        ON i.`Material Key` = m.`Material Key`\n",
+                "      LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_product_hierarchy` ph\n",
+                "        ON ph.`Material Code` = m.`Material Code`\n",
+                "      LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_users` se\n",
+                "        ON i.`Sales Employee` = se.`User ID`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND i.`Sales Document Type` = 'YQT'\n",
+                "    AND (\n",
+                "      :segment_filter IS NULL\n",
+                "      OR CARDINALITY(:segment_filter) = 0\n",
+                "      OR array_contains(:segment_filter, i.`Application area Description`)\n",
+                "    )\n",
+                "    AND (\n",
+                "      :country_filter IS NULL\n",
+                "      OR CARDINALITY(:country_filter) = 0\n",
+                "      OR array_contains(:country_filter, c.`Country`)\n",
+                "    )\n",
+                "  GROUP BY\n",
+                "    1\n",
+                "),\n",
+                "converted AS (\n",
+                "  SELECT DISTINCT\n",
+                "    o.`Quote Number` AS quote_number\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` o\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON o.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND o.`Sales Document Type` IN ('YOR', 'YSO', 'YKE', 'YKB')\n",
+                "    AND COALESCE(o.`Quote Number`, '') != ''\n",
+                "    AND o.`Created On` >= CAST(CONCAT(YEAR(CURRENT_DATE()) - 2, '0101') AS INT)\n",
+                "),\n",
+                "quote_items AS (\n",
+                "  SELECT\n",
+                "    i.`Sales Document Number` AS quote_number,\n",
+                "    i.`Material Code` AS material_code,\n",
+                "    i.`Customer Key` AS customer_key,\n",
+                "    TO_DATE(CAST(i.`Created On` AS STRING), 'yyyyMMdd') AS quote_created,\n",
+                "    CASE\n",
+                "      WHEN i.`Quotation Valid To` > 19700101\n",
+                "      THEN TO_DATE(CAST(i.`Quotation Valid To` AS STRING), 'yyyyMMdd')\n",
+                "      ELSE NULL\n",
+                "    END AS quote_valid_to\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` i\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON i.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND i.`Sales Document Type` = 'YQT'\n",
+                "    AND COALESCE(i.`Material Code`, '') != ''\n",
+                "    AND i.`Material Code` != 'HN_DUMMY'\n",
+                "),\n",
+                "unlinked_orders AS (\n",
+                "  SELECT\n",
+                "    o.`Material Code` AS material_code,\n",
+                "    o.`Customer Key` AS customer_key,\n",
+                "    TO_DATE(CAST(o.`Created On` AS STRING), 'yyyyMMdd') AS order_created\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` o\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON o.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND o.`Sales Document Type` IN ('YOR', 'YSO', 'YKE', 'YKB')\n",
+                "    AND o.`Created On` >= CAST(DATE_FORMAT(ADD_MONTHS(CURRENT_DATE(), -18), 'yyyyMMdd') AS INT)\n",
+                "    AND COALESCE(o.`Material Code`, '') != ''\n",
+                "    AND COALESCE(o.`Quote Number`, '') = ''\n",
+                "    AND COALESCE(o.`Reason for Rejection`, '') = ''\n",
+                "),\n",
+                "quotes_with_match AS (\n",
+                "  SELECT DISTINCT\n",
+                "    qi.quote_number\n",
+                "  FROM\n",
+                "    quote_items qi\n",
+                "      INNER JOIN unlinked_orders uo\n",
+                "        ON qi.customer_key = uo.customer_key\n",
+                "        AND qi.material_code = uo.material_code\n",
+                "        AND uo.order_created >= qi.quote_created\n",
+                "        AND uo.order_created <= COALESCE(qi.quote_valid_to, DATE_ADD(qi.quote_created, 60))\n",
+                "),\n",
+                "base AS (\n",
+                "  SELECT\n",
+                "    q.quote_id,\n",
+                "    q.created_date,\n",
+                "    q.valid_to,\n",
+                "    DATEDIFF(q.valid_to, CURRENT_DATE()) AS days_to_expiry,\n",
+                "    q.customer,\n",
+                "    q.country,\n",
+                "    q.cs_team,\n",
+                "    q.product_group,\n",
+                "    q.segment,\n",
+                "    q.quote_value,\n",
+                "    q.sales_manager,\n",
+                "    CASE\n",
+                "      WHEN\n",
+                "        q.quote_value >= 100000\n",
+                "        AND DATEDIFF(q.valid_to, CURRENT_DATE()) <= 14\n",
+                "      THEN\n",
+                "        'P1 - Critical'\n",
+                "      WHEN q.quote_value >= 50000 THEN 'P2 - High'\n",
+                "      WHEN DATEDIFF(q.valid_to, CURRENT_DATE()) <= 3 THEN 'P2 - High'\n",
+                "      WHEN\n",
+                "        DATEDIFF(q.valid_to, CURRENT_DATE()) <= 7\n",
+                "        AND q.quote_value >= 10000\n",
+                "      THEN\n",
+                "        'P2 - High'\n",
+                "      WHEN DATEDIFF(q.valid_to, CURRENT_DATE()) <= 7 THEN 'P3 - Medium'\n",
+                "      ELSE 'P4 - Low'\n",
+                "    END AS priority,\n",
+                "    CASE\n",
+                "      WHEN DATEDIFF(q.valid_to, CURRENT_DATE()) <= 3 THEN '0-3 days'\n",
+                "      WHEN DATEDIFF(q.valid_to, CURRENT_DATE()) <= 7 THEN '4-7 days'\n",
+                "      ELSE '8-14 days'\n",
+                "    END AS days_bucket,\n",
+                "    CASE\n",
+                "      WHEN qm.quote_number IS NOT NULL THEN 'Yes'\n",
+                "      ELSE 'No'\n",
+                "    END AS has_order_match\n",
+                "  FROM\n",
+                "    quotes q\n",
+                "      LEFT JOIN converted c\n",
+                "        ON c.quote_number = q.quote_id\n",
+                "      LEFT JOIN quotes_with_match qm\n",
+                "        ON qm.quote_number = q.quote_id\n",
+                "  WHERE\n",
+                "    c.quote_number IS NULL\n",
+                "    AND q.is_rejected = 0\n",
+                "    AND COALESCE(q.order_reason, '') NOT IN ('24', '25')\n",
+                "    AND q.valid_to >= CURRENT_DATE()\n",
+                "    AND q.valid_to <= DATE_ADD(CURRENT_DATE(), 14)\n",
+                ")\n",
+                "SELECT\n",
+                "  *\n",
+                "FROM\n",
+                "  base\n",
+                "WHERE\n",
+                "  (\n",
+                "    :priority_filter IS NULL\n",
+                "    OR CARDINALITY(:priority_filter) = 0\n",
+                "    OR array_contains(:priority_filter, priority)\n",
+                "  )\n",
+                "  AND (\n",
+                "    :days_bucket_filter IS NULL\n",
+                "    OR CARDINALITY(:days_bucket_filter) = 0\n",
+                "    OR array_contains(:days_bucket_filter, days_bucket)\n",
+                "  )\n",
+                "ORDER BY\n",
+                "  valid_to ASC"
+              ],
+              "parameters": [
+                {
+                  "displayName": "Segment Filter",
+                  "keyword": "segment_filter",
+                  "dataType": "STRING",
+                  "complexType": "MULTI",
+                  "defaultSelection": {
+                    "values": {
+                      "dataType": "STRING"
+                    }
+                  }
+                },
+                {
+                  "displayName": "Country Filter",
+                  "keyword": "country_filter",
+                  "dataType": "STRING",
+                  "complexType": "MULTI",
+                  "defaultSelection": {
+                    "values": {
+                      "dataType": "STRING"
+                    }
+                  }
+                },
+                {
+                  "displayName": "Priority Filter",
+                  "keyword": "priority_filter",
+                  "dataType": "STRING",
+                  "complexType": "MULTI",
+                  "defaultSelection": {
+                    "values": {
+                      "dataType": "STRING"
+                    }
+                  }
+                },
+                {
+                  "displayName": "Days Bucket Filter",
+                  "keyword": "days_bucket_filter",
+                  "dataType": "STRING",
+                  "complexType": "MULTI",
+                  "defaultSelection": {
+                    "values": {
+                      "dataType": "STRING"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "name": "ds_country_options",
+              "displayName": "ds_country_options",
+              "queryLines": [
+                "SELECT DISTINCT\n",
+                "  c.`Country` AS country\n",
+                "FROM\n",
+                "  `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` i\n",
+                "    INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "      ON i.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "    LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_customer` c\n",
+                "      ON i.`Customer Key` = c.`Customer Key`\n",
+                "WHERE\n",
+                "  sorg.`Business Unit 2` = '34'\n",
+                "  AND i.`Sales Document Type` = 'YQT'\n",
+                "  AND c.`Country` IS NOT NULL\n",
+                "ORDER BY\n",
+                "  1"
+              ]
+            },
+            {
+              "name": "ds_priority_options",
+              "displayName": "ds_priority_options",
+              "queryLines": [
+                "SELECT\n",
+                "  'P1 - Critical' AS priority\n",
+                "UNION ALL\n",
+                "SELECT\n",
+                "  'P2 - High'\n",
+                "UNION ALL\n",
+                "SELECT\n",
+                "  'P3 - Medium'\n",
+                "UNION ALL\n",
+                "SELECT\n",
+                "  'P4 - Low'\n",
+                "ORDER BY\n",
+                "  1"
+              ]
+            },
+            {
+              "name": "ds_potential_matches",
+              "displayName": "ds_potential_matches",
+              "queryLines": [
+                "WITH quotations AS (\n",
+                "  SELECT\n",
+                "    i.`Sales Document Number` AS quote_number,\n",
+                "    i.`Sales Document Item Number` AS quote_item,\n",
+                "    i.`Material Code` AS material_code,\n",
+                "    i.`Customer Key` AS customer_key,\n",
+                "    i.`Sold To Party` AS sold_to_party,\n",
+                "    TO_DATE(CAST(i.`Created On` AS STRING), 'yyyyMMdd') AS quote_created,\n",
+                "    CASE\n",
+                "      WHEN\n",
+                "        i.`Quotation Valid From` > 19700101\n",
+                "      THEN\n",
+                "        TO_DATE(CAST(i.`Quotation Valid From` AS STRING), 'yyyyMMdd')\n",
+                "      ELSE NULL\n",
+                "    END AS quote_valid_from,\n",
+                "    CASE\n",
+                "      WHEN\n",
+                "        i.`Quotation Valid To` > 19700101\n",
+                "      THEN\n",
+                "        TO_DATE(CAST(i.`Quotation Valid To` AS STRING), 'yyyyMMdd')\n",
+                "      ELSE NULL\n",
+                "    END AS quote_valid_to,\n",
+                "    i.`Measure Net Value in Euro` AS quote_value_eur,\n",
+                "    i.`Measure Sales Order Quantity` AS quote_qty,\n",
+                "    i.`Sales Order Quantity Unit of Measure` AS quote_uom,\n",
+                "    i.`Reason for Rejection` AS rejection_reason,\n",
+                "    i.`Application area Description` AS segment,\n",
+                "    i.`Plant` AS quote_plant,\n",
+                "    sorg.`Sales_Organization ID` AS sales_org,\n",
+                "    i.`Sales Employee` AS sales_employee_id,\n",
+                "    i.`Order Reason` AS order_reason,\n",
+                "    i.`Created By` AS quote_created_by\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` i\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON i.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND i.`Sales Document Type` = 'YQT'\n",
+                "    AND i.`Created On` >= CAST(DATE_FORMAT(ADD_MONTHS(CURRENT_DATE(), -12), 'yyyyMMdd') AS INT)\n",
+                "    AND COALESCE(i.`Material Code`, '') != ''\n",
+                "    AND i.`Material Code` != 'HN_DUMMY'\n",
+                "),\n",
+                "already_converted AS (\n",
+                "  SELECT DISTINCT\n",
+                "    o.`Quote Number` AS quote_number\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` o\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON o.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND o.`Sales Document Type` IN ('YOR', 'YSO', 'YKE', 'YKB')\n",
+                "    AND COALESCE(o.`Quote Number`, '') != ''\n",
+                "    AND o.`Created On` >= CAST(CONCAT(YEAR(CURRENT_DATE()) - 2, '0101') AS INT)\n",
+                "),\n",
+                "unconverted_quotes AS (\n",
+                "  SELECT\n",
+                "    q.*\n",
+                "  FROM\n",
+                "    quotations q\n",
+                "      LEFT JOIN already_converted ac\n",
+                "        ON ac.quote_number = q.quote_number\n",
+                "  WHERE\n",
+                "    ac.quote_number IS NULL\n",
+                "    AND COALESCE(q.rejection_reason, '') = ''\n",
+                "    AND COALESCE(q.order_reason, '') NOT IN ('24', '25')\n",
+                "),\n",
+                "orders AS (\n",
+                "  SELECT\n",
+                "    o.`Sales Document Number` AS order_number,\n",
+                "    o.`Sales Document Item Number` AS order_item,\n",
+                "    o.`Material Code` AS material_code,\n",
+                "    o.`Customer Key` AS customer_key,\n",
+                "    TO_DATE(CAST(o.`Created On` AS STRING), 'yyyyMMdd') AS order_created,\n",
+                "    o.`Measure Net Value in Euro` AS order_value_eur,\n",
+                "    o.`Measure Sales Order Quantity` AS order_qty,\n",
+                "    o.`Sales Order Quantity Unit of Measure` AS order_uom,\n",
+                "    o.`Sales Document Type` AS order_doc_type,\n",
+                "    o.`Plant` AS order_plant,\n",
+                "    o.`Created By` AS order_created_by,\n",
+                "    o.`Created By Key` AS order_created_by_key\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` o\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON o.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND o.`Sales Document Type` IN ('YOR', 'YSO', 'YKE', 'YKB')\n",
+                "    AND o.`Created On` >= CAST(DATE_FORMAT(ADD_MONTHS(CURRENT_DATE(), -18), 'yyyyMMdd') AS INT)\n",
+                "    AND COALESCE(o.`Material Code`, '') != ''\n",
+                "    AND COALESCE(o.`Quote Number`, '') = ''\n",
+                "    AND COALESCE(o.`Reason for Rejection`, '') = ''\n",
+                "),\n",
+                "best_matches AS (\n",
+                "  SELECT\n",
+                "    uq.quote_number,\n",
+                "    uq.quote_item,\n",
+                "    uq.material_code,\n",
+                "    uq.customer_key,\n",
+                "    uq.sold_to_party,\n",
+                "    uq.quote_created,\n",
+                "    uq.quote_valid_from,\n",
+                "    uq.quote_valid_to,\n",
+                "    uq.quote_value_eur,\n",
+                "    uq.quote_qty,\n",
+                "    uq.quote_uom,\n",
+                "    uq.segment,\n",
+                "    uq.quote_plant,\n",
+                "    uq.sales_org,\n",
+                "    uq.sales_employee_id,\n",
+                "    uq.order_reason,\n",
+                "    uq.quote_created_by,\n",
+                "    ord.order_number,\n",
+                "    ord.order_item,\n",
+                "    ord.order_created,\n",
+                "    ord.order_value_eur,\n",
+                "    ord.order_qty,\n",
+                "    ord.order_uom,\n",
+                "    ord.order_doc_type,\n",
+                "    ord.order_plant,\n",
+                "    ord.order_created_by,\n",
+                "    ord.order_created_by_key,\n",
+                "    DATEDIFF(ord.order_created, uq.quote_created) AS days_between,\n",
+                "    CASE\n",
+                "      WHEN uq.quote_valid_to IS NOT NULL THEN 'Validity window'\n",
+                "      ELSE '60-day fallback'\n",
+                "    END AS match_method\n",
+                "  FROM\n",
+                "    unconverted_quotes uq\n",
+                "      INNER JOIN orders ord\n",
+                "        ON uq.customer_key = ord.customer_key\n",
+                "        AND uq.material_code = ord.material_code\n",
+                "        AND ord.order_created >= uq.quote_created\n",
+                "        AND ord.order_created <= COALESCE(uq.quote_valid_to, DATE_ADD(uq.quote_created, 60))\n",
+                "  QUALIFY\n",
+                "    ROW_NUMBER() OVER (\n",
+                "        PARTITION BY uq.quote_number, uq.quote_item\n",
+                "        ORDER BY DATEDIFF(ord.order_created, uq.quote_created) ASC\n",
+                "      ) = 1\n",
+                "),\n",
+                "filtered AS (\n",
+                "  SELECT\n",
+                "    bm.*\n",
+                "  FROM\n",
+                "    best_matches bm\n",
+                "      LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_customer` c\n",
+                "        ON bm.customer_key = c.`Customer Key`\n",
+                "  WHERE\n",
+                "    NOT UPPER(COALESCE(c.`Name 1`, '')) LIKE '%CASH SALE%'\n",
+                "    AND NOT UPPER(COALESCE(c.`Name 1`, '')) LIKE '%CASH SALES%'\n",
+                "    AND NOT UPPER(COALESCE(c.`Name 1`, '')) LIKE '%ONE TIME CUSTOMER%'\n",
+                "    AND NOT UPPER(COALESCE(c.`Name 1`, '')) LIKE '%DUMMY CUSTOMER%'\n",
+                "    AND NOT UPPER(COALESCE(c.`Name 1`, '')) LIKE '%DUMMY SITE%'\n",
+                "),\n",
+                "shared_orders AS (\n",
+                "  SELECT\n",
+                "    order_number,\n",
+                "    order_item\n",
+                "  FROM\n",
+                "    filtered\n",
+                "  GROUP BY\n",
+                "    1,\n",
+                "    2\n",
+                "  HAVING\n",
+                "    COUNT(DISTINCT quote_number) > 1\n",
+                ")\n",
+                "SELECT\n",
+                "  f.segment,\n",
+                "  COALESCE(csm.cs_team, 'Unmapped') AS cs_team,\n",
+                "  f.quote_number,\n",
+                "  f.quote_item,\n",
+                "  COALESCE(c.`Name 1`, f.sold_to_party) AS customer_name,\n",
+                "  COALESCE(c.`Country`, '') AS customer_country,\n",
+                "  COALESCE(mat.`Material Text`, f.material_code) AS material_description,\n",
+                "  CAST(CAST(f.material_code AS BIGINT) AS STRING) AS material_code,\n",
+                "  COALESCE(ph.`L2 Product Description`, 'Unknown') AS product_group,\n",
+                "  f.quote_created,\n",
+                "  f.quote_valid_to,\n",
+                "  CASE\n",
+                "    WHEN\n",
+                "      f.quote_valid_to IS NOT NULL\n",
+                "      AND f.quote_valid_to < CURRENT_DATE()\n",
+                "    THEN\n",
+                "      'Expired'\n",
+                "    ELSE 'Open'\n",
+                "  END AS current_quote_status,\n",
+                "  ROUND(f.quote_value_eur, 0) AS quote_value_eur,\n",
+                "  f.order_number AS matched_order,\n",
+                "  f.order_doc_type,\n",
+                "  f.order_created AS matched_order_date,\n",
+                "  ROUND(f.order_value_eur, 0) AS matched_order_value_eur,\n",
+                "  COALESCE(u1.`User Name`, u2.`User Name`, f.order_created_by) AS order_created_by,\n",
+                "  COALESCE(se.`User Name`, f.sales_employee_id) AS sales_manager,\n",
+                "  COALESCE(qcu.`User Name`, f.quote_created_by) AS quote_creator,\n",
+                "  f.days_between,\n",
+                "  COALESCE(orr.`Description`, f.order_reason) AS order_reason,\n",
+                "  f.match_method,\n",
+                "  CASE\n",
+                "    WHEN so.order_number IS NOT NULL THEN 'Yes'\n",
+                "    ELSE 'No'\n",
+                "  END AS shared_match\n",
+                "FROM\n",
+                "  filtered f\n",
+                "    LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_customer` c\n",
+                "      ON f.customer_key = c.`Customer Key`\n",
+                "    LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_material` mat\n",
+                "      ON f.material_code = mat.`Material Code`\n",
+                "    LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_product_hierarchy` ph\n",
+                "      ON mat.`Material Code` = ph.`Material Code`\n",
+                "    LEFT JOIN ${var.catalog}.gold.${var.mapping_table_name} csm\n",
+                "      ON f.sales_org = csm.sales_org_code\n",
+                "    LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_users` u1\n",
+                "      ON f.order_created_by_key = u1.`User Key`\n",
+                "      AND f.order_created_by_key > 0\n",
+                "    LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_users` u2\n",
+                "      ON f.order_created_by = u2.`User ID`\n",
+                "      AND f.order_created_by_key <= 0\n",
+                "    LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_users` se\n",
+                "      ON f.sales_employee_id = se.`User ID`\n",
+                "    LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_users` qcu\n",
+                "      ON f.quote_created_by = qcu.`User ID`\n",
+                "    LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_order_reason_desc` orr\n",
+                "      ON f.order_reason = orr.`Order Reason Code`\n",
+                "      AND orr.`Language Code` = 'E'\n",
+                "    LEFT JOIN shared_orders so\n",
+                "      ON f.order_number = so.order_number\n",
+                "      AND f.order_item = so.order_item\n",
+                "WHERE\n",
+                "  (\n",
+                "    :segment_filter IS NULL\n",
+                "    OR CARDINALITY(:segment_filter) = 0\n",
+                "    OR array_contains(:segment_filter, f.segment)\n",
+                "  )\n",
+                "ORDER BY\n",
+                "  f.quote_value_eur DESC"
+              ],
+              "parameters": [
+                {
+                  "displayName": "Segment Filter",
+                  "keyword": "segment_filter",
+                  "dataType": "STRING",
+                  "complexType": "MULTI",
+                  "defaultSelection": {
+                    "operator": {
+                      "operator": "AND"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "name": "ds_segment_kpis",
+              "displayName": "ds_segment_kpis",
+              "queryLines": [
+                "WITH q AS (\n",
+                "  SELECT\n",
+                "    i.`Sales Document Number` AS quote_number,\n",
+                "    i.`Application area Description` AS segment,\n",
+                "    TO_DATE(CAST(i.`Created On` AS STRING), 'yyyyMMdd') AS created_date,\n",
+                "    ROUND(SUM(i.`Measure Net Value in Euro`), 0) AS quote_value,\n",
+                "    MAX(\n",
+                "      CASE\n",
+                "        WHEN COALESCE(i.`Reason for Rejection`, '') != '' THEN 1\n",
+                "        ELSE 0\n",
+                "      END\n",
+                "    ) AS is_rejected,\n",
+                "    MAX(i.`Order Reason`) AS order_reason\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` i\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON i.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND i.`Sales Document Type` = 'YQT'\n",
+                "    AND i.`Created On` >= CAST(CONCAT(YEAR(CURRENT_DATE()), '0101') AS INT)\n",
+                "  GROUP BY\n",
+                "    1,\n",
+                "    2,\n",
+                "    3\n",
+                "),\n",
+                "converted AS (\n",
+                "  SELECT DISTINCT\n",
+                "    o.`Quote Number` AS quote_number\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` o\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON o.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND o.`Sales Document Type` IN ('YOR', 'YSO', 'YKE', 'YKB')\n",
+                "    AND COALESCE(o.`Quote Number`, '') != ''\n",
+                "    AND o.`Created On` >= CAST(CONCAT(YEAR(CURRENT_DATE()) - 2, '0101') AS INT)\n",
+                ")\n",
+                "SELECT\n",
+                "  q.segment,\n",
+                "  CASE\n",
+                "    WHEN q.created_date >= DATE_TRUNC('MONTH', CURRENT_DATE()) THEN 'MTD'\n",
+                "    ELSE 'Prior YTD'\n",
+                "  END AS period,\n",
+                "  COUNT(DISTINCT q.quote_number) AS quotes_done,\n",
+                "  SUM(q.quote_value) AS quotes_done_value,\n",
+                "  COUNT(DISTINCT\n",
+                "    CASE\n",
+                "      WHEN c.quote_number IS NOT NULL OR q.order_reason = '24' THEN q.quote_number\n",
+                "    END\n",
+                "  ) AS quotes_converted,\n",
+                "  SUM(\n",
+                "    CASE\n",
+                "      WHEN c.quote_number IS NOT NULL OR q.order_reason = '24' THEN q.quote_value\n",
+                "      ELSE 0\n",
+                "    END\n",
+                "  ) AS quotes_converted_value\n",
+                "FROM\n",
+                "  q\n",
+                "    LEFT JOIN converted c\n",
+                "      ON c.quote_number = q.quote_number\n",
+                "GROUP BY\n",
+                "  1,\n",
+                "  2"
+              ]
+            },
+            {
+              "name": "ds_top_quotes_segment",
+              "displayName": "ds_top_quotes_segment",
+              "queryLines": [
+                "WITH q AS (\n",
+                "  SELECT\n",
+                "    i.`Sales Document Number` AS quote_id,\n",
+                "    MAX(i.`Application area Description`) AS segment,\n",
+                "    TO_DATE(CAST(MAX(i.`Created On`) AS STRING), 'yyyyMMdd') AS created_date,\n",
+                "    MAX(COALESCE(c.`Name 1`, i.`Sold To Party`)) AS customer,\n",
+                "    MAX(c.`Country`) AS country,\n",
+                "    MAX(COALESCE(csm.`cs_team`, 'Unmapped')) AS cs_team,\n",
+                "    MAX(COALESCE(se.`User Name`, i.`Sales Employee`)) AS sales_manager,\n",
+                "    ROUND(SUM(i.`Measure Net Value in Euro`), 0) AS quote_value,\n",
+                "    MAX(i.`Order Reason`) AS order_reason\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` i\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON i.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "      LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_customer` c\n",
+                "        ON i.`Customer Key` = c.`Customer Key`\n",
+                "      LEFT JOIN ${var.catalog}.gold.${var.mapping_table_name} csm\n",
+                "        ON sorg.`Sales_Organization ID` = csm.`sales_org_code`\n",
+                "      LEFT JOIN `${var.source_catalog}`.pbi.`dbx_dim_users` se\n",
+                "        ON i.`Sales Employee` = se.`User ID`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND i.`Sales Document Type` = 'YQT'\n",
+                "    AND i.`Created On` >= CAST(CONCAT(YEAR(CURRENT_DATE()), '0101') AS INT)\n",
+                "  GROUP BY\n",
+                "    1\n",
+                "),\n",
+                "converted AS (\n",
+                "  SELECT DISTINCT\n",
+                "    o.`Quote Number` AS quote_number\n",
+                "  FROM\n",
+                "    `${var.source_catalog}`.pbi.`dbx_fact_sales_distribution_sales_document_item` o\n",
+                "      INNER JOIN `${var.source_catalog}`.pbi.`dbx_dim_sales_organization` sorg\n",
+                "        ON o.`Sales Organization Key` = sorg.`Sales Organization Key`\n",
+                "  WHERE\n",
+                "    sorg.`Business Unit 2` = '34'\n",
+                "    AND o.`Sales Document Type` IN ('YOR', 'YSO', 'YKE', 'YKB')\n",
+                "    AND COALESCE(o.`Quote Number`, '') != ''\n",
+                "    AND o.`Created On` >= CAST(CONCAT(YEAR(CURRENT_DATE()) - 2, '0101') AS INT)\n",
+                ")\n",
+                "SELECT\n",
+                "  q.*,\n",
+                "  CASE\n",
+                "    WHEN cv.quote_number IS NOT NULL OR q.order_reason = '24' THEN 'Converted'\n",
+                "    ELSE 'Not Converted'\n",
+                "  END AS conversion_status\n",
+                "FROM\n",
+                "  q\n",
+                "    LEFT JOIN converted cv\n",
+                "      ON cv.quote_number = q.quote_id\n",
+                "ORDER BY\n",
+                "  q.quote_value DESC"
+              ]
+            }
+          ],
+          "pages": [
+            {
+              "name": "e0a0402e",
+              "displayName": "Overview",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "header",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Industry Division \u2014 Quotations Dashboard\n",
+                        "Quotation activity and conversion tracking \u00b7 doc type YQT \u00b7 rolling 12-month scope \u00b7 CS team breakdown \u00b7 segment filter available."
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 2
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "section1",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "**1. Quotation KPIs**\n",
+                        "Rolling 12-month headline metrics for quote volume, value, conversion rate, and open pipeline."
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 2,
+                    "width": 12,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "section2",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "**2. Quotation Trends & Breakdown**\n",
+                        "Monthly quotation volume by status \u00b7 conversion funnel \u00b7 CS team and product group analysis \u00b7 detail table."
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 7,
+                    "width": 9,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "detail_table",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_quotations_detail",
+                          "fields": [
+                            {
+                              "name": "quote_id",
+                              "expression": "`quote_id`"
+                            },
+                            {
+                              "name": "created_date",
+                              "expression": "`created_date`"
+                            },
+                            {
+                              "name": "customer",
+                              "expression": "`customer`"
+                            },
+                            {
+                              "name": "country",
+                              "expression": "`country`"
+                            },
+                            {
+                              "name": "cs_team",
+                              "expression": "`cs_team`"
+                            },
+                            {
+                              "name": "sales_manager",
+                              "expression": "`sales_manager`"
+                            },
+                            {
+                              "name": "product_group",
+                              "expression": "`product_group`"
+                            },
+                            {
+                              "name": "quote_value",
+                              "expression": "`quote_value`"
+                            },
+                            {
+                              "name": "status",
+                              "expression": "`status`"
+                            },
+                            {
+                              "name": "valid_to",
+                              "expression": "`valid_to`"
+                            },
+                            {
+                              "name": "rejection_reason",
+                              "expression": "`rejection_reason`"
+                            }
+                          ],
+                          "disaggregated": true
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": {
+                          "value": "Quotation Detail",
+                          "fields": []
+                        }
+                      },
+                      "version": 2,
+                      "widgetType": "table",
+                      "encodings": {
+                        "columns": [
+                          {
+                            "fieldName": "quote_id",
+                            "useForSearch": true
+                          },
+                          {
+                            "fieldName": "created_date"
+                          },
+                          {
+                            "fieldName": "customer",
+                            "useForSearch": true
+                          },
+                          {
+                            "fieldName": "country"
+                          },
+                          {
+                            "fieldName": "cs_team"
+                          },
+                          {
+                            "fieldName": "sales_manager"
+                          },
+                          {
+                            "fieldName": "product_group"
+                          },
+                          {
+                            "fieldName": "quote_value",
+                            "format": {
+                              "type": "number-currency",
+                              "currencyCode": "EUR",
+                              "abbreviation": "compact",
+                              "decimalPlaces": {
+                                "type": "exact",
+                                "places": 2
+                              },
+                              "significantFigures": {
+                                "type": "all"
+                              },
+                              "hideGroupSeparator": true
+                            }
+                          },
+                          {
+                            "fieldName": "status"
+                          },
+                          {
+                            "fieldName": "valid_to"
+                          },
+                          {
+                            "fieldName": "rejection_reason"
+                          }
+                        ]
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 22,
+                    "width": 12,
+                    "height": 8
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_total",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_quotations",
+                          "fields": [
+                            {
+                              "name": "sum(total_quotes)",
+                              "expression": "SUM(`total_quotes`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "title": "Total Quotes",
+                        "showTitle": true,
+                        "description": "YTD quotation count across all CS teams",
+                        "showDescription": true
+                      },
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(total_quotes)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 3,
+                    "width": 2,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_value",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_quotations",
+                          "fields": [
+                            {
+                              "name": "sum(total_quote_value)",
+                              "expression": "SUM(`total_quote_value`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "title": "Quote Value",
+                        "showTitle": true,
+                        "description": "YTD total quotation value in EUR",
+                        "showDescription": true
+                      },
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(total_quote_value)",
+                          "format": {
+                            "type": "number-currency",
+                            "currencyCode": "EUR",
+                            "abbreviation": "compact",
+                            "decimalPlaces": {
+                              "type": "exact",
+                              "places": 2
+                            }
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 2,
+                    "y": 3,
+                    "width": 3,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_conv",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_quotations",
+                          "fields": [
+                            {
+                              "name": "measure(Conversion Rate %)",
+                              "expression": "MEASURE(`Conversion Rate %`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "title": "Conversion Rate",
+                        "showTitle": true,
+                        "description": "% of quotes converted to orders YTD",
+                        "showDescription": true
+                      },
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "measure(Conversion Rate %)",
+                          "formatTemplate": "{{ @formatted }}%",
+                          "format": {
+                            "type": "number-plain",
+                            "abbreviation": "none",
+                            "decimalPlaces": {
+                              "type": "exact",
+                              "places": 1
+                            }
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 5,
+                    "y": 3,
+                    "width": 2,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_open",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_quotations",
+                          "fields": [
+                            {
+                              "name": "sum(open_quotes)",
+                              "expression": "SUM(`open_quotes`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "title": "Open Quotes",
+                        "showTitle": true,
+                        "description": "Quotes not yet converted, rejected, or expired",
+                        "showDescription": true
+                      },
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(open_quotes)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 7,
+                    "y": 3,
+                    "width": 2,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "filter_segment",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a8f50e81190a9c652fb9153fc9e_segment",
+                        "query": {
+                          "datasetName": "ds_segment_options",
+                          "fields": [
+                            {
+                              "name": "segment",
+                              "expression": "`segment`"
+                            },
+                            {
+                              "name": "segment_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      },
+                      {
+                        "name": "parameter_dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a8f4b5f17e5be102f001ab2727c_segment_filter",
+                        "query": {
+                          "datasetName": "ds_quotations",
+                          "parameters": [
+                            {
+                              "name": "segment_filter",
+                              "keyword": "segment_filter"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      },
+                      {
+                        "name": "parameter_dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a8f4ecf122da88b7686bce69ed8_segment_filter",
+                        "query": {
+                          "datasetName": "ds_quotations_detail",
+                          "parameters": [
+                            {
+                              "name": "segment_filter",
+                              "keyword": "segment_filter"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": {
+                          "value": "Segment Filter",
+                          "fields": []
+                        },
+                        "description": {
+                          "value": "Filter by application area / market segment",
+                          "fields": []
+                        }
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "parameterName": "segment_filter",
+                            "queryName": "parameter_dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a8f4b5f17e5be102f001ab2727c_segment_filter"
+                          },
+                          {
+                            "parameterName": "segment_filter",
+                            "queryName": "parameter_dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a8f4ecf122da88b7686bce69ed8_segment_filter"
+                          },
+                          {
+                            "fieldName": "segment",
+                            "queryName": "dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a8f50e81190a9c652fb9153fc9e_segment"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 9,
+                    "y": 3,
+                    "width": 3,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "stacked_bar",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_quotations_detail",
+                          "fields": [
+                            {
+                              "name": "status",
+                              "expression": "`status`"
+                            },
+                            {
+                              "name": "monthly(created_date)",
+                              "expression": "DATE_TRUNC(\"MONTH\", `created_date`)"
+                            },
+                            {
+                              "name": "$chart_measure",
+                              "variable": "chart_measure"
+                            }
+                          ],
+                          "disaggregated": true
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "title": "Monthly Quotation Volume by Status",
+                        "showTitle": true,
+                        "description": "Stacked bar showing quote outcomes per month \u00b7 toggle between count and EUR value",
+                        "showDescription": true
+                      },
+                      "version": 3,
+                      "mark": {
+                        "layout": "stack"
+                      },
+                      "widgetType": "bar",
+                      "encodings": {
+                        "x": {
+                          "fieldName": "monthly(created_date)",
+                          "scale": {
+                            "type": "temporal"
+                          }
+                        },
+                        "y": {
+                          "fieldName": "$chart_measure",
+                          "scale": {
+                            "type": "quantitative"
+                          }
+                        },
+                        "color": {
+                          "fieldName": "status",
+                          "scale": {
+                            "type": "categorical",
+                            "mappings": [
+                              {
+                                "value": "Converted",
+                                "color": "#189138"
+                              },
+                              {
+                                "value": "Open",
+                                "color": "#F06D0C"
+                              },
+                              {
+                                "value": "Expired",
+                                "color": "#D1D5D7"
+                              },
+                              {
+                                "value": "Rejected",
+                                "color": "#DC6206"
+                              }
+                            ]
+                          }
+                        },
+                        "label": {
+                          "show": false
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 8,
+                    "width": 9,
+                    "height": 6
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "pie_status",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_quotations_detail",
+                          "fields": [
+                            {
+                              "name": "$chart_measure",
+                              "variable": "chart_measure"
+                            },
+                            {
+                              "name": "status",
+                              "expression": "`status`"
+                            }
+                          ],
+                          "disaggregated": true
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "title": "Status Distribution",
+                        "showTitle": true,
+                        "description": "Share of quotes by current status \u00b7 toggle between count and EUR value",
+                        "showDescription": true
+                      },
+                      "version": 3,
+                      "widgetType": "pie",
+                      "encodings": {
+                        "angle": {
+                          "fieldName": "$chart_measure",
+                          "scale": {
+                            "type": "quantitative"
+                          }
+                        },
+                        "color": {
+                          "fieldName": "status",
+                          "scale": {
+                            "type": "categorical",
+                            "mappings": [
+                              {
+                                "value": "Converted",
+                                "color": "#189138"
+                              },
+                              {
+                                "value": "Open",
+                                "color": "#F06D0C"
+                              },
+                              {
+                                "value": "Expired",
+                                "color": "#D1D5D7"
+                              },
+                              {
+                                "value": "Rejected",
+                                "color": "#DC6206"
+                              }
+                            ]
+                          }
+                        },
+                        "label": {
+                          "show": true
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 9,
+                    "y": 8,
+                    "width": 3,
+                    "height": 6
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "bar_status_country",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_quotations_detail",
+                          "fields": [
+                            {
+                              "name": "status",
+                              "expression": "`status`"
+                            },
+                            {
+                              "name": "$chart_measure",
+                              "variable": "chart_measure"
+                            },
+                            {
+                              "name": "country",
+                              "expression": "`country`"
+                            }
+                          ],
+                          "disaggregated": true
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "title": "Top 10 Countries by Status",
+                        "showTitle": true,
+                        "description": "Top 10 countries \u00b7 split by status \u00b7 toggle between count and EUR value",
+                        "showDescription": true
+                      },
+                      "version": 3,
+                      "mark": {
+                        "layout": "stack"
+                      },
+                      "widgetType": "bar",
+                      "encodings": {
+                        "x": {
+                          "fieldName": "$chart_measure",
+                          "scale": {
+                            "type": "quantitative"
+                          }
+                        },
+                        "y": {
+                          "fieldName": "country",
+                          "scale": {
+                            "type": "categorical",
+                            "categorySize": {
+                              "type": "number-of-categories",
+                              "number": 10
+                            },
+                            "sort": {
+                              "by": "x-reversed"
+                            }
+                          }
+                        },
+                        "color": {
+                          "fieldName": "status",
+                          "scale": {
+                            "type": "categorical",
+                            "mappings": [
+                              {
+                                "value": "Converted",
+                                "color": "#189138"
+                              },
+                              {
+                                "value": "Open",
+                                "color": "#F06D0C"
+                              },
+                              {
+                                "value": "Expired",
+                                "color": "#D1D5D7"
+                              },
+                              {
+                                "value": "Rejected",
+                                "color": "#DC6206"
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 14,
+                    "width": 9,
+                    "height": 8
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "measure_toggle",
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "title": "Show as",
+                        "showTitle": true,
+                        "showDescription": false
+                      },
+                      "widgetType": "filter-single-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "variableName": "chart_measure"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 9,
+                    "y": 7,
+                    "width": 3,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "bar_value_category",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_quotations_detail",
+                          "fields": [
+                            {
+                              "name": "$chart_measure",
+                              "variable": "chart_measure"
+                            },
+                            {
+                              "name": "Value Category",
+                              "expression": "`Value Category`"
+                            }
+                          ],
+                          "disaggregated": true
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 3,
+                      "frame": {
+                        "title": "Quotations by Value Category",
+                        "showTitle": true,
+                        "description": "Distribution across value tiers \u00b7 respects count/EUR toggle",
+                        "showDescription": true
+                      },
+                      "mark": {
+                        "colors": [
+                          {
+                            "themeColorType": "visualizationColors",
+                            "position": 10
+                          },
+                          {
+                            "themeColorType": "visualizationColors",
+                            "position": 2
+                          },
+                          {
+                            "themeColorType": "visualizationColors",
+                            "position": 3
+                          },
+                          {
+                            "themeColorType": "visualizationColors",
+                            "position": 4
+                          },
+                          {
+                            "themeColorType": "visualizationColors",
+                            "position": 5
+                          },
+                          {
+                            "themeColorType": "visualizationColors",
+                            "position": 6
+                          },
+                          {
+                            "themeColorType": "visualizationColors",
+                            "position": 7
+                          },
+                          {
+                            "themeColorType": "visualizationColors",
+                            "position": 8
+                          },
+                          {
+                            "themeColorType": "visualizationColors",
+                            "position": 9
+                          },
+                          {
+                            "themeColorType": "visualizationColors",
+                            "position": 10
+                          }
+                        ]
+                      },
+                      "widgetType": "bar",
+                      "encodings": {
+                        "x": {
+                          "fieldName": "$chart_measure",
+                          "scale": {
+                            "type": "quantitative"
+                          }
+                        },
+                        "y": {
+                          "fieldName": "Value Category",
+                          "scale": {
+                            "type": "categorical",
+                            "sort": {
+                              "by": "custom-order",
+                              "orderedValues": [
+                                "Strategic (100k+)",
+                                "Key (25k-100k)",
+                                "Large (5k-25k)",
+                                "Medium (1k-5k)",
+                                "Small (< 1k)"
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 9,
+                    "y": 14,
+                    "width": 3,
+                    "height": 8
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "bar_rejection_reason",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_quotations_detail",
+                          "fields": [
+                            {
+                              "name": "$chart_measure",
+                              "variable": "chart_measure"
+                            },
+                            {
+                              "name": "rejection_reason",
+                              "expression": "`rejection_reason`"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`status` IN ('Rejected')"
+                            }
+                          ],
+                          "disaggregated": true
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": "Rejection Reasons",
+                        "description": {
+                          "value": "Breakdown of rejected quotes by reason \u00b7 toggle between count and EUR value",
+                          "fields": []
+                        }
+                      },
+                      "version": 3,
+                      "widgetType": "bar",
+                      "encodings": {
+                        "x": {
+                          "fieldName": "$chart_measure",
+                          "scale": {
+                            "type": "quantitative"
+                          }
+                        },
+                        "y": {
+                          "fieldName": "rejection_reason",
+                          "scale": {
+                            "type": "categorical",
+                            "sort": {
+                              "by": "x-reversed"
+                            }
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 30,
+                    "width": 12,
+                    "height": 7
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "segment_performance",
+              "displayName": "Segment Performance",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "header",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Segment Performance \u2014 Quotations\n",
+                        "YTD and MTD quotation activity and conversion by application area segment \u00b7 top 10 quotations ranked by value."
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 2
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "section1",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "**1. Headline KPIs**\n",
+                        "Total quotations created and converted, month-to-date and year-to-date."
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 2,
+                    "width": 12,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "ctr_done_mtd",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_segment_kpis",
+                          "fields": [
+                            {
+                              "name": "sum(quotes_done)",
+                              "expression": "SUM(`quotes_done`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`period` IN ('MTD')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": {
+                          "value": "Quotes Done (MTD)",
+                          "fields": []
+                        },
+                        "description": {
+                          "value": "Total quotations created in the current month across all segments",
+                          "fields": []
+                        }
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(quotes_done)",
+                          "rowNumber": 0
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 3,
+                    "width": 3,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "ctr_done_val_mtd",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_segment_kpis",
+                          "fields": [
+                            {
+                              "name": "sum(quotes_done_value)",
+                              "expression": "SUM(`quotes_done_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`period` IN ('MTD')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": {
+                          "value": "Quote Value (MTD)",
+                          "fields": []
+                        },
+                        "description": {
+                          "value": "Total EUR value of quotations created this month",
+                          "fields": []
+                        }
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(quotes_done_value)",
+                          "rowNumber": 0,
+                          "format": {
+                            "type": "number-currency",
+                            "currencyCode": "EUR",
+                            "abbreviation": "compact",
+                            "decimalPlaces": {
+                              "type": "exact",
+                              "places": 0
+                            }
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 3,
+                    "y": 3,
+                    "width": 3,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "ctr_conv_mtd",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_segment_kpis",
+                          "fields": [
+                            {
+                              "name": "sum(quotes_converted)",
+                              "expression": "SUM(`quotes_converted`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`period` IN ('MTD')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": {
+                          "value": "Converted (MTD)",
+                          "fields": []
+                        },
+                        "description": {
+                          "value": "Quotations converted to orders in the current month",
+                          "fields": []
+                        }
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(quotes_converted)",
+                          "rowNumber": 0
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 6,
+                    "y": 3,
+                    "width": 3,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "ctr_conv_val_mtd",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_segment_kpis",
+                          "fields": [
+                            {
+                              "name": "sum(quotes_converted_value)",
+                              "expression": "SUM(`quotes_converted_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`period` IN ('MTD')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": {
+                          "value": "Converted Value (MTD)",
+                          "fields": []
+                        },
+                        "description": {
+                          "value": "EUR value of quotations converted to orders this month",
+                          "fields": []
+                        }
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(quotes_converted_value)",
+                          "rowNumber": 0,
+                          "format": {
+                            "type": "number-currency",
+                            "currencyCode": "EUR",
+                            "abbreviation": "compact",
+                            "decimalPlaces": {
+                              "type": "exact",
+                              "places": 0
+                            }
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 9,
+                    "y": 3,
+                    "width": 3,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "section4",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "**3. Top 10 Quotations \u2014 Done & Converted**<br>Highest-value quotations YTD per segment \u00b7 showing conversion status, customer, sales manager."
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 28,
+                    "width": 12,
+                    "height": 2
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "top_quotes",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_top_quotes_segment",
+                          "fields": [
+                            {
+                              "name": "segment",
+                              "expression": "`segment`"
+                            },
+                            {
+                              "name": "quote_id",
+                              "expression": "`quote_id`"
+                            },
+                            {
+                              "name": "customer",
+                              "expression": "`customer`"
+                            },
+                            {
+                              "name": "country",
+                              "expression": "`country`"
+                            },
+                            {
+                              "name": "cs_team",
+                              "expression": "`cs_team`"
+                            },
+                            {
+                              "name": "sales_manager",
+                              "expression": "`sales_manager`"
+                            },
+                            {
+                              "name": "quote_value",
+                              "expression": "`quote_value`"
+                            },
+                            {
+                              "name": "conversion_status",
+                              "expression": "`conversion_status`"
+                            },
+                            {
+                              "name": "created_date",
+                              "expression": "`created_date`"
+                            }
+                          ],
+                          "disaggregated": true
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": {
+                          "value": "Top 10 Quotations by Value",
+                          "fields": []
+                        }
+                      },
+                      "version": 2,
+                      "widgetType": "table",
+                      "encodings": {
+                        "columns": [
+                          {
+                            "fieldName": "segment"
+                          },
+                          {
+                            "fieldName": "quote_id"
+                          },
+                          {
+                            "fieldName": "customer"
+                          },
+                          {
+                            "fieldName": "country"
+                          },
+                          {
+                            "fieldName": "cs_team"
+                          },
+                          {
+                            "fieldName": "sales_manager"
+                          },
+                          {
+                            "fieldName": "quote_value",
+                            "format": {
+                              "type": "number-currency",
+                              "currencyCode": "EUR",
+                              "abbreviation": "none",
+                              "decimalPlaces": {
+                                "type": "exact",
+                                "places": 0
+                              }
+                            }
+                          },
+                          {
+                            "fieldName": "conversion_status"
+                          },
+                          {
+                            "fieldName": "created_date"
+                          }
+                        ]
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 30,
+                    "width": 12,
+                    "height": 8
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "section_segment",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "**2. Segment Breakdown \u2014 Quotations Done & Converted**\n",
+                        "MTD and YTD quotation count and value per application area segment, with conversion metrics side by side."
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 7,
+                    "width": 12,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "pivot_combined",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_segment_kpis",
+                          "fields": [
+                            {
+                              "name": "segment",
+                              "expression": "`segment`"
+                            },
+                            {
+                              "name": "period",
+                              "expression": "`period`"
+                            },
+                            {
+                              "name": "sum(quotes_done)",
+                              "expression": "SUM(`quotes_done`)"
+                            },
+                            {
+                              "name": "sum(quotes_converted)",
+                              "expression": "SUM(`quotes_converted`)"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "segment"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "period"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`segment`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`period`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": {
+                          "value": "Segment Performance \u2014 Quantities",
+                          "fields": []
+                        },
+                        "description": {
+                          "value": "Quotation count per segment \u00b7 done and converted \u00b7 MTD vs prior YTD",
+                          "fields": []
+                        }
+                      },
+                      "version": 4,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": {
+                          "fields": [
+                            {
+                              "fieldName": "segment",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "columns": {
+                          "fields": [
+                            {
+                              "fieldName": "period",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "cells": {
+                          "fields": [
+                            {
+                              "fieldName": "sum(quotes_done)",
+                              "cellType": "text"
+                            },
+                            {
+                              "fieldName": "sum(quotes_converted)",
+                              "cellType": "text"
+                            }
+                          ],
+                          "displayAs": "columns"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 18,
+                    "width": 12,
+                    "height": 10
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "pivot_values",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_segment_kpis",
+                          "fields": [
+                            {
+                              "name": "segment",
+                              "expression": "`segment`"
+                            },
+                            {
+                              "name": "period",
+                              "expression": "`period`"
+                            },
+                            {
+                              "name": "sum(quotes_done_value)",
+                              "expression": "SUM(`quotes_done_value`)"
+                            },
+                            {
+                              "name": "sum(quotes_converted_value)",
+                              "expression": "SUM(`quotes_converted_value`)"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "segment"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "period"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`segment`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`period`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": {
+                          "value": "Segment Performance \u2014 Values (EUR)",
+                          "fields": []
+                        },
+                        "description": {
+                          "value": "Quotation EUR value per segment \u00b7 done and converted \u00b7 MTD vs prior YTD",
+                          "fields": []
+                        }
+                      },
+                      "version": 4,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": {
+                          "fields": [
+                            {
+                              "fieldName": "segment",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "columns": {
+                          "fields": [
+                            {
+                              "fieldName": "period",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "cells": {
+                          "displayAs": "columns",
+                          "fields": [
+                            {
+                              "fieldName": "sum(quotes_done_value)",
+                              "format": {
+                                "type": "number-currency",
+                                "currencyCode": "EUR",
+                                "abbreviation": "compact",
+                                "decimalPlaces": {
+                                  "type": "exact",
+                                  "places": 0
+                                }
+                              },
+                              "cellType": "text"
+                            },
+                            {
+                              "fieldName": "sum(quotes_converted_value)",
+                              "format": {
+                                "type": "number-currency",
+                                "currencyCode": "EUR",
+                                "abbreviation": "compact",
+                                "decimalPlaces": {
+                                  "type": "exact",
+                                  "places": 0
+                                }
+                              },
+                              "cellType": "text"
+                            }
+                          ]
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 8,
+                    "width": 12,
+                    "height": 10
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "expiring_soon",
+              "displayName": "Expiring Soon",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "header",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Expiring Soon \u2014 Open Quotations\n",
+                        "Open quotes (not converted, not rejected) expiring within the next 14 days \u00b7 act now to convert or extend \u00b7 filterable by segment and country."
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 2
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "section1",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "**1. Expiring Quotes KPIs**\n",
+                        "Headline counts and pipeline value for quotes expiring in the next 14 days."
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 2,
+                    "width": 12,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_count",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_expiring_quotes",
+                          "fields": [
+                            {
+                              "name": "count(quote_id)",
+                              "expression": "COUNT(`quote_id`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "title": "Quotes Expiring",
+                        "showTitle": true,
+                        "description": "Open quotes expiring within 14 days",
+                        "showDescription": true
+                      },
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "count(quote_id)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 3,
+                    "width": 3,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_value",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_expiring_quotes",
+                          "fields": [
+                            {
+                              "name": "sum(quote_value)",
+                              "expression": "SUM(`quote_value`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "title": "At-Risk Value",
+                        "showTitle": true,
+                        "description": "Total EUR value of quotes expiring within 14 days",
+                        "showDescription": true
+                      },
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(quote_value)",
+                          "format": {
+                            "type": "number-currency",
+                            "currencyCode": "EUR",
+                            "abbreviation": "compact",
+                            "decimalPlaces": {
+                              "type": "exact",
+                              "places": 2
+                            }
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 3,
+                    "y": 3,
+                    "width": 3,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_avg_days",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_expiring_quotes",
+                          "fields": [
+                            {
+                              "name": "avg(days_to_expiry)",
+                              "expression": "AVG(`days_to_expiry`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "title": "Avg Days to Expiry",
+                        "showTitle": true,
+                        "description": "Average remaining days before expiration across the set",
+                        "showDescription": true
+                      },
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "avg(days_to_expiry)",
+                          "format": {
+                            "type": "number-plain",
+                            "abbreviation": "none",
+                            "decimalPlaces": {
+                              "type": "exact",
+                              "places": 1
+                            }
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 6,
+                    "y": 3,
+                    "width": 3,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "filter_segment",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a8f50e81190a9c652fb9153fc9e_segment",
+                        "query": {
+                          "datasetName": "ds_segment_options",
+                          "fields": [
+                            {
+                              "name": "segment",
+                              "expression": "`segment`"
+                            },
+                            {
+                              "name": "segment_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      },
+                      {
+                        "name": "parameter_dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a91dd9c1040a11cf40b1be9b362_segment_filter",
+                        "query": {
+                          "datasetName": "ds_expiring_quotes",
+                          "parameters": [
+                            {
+                              "name": "segment_filter",
+                              "keyword": "segment_filter"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "title": "Segment Filter",
+                        "showTitle": true
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "segment",
+                            "queryName": "dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a8f50e81190a9c652fb9153fc9e_segment"
+                          },
+                          {
+                            "parameterName": "segment_filter",
+                            "queryName": "parameter_dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a91dd9c1040a11cf40b1be9b362_segment_filter"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 7,
+                    "width": 3,
+                    "height": 2
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "filter_country",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a91ebe61e9089f5a09fce73b645_country",
+                        "query": {
+                          "datasetName": "ds_country_options",
+                          "fields": [
+                            {
+                              "name": "country",
+                              "expression": "`country`"
+                            },
+                            {
+                              "name": "country_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      },
+                      {
+                        "name": "parameter_dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a91dd9c1040a11cf40b1be9b362_country_filter",
+                        "query": {
+                          "datasetName": "ds_expiring_quotes",
+                          "parameters": [
+                            {
+                              "name": "country_filter",
+                              "keyword": "country_filter"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "title": "Country Filter",
+                        "showTitle": true
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "country",
+                            "queryName": "dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a91ebe61e9089f5a09fce73b645_country"
+                          },
+                          {
+                            "parameterName": "country_filter",
+                            "queryName": "parameter_dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a91dd9c1040a11cf40b1be9b362_country_filter"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 3,
+                    "y": 7,
+                    "width": 3,
+                    "height": 2
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "section2",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "**2. Expiring Quotes Detail**\n",
+                        "All open quotations expiring within 14 days \u00b7 sorted by days remaining \u00b7 use this to prioritize follow-up actions."
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 9,
+                    "width": 12,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "detail_table",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_expiring_quotes",
+                          "fields": [
+                            {
+                              "name": "priority",
+                              "expression": "`priority`"
+                            },
+                            {
+                              "name": "has_order_match",
+                              "expression": "`has_order_match`"
+                            },
+                            {
+                              "name": "quote_id",
+                              "expression": "`quote_id`"
+                            },
+                            {
+                              "name": "customer",
+                              "expression": "`customer`"
+                            },
+                            {
+                              "name": "country",
+                              "expression": "`country`"
+                            },
+                            {
+                              "name": "cs_team",
+                              "expression": "`cs_team`"
+                            },
+                            {
+                              "name": "product_group",
+                              "expression": "`product_group`"
+                            },
+                            {
+                              "name": "segment",
+                              "expression": "`segment`"
+                            },
+                            {
+                              "name": "quote_value",
+                              "expression": "`quote_value`"
+                            },
+                            {
+                              "name": "valid_to",
+                              "expression": "`valid_to`"
+                            },
+                            {
+                              "name": "days_to_expiry",
+                              "expression": "`days_to_expiry`"
+                            }
+                          ],
+                          "disaggregated": true,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`priority`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": {
+                          "value": "Expiring Quotes",
+                          "fields": []
+                        },
+                        "description": {
+                          "value": "Order Match = Yes means an unlinked order exists for the same customer & material within the quote validity window",
+                          "fields": []
+                        }
+                      },
+                      "version": 2,
+                      "widgetType": "table",
+                      "encodings": {
+                        "columns": [
+                          {
+                            "fieldName": "priority",
+                            "displayName": "Priority",
+                            "style": {
+                              "type": "basic",
+                              "bold": true,
+                              "rules": [
+                                {
+                                  "condition": {
+                                    "operand": {
+                                      "type": "data-value",
+                                      "value": "P1 - Critical"
+                                    },
+                                    "operator": "="
+                                  },
+                                  "backgroundColor": "#DC6206",
+                                  "foregroundColor": "#FFFFFF",
+                                  "bold": true
+                                },
+                                {
+                                  "condition": {
+                                    "operand": {
+                                      "type": "data-value",
+                                      "value": "P2 - High"
+                                    },
+                                    "operator": "="
+                                  },
+                                  "backgroundColor": "#F8A42B",
+                                  "foregroundColor": "#FFFFFF",
+                                  "bold": true
+                                },
+                                {
+                                  "condition": {
+                                    "operand": {
+                                      "type": "data-value",
+                                      "value": "P3 - Medium"
+                                    },
+                                    "operator": "="
+                                  },
+                                  "backgroundColor": "#F06D0C",
+                                  "foregroundColor": "#FFFFFF"
+                                },
+                                {
+                                  "condition": {
+                                    "operand": {
+                                      "type": "data-value",
+                                      "value": "P4 - Low"
+                                    },
+                                    "operator": "="
+                                  },
+                                  "backgroundColor": "#D1D5D7",
+                                  "foregroundColor": "#5D696E"
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "fieldName": "has_order_match",
+                            "displayName": "Order Match?",
+                            "style": {
+                              "type": "basic",
+                              "bold": true,
+                              "rules": [
+                                {
+                                  "condition": {
+                                    "operand": {
+                                      "type": "data-value",
+                                      "value": "Yes"
+                                    },
+                                    "operator": "="
+                                  },
+                                  "backgroundColor": "#189138",
+                                  "foregroundColor": "#FFFFFF",
+                                  "bold": true
+                                },
+                                {
+                                  "condition": {
+                                    "operand": {
+                                      "type": "data-value",
+                                      "value": "No"
+                                    },
+                                    "operator": "="
+                                  },
+                                  "backgroundColor": "#D1D5D7",
+                                  "foregroundColor": "#5D696E"
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "fieldName": "quote_id",
+                            "useForSearch": true,
+                            "displayName": "Quote ID"
+                          },
+                          {
+                            "fieldName": "customer",
+                            "useForSearch": true,
+                            "displayName": "Customer"
+                          },
+                          {
+                            "fieldName": "country",
+                            "displayName": "Country"
+                          },
+                          {
+                            "fieldName": "cs_team",
+                            "displayName": "CS Team"
+                          },
+                          {
+                            "fieldName": "product_group",
+                            "displayName": "Product Group"
+                          },
+                          {
+                            "fieldName": "segment",
+                            "displayName": "Segment"
+                          },
+                          {
+                            "fieldName": "quote_value",
+                            "format": {
+                              "type": "number-currency",
+                              "abbreviation": "none",
+                              "currencyCode": "EUR"
+                            },
+                            "displayName": "Value (EUR)"
+                          },
+                          {
+                            "fieldName": "valid_to",
+                            "format": {
+                              "type": "date",
+                              "date": "year-month-day"
+                            },
+                            "displayName": "Expires On"
+                          },
+                          {
+                            "fieldName": "days_to_expiry",
+                            "displayName": "Days Left",
+                            "style": {
+                              "type": "basic",
+                              "rules": [
+                                {
+                                  "condition": {
+                                    "operand": {
+                                      "type": "data-value",
+                                      "value": "3"
+                                    },
+                                    "operator": "<="
+                                  },
+                                  "backgroundColor": "#DC6206",
+                                  "foregroundColor": "#FFFFFF",
+                                  "bold": true
+                                },
+                                {
+                                  "condition": {
+                                    "operand": {
+                                      "type": "data-value",
+                                      "value": "7"
+                                    },
+                                    "operator": "<="
+                                  },
+                                  "backgroundColor": "#F8A42B",
+                                  "foregroundColor": "#FFFFFF",
+                                  "bold": true
+                                },
+                                {
+                                  "condition": {
+                                    "operand": {
+                                      "type": "data-value",
+                                      "value": "7"
+                                    },
+                                    "operator": ">"
+                                  },
+                                  "backgroundColor": "#189138",
+                                  "foregroundColor": "#FFFFFF"
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        "rowOrder": [
+                          {
+                            "by": "column",
+                            "field": {
+                              "index": 0
+                            }
+                          }
+                        ]
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 10,
+                    "width": 12,
+                    "height": 9
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_p1",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_expiring_quotes",
+                          "fields": [
+                            {
+                              "name": "count(quote_id)",
+                              "expression": "COUNT(`quote_id`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`priority` IN ('P1 - Critical')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "title": "P1 Critical",
+                        "showTitle": true,
+                        "description": "Quotes \u2265\u20ac100K expiring within 14 days",
+                        "showDescription": true
+                      },
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "count(quote_id)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 9,
+                    "y": 23,
+                    "width": 3,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "filter_priority",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18ab947101b7e8eafc0f14d3ee3c5_priority",
+                        "query": {
+                          "datasetName": "ds_priority_options",
+                          "fields": [
+                            {
+                              "name": "priority",
+                              "expression": "`priority`"
+                            },
+                            {
+                              "name": "priority_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      },
+                      {
+                        "name": "parameter_dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a91dd9c1040a11cf40b1be9b362_priority_filter",
+                        "query": {
+                          "datasetName": "ds_expiring_quotes",
+                          "parameters": [
+                            {
+                              "name": "priority_filter",
+                              "keyword": "priority_filter"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "title": "Priority Filter",
+                        "showTitle": true
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "priority",
+                            "queryName": "dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18ab947101b7e8eafc0f14d3ee3c5_priority"
+                          },
+                          {
+                            "parameterName": "priority_filter",
+                            "queryName": "parameter_dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a91dd9c1040a11cf40b1be9b362_priority_filter"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 6,
+                    "y": 7,
+                    "width": 3,
+                    "height": 2
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "filter_days_bucket",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a91dd9c1040a11cf40b1be9b362_days_bucket",
+                        "query": {
+                          "datasetName": "ds_expiring_quotes",
+                          "fields": [
+                            {
+                              "name": "days_bucket",
+                              "expression": "`days_bucket`"
+                            },
+                            {
+                              "name": "days_bucket_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      },
+                      {
+                        "name": "parameter_dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a91dd9c1040a11cf40b1be9b362_days_bucket_filter",
+                        "query": {
+                          "datasetName": "ds_expiring_quotes",
+                          "parameters": [
+                            {
+                              "name": "days_bucket_filter",
+                              "keyword": "days_bucket_filter"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "title": "Days Left",
+                        "showTitle": true
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "days_bucket",
+                            "queryName": "dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a91dd9c1040a11cf40b1be9b362_days_bucket"
+                          },
+                          {
+                            "parameterName": "days_bucket_filter",
+                            "queryName": "parameter_dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a91dd9c1040a11cf40b1be9b362_days_bucket_filter"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 9,
+                    "y": 7,
+                    "width": 3,
+                    "height": 2
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_matched",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_expiring_quotes",
+                          "fields": [
+                            {
+                              "name": "count(quote_id)",
+                              "expression": "COUNT(`quote_id`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`has_order_match` IN ('Yes')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": "With Order Match",
+                        "description": {
+                          "value": "Expiring quotes where an unlinked order already exists for same customer & material",
+                          "fields": []
+                        }
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "count(quote_id)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 9,
+                    "y": 3,
+                    "width": 3,
+                    "height": 4
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "potential_matches",
+              "displayName": "Potential Matches",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "counter_unique",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_potential_matches",
+                          "fields": [
+                            {
+                              "name": "count(quote_number)",
+                              "expression": "COUNT(`quote_number`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`shared_match` IN ('No')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": "Unique Matches (excl. shared)",
+                        "description": {
+                          "value": "Matches where the order is linked to only one quotation",
+                          "fields": []
+                        }
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "count(quote_number)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 4,
+                    "y": 3,
+                    "width": 4,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "filter_segment",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a8f50e81190a9c652fb9153fc9e_segment",
+                        "query": {
+                          "datasetName": "ds_segment_options",
+                          "fields": [
+                            {
+                              "name": "segment",
+                              "expression": "`segment`"
+                            },
+                            {
+                              "name": "segment_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      },
+                      {
+                        "name": "parameter_dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f1a55a0db310f880d047091495e2e3_segment_filter",
+                        "query": {
+                          "datasetName": "ds_potential_matches",
+                          "parameters": [
+                            {
+                              "name": "segment_filter",
+                              "keyword": "segment_filter"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Segment Filter"
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "segment",
+                            "queryName": "dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f18a8f50e81190a9c652fb9153fc9e_segment"
+                          },
+                          {
+                            "parameterName": "segment_filter",
+                            "queryName": "parameter_dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f1a55a0db310f880d047091495e2e3_segment_filter"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 7,
+                    "width": 4,
+                    "height": 2
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "header",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Potential Matches \u2014 Quotations\n",
+                        "Quotations not formally linked to an order, but where a matching order exists for the same customer and material within the quotation's validity period. CX teams should review these matches and update the quotation reference in SAP where appropriate. Rows flagged as \"Shared Match = Yes\" have the same order matched to multiple quotations \u2014 review these manually to assign the correct one."
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 2
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "section1",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "**1. KPIs & Filters**\n",
+                        "Headline match counts and quote value at risk, with segment, CS team, and shared-match filters."
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 2,
+                    "width": 12,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_total",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_potential_matches",
+                          "fields": [
+                            {
+                              "name": "count(quote_number)",
+                              "expression": "COUNT(`quote_number`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": {
+                          "value": "Total Potential Matches",
+                          "fields": []
+                        },
+                        "description": {
+                          "value": "Count of quotation lines matched to an unlinked order within the validity window",
+                          "fields": []
+                        }
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "count(quote_number)",
+                          "rowNumber": 0
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 3,
+                    "width": 4,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_value",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_potential_matches",
+                          "fields": [
+                            {
+                              "name": "sum(quote_value_eur)",
+                              "expression": "SUM(`quote_value_eur`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": {
+                          "value": "Quote Value at Risk",
+                          "fields": []
+                        },
+                        "description": {
+                          "value": "Total EUR quote value across all potential matches",
+                          "fields": []
+                        }
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(quote_value_eur)",
+                          "rowNumber": 0,
+                          "format": {
+                            "type": "number-currency",
+                            "currencyCode": "EUR",
+                            "abbreviation": "compact",
+                            "decimalPlaces": {
+                              "type": "exact",
+                              "places": 0
+                            }
+                          }
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 8,
+                    "y": 3,
+                    "width": 4,
+                    "height": 4
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "filter_cs_team",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f1a55a0db310f880d047091495e2e3_cs_team",
+                        "query": {
+                          "datasetName": "ds_potential_matches",
+                          "fields": [
+                            {
+                              "name": "cs_team",
+                              "expression": "`cs_team`"
+                            },
+                            {
+                              "name": "cs_team_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "showTitle": true,
+                        "title": "CS Team"
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "cs_team",
+                            "queryName": "dashboards/01f18a8dd54210c997e12bcf2ce321f1/datasets/01f1a55a0db310f880d047091495e2e3_cs_team"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 4,
+                    "y": 7,
+                    "width": 4,
+                    "height": 2
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "filter_shared",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f1b9dbf7ea1d8483cdaa18dd976a80/datasets/01f1b9dbf7ee1608969d4236b769e60c_quote_creator",
+                        "query": {
+                          "datasetName": "ds_potential_matches",
+                          "fields": [
+                            {
+                              "name": "quote_creator",
+                              "expression": "`quote_creator`"
+                            },
+                            {
+                              "name": "quote_creator_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Quote Creator"
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "quote_creator",
+                            "queryName": "dashboards/01f1b9dbf7ea1d8483cdaa18dd976a80/datasets/01f1b9dbf7ee1608969d4236b769e60c_quote_creator"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 8,
+                    "y": 7,
+                    "width": 4,
+                    "height": 2
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "section2",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "**2. Review List**\n",
+                        "Full detail of potential matches sorted by quote value \u00b7 use filters above to narrow by segment, CS team, or shared-match status."
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 9,
+                    "width": 12,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "review_table",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ds_potential_matches",
+                          "fields": [
+                            {
+                              "name": "segment",
+                              "expression": "`segment`"
+                            },
+                            {
+                              "name": "cs_team",
+                              "expression": "`cs_team`"
+                            },
+                            {
+                              "name": "sales_manager",
+                              "expression": "`sales_manager`"
+                            },
+                            {
+                              "name": "quote_creator",
+                              "expression": "`quote_creator`"
+                            },
+                            {
+                              "name": "quote_number",
+                              "expression": "`quote_number`"
+                            },
+                            {
+                              "name": "quote_item",
+                              "expression": "`quote_item`"
+                            },
+                            {
+                              "name": "order_reason",
+                              "expression": "`order_reason`"
+                            },
+                            {
+                              "name": "customer_name",
+                              "expression": "`customer_name`"
+                            },
+                            {
+                              "name": "customer_country",
+                              "expression": "`customer_country`"
+                            },
+                            {
+                              "name": "material_description",
+                              "expression": "`material_description`"
+                            },
+                            {
+                              "name": "product_group",
+                              "expression": "`product_group`"
+                            },
+                            {
+                              "name": "quote_created",
+                              "expression": "`quote_created`"
+                            },
+                            {
+                              "name": "quote_valid_to",
+                              "expression": "`quote_valid_to`"
+                            },
+                            {
+                              "name": "current_quote_status",
+                              "expression": "`current_quote_status`"
+                            },
+                            {
+                              "name": "quote_value_eur",
+                              "expression": "`quote_value_eur`"
+                            },
+                            {
+                              "name": "matched_order",
+                              "expression": "`matched_order`"
+                            },
+                            {
+                              "name": "matched_order_date",
+                              "expression": "`matched_order_date`"
+                            },
+                            {
+                              "name": "matched_order_value_eur",
+                              "expression": "`matched_order_value_eur`"
+                            },
+                            {
+                              "name": "order_created_by",
+                              "expression": "`order_created_by`"
+                            },
+                            {
+                              "name": "days_between",
+                              "expression": "`days_between`"
+                            },
+                            {
+                              "name": "shared_match",
+                              "expression": "`shared_match`"
+                            }
+                          ],
+                          "disaggregated": true
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "showDescription": true,
+                        "title": {
+                          "value": "Potential Matches \u2014 Review List",
+                          "fields": []
+                        },
+                        "description": {
+                          "value": "Sorted by quote value descending \u00b7 \"Shared Match = Yes\" means the same order matches multiple quotes",
+                          "fields": []
+                        }
+                      },
+                      "version": 2,
+                      "widgetType": "table",
+                      "encodings": {
+                        "columns": [
+                          {
+                            "fieldName": "segment",
+                            "displayName": "Segment"
+                          },
+                          {
+                            "fieldName": "cs_team",
+                            "displayName": "CS Team"
+                          },
+                          {
+                            "fieldName": "sales_manager",
+                            "displayName": "Sales Manager"
+                          },
+                          {
+                            "fieldName": "quote_creator",
+                            "displayName": "Quote Creator"
+                          },
+                          {
+                            "fieldName": "quote_number",
+                            "useForSearch": true,
+                            "displayName": "Quotation"
+                          },
+                          {
+                            "fieldName": "quote_item",
+                            "displayName": "Quote Item"
+                          },
+                          {
+                            "fieldName": "order_reason",
+                            "displayName": "Order Reason"
+                          },
+                          {
+                            "fieldName": "customer_name",
+                            "useForSearch": true,
+                            "displayName": "Customer"
+                          },
+                          {
+                            "fieldName": "customer_country",
+                            "displayName": "Country"
+                          },
+                          {
+                            "fieldName": "material_description",
+                            "useForSearch": true,
+                            "displayName": "Material"
+                          },
+                          {
+                            "fieldName": "product_group",
+                            "displayName": "Product Group"
+                          },
+                          {
+                            "fieldName": "quote_created",
+                            "displayName": "Quote Created"
+                          },
+                          {
+                            "fieldName": "quote_valid_to",
+                            "displayName": "Valid To"
+                          },
+                          {
+                            "fieldName": "current_quote_status",
+                            "displayName": "Quote Status"
+                          },
+                          {
+                            "fieldName": "quote_value_eur",
+                            "format": {
+                              "type": "number-currency",
+                              "currencyCode": "EUR",
+                              "abbreviation": "none",
+                              "decimalPlaces": {
+                                "type": "exact",
+                                "places": 0
+                              }
+                            },
+                            "displayName": "Quote Value (EUR)"
+                          },
+                          {
+                            "fieldName": "matched_order",
+                            "displayName": "Matched Order"
+                          },
+                          {
+                            "fieldName": "matched_order_date",
+                            "displayName": "Order Date"
+                          },
+                          {
+                            "fieldName": "matched_order_value_eur",
+                            "format": {
+                              "type": "number-currency",
+                              "currencyCode": "EUR",
+                              "abbreviation": "none",
+                              "decimalPlaces": {
+                                "type": "exact",
+                                "places": 0
+                              }
+                            },
+                            "displayName": "Order Value (EUR)"
+                          },
+                          {
+                            "fieldName": "order_created_by",
+                            "displayName": "Order Created By"
+                          },
+                          {
+                            "fieldName": "days_between",
+                            "displayName": "Days Between"
+                          },
+                          {
+                            "fieldName": "shared_match",
+                            "displayName": "Shared Match"
+                          }
+                        ]
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 10,
+                    "width": 12,
+                    "height": 8
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            }
+          ],
+          "uiSettings": {
+            "theme": {
+              "canvasBackgroundColor": {
+                "light": "#F4F5F6",
+                "dark": "#1C2325"
+              },
+              "widgetBackgroundColor": {
+                "light": "#FFFFFF",
+                "dark": "#293537"
+              },
+              "widgetBorderColor": {
+                "light": "#F4F5F6",
+                "dark": "#1C2325"
+              },
+              "selectionColor": {
+                "light": "#F06D0C",
+                "dark": "#F06D0C"
+              },
+              "visualizationColors": [
+                "#F06D0C",
+                "#5D696E",
+                "#F8A42B",
+                "#3599B8",
+                "#4AC5BB",
+                "#DC6206",
+                "#E1962A",
+                "#8B969C",
+                "#28738A",
+                "#D1D5D7"
+              ],
+              "widgetHeaderAlignment": "LEFT",
+              "widgetPadding": 12,
+              "widgetMargin": 8,
+              "widgetCornerRadius": 8,
+              "widgetShadow": 5,
+              "continuousGradient": {
+                "lightMode": {
+                  "customSequential": {
+                    "start": "#F5D7C1",
+                    "end": "#F06D0C"
+                  }
+                },
+                "darkMode": {
+                  "customSequential": {
+                    "start": "#293537",
+                    "end": "#F06D0C"
+                  }
+                }
+              },
+              "fontSettings": {
+                "base": {
+                  "fontFamily": "Poppins",
+                  "fontSize": 13
+                },
+                "widgetTitle": {
+                  "fontFamily": "Poppins",
+                  "fontSize": 13,
+                  "fontWeight": 600
+                },
+                "widgetDescription": {
+                  "fontFamily": "Poppins",
+                  "fontColor": {
+                    "light": "#5D696E",
+                    "dark": "#8B969C"
+                  },
+                  "fontSize": 11
+                },
+                "fieldTitle": {
+                  "fontFamily": "Poppins",
+                  "fontColor": {
+                    "light": "#5D696E",
+                    "dark": "#8B969C"
+                  },
+                  "fontSize": 11,
+                  "fontWeight": 600
+                },
+                "fieldValue": {
+                  "fontFamily": "Poppins",
+                  "fontSize": 12
+                }
+              },
+              "gridLineColor": {
+                "light": "#D1D5D7",
+                "dark": "#475052"
+              },
+              "axisLineColor": {
+                "light": "#8B969C",
+                "dark": "#5F6B6D"
+              }
+            },
+            "applyModeEnabled": false
+          },
+          "variables": [
+            {
+              "name": "chart_measure",
+              "displayName": "chart_measure",
+              "field": {
+                "options": [
+                  {
+                    "expression": "COUNT(`ds_quotations_detail`.`quote_id`)"
+                  },
+                  {
+                    "expression": "SUM(`ds_quotations_detail`.`quote_value`)"
+                  }
+                ]
+              }
+            }
+          ]
+        }

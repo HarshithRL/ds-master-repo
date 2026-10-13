@@ -1,0 +1,131 @@
+{
+  "access_control_list": [
+    {
+      "all_permissions": [
+        {
+          "inherited": false,
+          "permission_level": "CAN_READ"
+        }
+      ],
+      "display_name": "Federico Nidini",
+      "user_name": "federico.nidini@etexgroup.com"
+    },
+    {
+      "all_permissions": [
+        {
+          "inherited": false,
+          "permission_level": "CAN_READ"
+        }
+      ],
+      "display_name": "David Hillier",
+      "user_name": "david.hillier@etexgroup.com"
+    },
+    {
+      "all_permissions": [
+        {
+          "inherited": false,
+          "permission_level": "CAN_READ"
+        }
+      ],
+      "display_name": "Kurt Avermate",
+      "user_name": "kurt.avermate@etexgroup.com"
+    },
+    {
+      "all_permissions": [
+        {
+          "inherited": false,
+          "permission_level": "CAN_READ"
+        }
+      ],
+      "display_name": "Kamil Darczuk",
+      "user_name": "kamil.darczuk@etexgroup.com"
+    },
+    {
+      "all_permissions": [
+        {
+          "inherited": false,
+          "permission_level": "CAN_MANAGE"
+        }
+      ],
+      "display_name": "François Leclercq",
+      "user_name": "francois.leclercq@etexgroup.com"
+    },
+    {
+      "all_permissions": [
+        {
+          "inherited": false,
+          "permission_level": "CAN_READ"
+        }
+      ],
+      "display_name": "Sarah-Katharina Drostel",
+      "user_name": "sarah.drostel@etexgroup.com"
+    },
+    {
+      "all_permissions": [
+        {
+          "inherited": false,
+          "permission_level": "CAN_READ"
+        }
+      ],
+      "display_name": "Iwona Lipinska",
+      "user_name": "iwona.lipinska@etexgroup.com"
+    },
+    {
+      "all_permissions": [
+        {
+          "inherited": false,
+          "permission_level": "CAN_READ"
+        }
+      ],
+      "display_name": "Santiago Salvagno Artagaveytia",
+      "user_name": "santiago.salvagno@etexgroup.com"
+    },
+    {
+      "all_permissions": [
+        {
+          "inherited": true,
+          "inherited_from_object": [
+            "/directories/3791904272307903"
+          ],
+          "permission_level": "CAN_MANAGE"
+        }
+      ],
+      "display_name": "Noël Vranckx",
+      "user_name": "noel.vranckx@etexgroup.com"
+    },
+    {
+      "all_permissions": [
+        {
+          "inherited": true,
+          "inherited_from_object": [
+            "/directories/"
+          ],
+          "permission_level": "CAN_MANAGE"
+        }
+      ],
+      "group_name": "admins"
+    },
+    {
+      "all_permissions": [
+        {
+          "inherited": false,
+          "permission_level": "CAN_MANAGE"
+        }
+      ],
+      "display_name": "Arda Biçakçi",
+      "user_name": "mustafaarda.bicakci@etexgroup.com"
+    },
+    {
+      "all_permissions": [
+        {
+          "inherited": false,
+          "permission_level": "CAN_READ"
+        }
+      ],
+      "display_name": "Roberta Villa",
+      "user_name": "roberta.villa@etexgroup.com"
+    }
+  ],
+  "object_id": "/dashboards/1612978214997713",
+  "object_type": "dashboard"
+}
