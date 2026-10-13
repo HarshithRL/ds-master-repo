@@ -81,6 +81,11 @@ targets:
           name: ds-master-data-app
           description: Customer master data request app (acceptance)
           source_code_path: src
+          permissions:
+            - group_name: AUTOMATION.MASTERDATAAPP.CONSUMER.WRITE
+              level: CAN_USE
+            - group_name: AUTOMATION.MASTERDATAAPP.CONSUMER.READ
+              level: CAN_USE
           user_api_scopes:
             - sql
           resources:
@@ -109,6 +114,11 @@ targets:
           name: ds-master-data-app
           description: Customer master data request app (production)
           source_code_path: src
+          permissions:
+            - group_name: AUTOMATION.MASTERDATAAPP.CONSUMER.WRITE
+              level: CAN_USE
+            - group_name: AUTOMATION.MASTERDATAAPP.CONSUMER.READ
+              level: CAN_USE
           user_api_scopes:
             - sql
           resources:
