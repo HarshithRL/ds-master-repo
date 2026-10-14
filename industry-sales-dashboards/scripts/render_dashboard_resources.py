@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from industry_config import MAPPING_COLUMNS, validate_mapping
+from source_snapshots import collect_source_columns, replace_source_references
 
 
 DASHBOARDS = {
@@ -35,12 +36,17 @@ MANAGERS = {
 
 def parameterize(value):
     if isinstance(value, dict):
-        return {key: parameterize(item) for key, item in value.items()}
+        result = {}
+        for key, item in value.items():
+            if key == "queryLines":
+                rewritten = replace_source_references("".join(item))
+                result[key] = [parameterize(line) for line in rewritten.splitlines(keepends=True)]
+            else:
+                result[key] = parameterize(item)
+        return result
     if isinstance(value, list):
         return [parameterize(item) for item in value]
     if isinstance(value, str):
-        for prefix in SOURCE_PREFIXES:
-            value = value.replace(prefix, "`${var.source_catalog}`.pbi.")
         for prefix in MAPPING_PREFIXES:
             value = value.replace(
                 prefix, "${var.catalog}.gold.${var.mapping_table_name}"
@@ -127,14 +133,13 @@ def main():
     if len(captured_rows) != mapping["manifest"]["total_row_count"]:
         raise ValueError("Mapping source capture is incomplete")
     rows = validate_mapping([dict(zip(fields, values, strict=True)) for values in captured_rows])
-    tables = set()
-    pattern = re.compile(r"`\$\{var\.source_catalog\}`\.pbi\.(?:`([^`]+)`|([a-zA-Z_][a-zA-Z0-9_]*))")
+    source_statements = []
     for key in DASHBOARDS:
         metadata = json.loads((ROOT / "source_dashboards" / f"{key}.metadata.json").read_text())
-        original = parameterize(json.loads(metadata["serialized_dashboard"]))
-        for match in pattern.finditer(json.dumps(original)):
-            tables.add(match.group(1) or match.group(2))
-    if not tables:
+        original = json.loads(metadata["serialized_dashboard"])
+        source_statements.extend("".join(dataset["queryLines"]) for dataset in original["datasets"])
+    snapshot_sources = collect_source_columns(source_statements)
+    if not snapshot_sources:
         raise ValueError("No source tables found in native dashboard definitions")
     generated = {
         "cs_team_sales_org_mapping.json": {
@@ -142,7 +147,8 @@ def main():
             "source_statement_id": mapping["statement_id"],
             "rows": rows,
         },
-        "source_dependencies.json": {"pbi_tables": sorted(tables)},
+        "source_dependencies.json": {"pbi_tables": [source["source_table"] for source in snapshot_sources]},
+        "source_snapshots.json": {"sources": snapshot_sources},
     }
     for filename, value in generated.items():
         destination = ROOT / "src" / "config" / filename

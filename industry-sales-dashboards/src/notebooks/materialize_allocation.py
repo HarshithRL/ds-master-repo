@@ -25,14 +25,30 @@ sys.path.insert(0, str(config_path.parent))
 
 from allocation_stages import build_stages, output_table_name
 from industry_config import validate_environment, validate_table_name
+from source_snapshots import SNAPSHOT_PREFIX, pinned_snapshot_query, validate_complete_receipts, validate_manifest
 
 
 validate_environment(catalog, source_catalog, target, spark.conf.get("spark.databricks.clusterUsageTags.orgId"))
 validate_table_name(mapping_table_name, target)
 spark.sql(f"DESCRIBE SCHEMA {catalog}.gold").collect()
 source = (config_path / "open_orders_allocation.sql").read_text()
-source = source.replace("${var.source_catalog}", source_catalog).replace("${var.catalog}", catalog).replace("${var.mapping_table_name}", mapping_table_name)
-as_of_date = spark.sql("SELECT CURRENT_DATE() AS business_date").first()["business_date"]
+source_suffix = "_dev" if target == "D" else ""
+source = source.replace("${var.catalog}", catalog).replace("${var.mapping_table_name}", mapping_table_name).replace("${var.source_snapshot_suffix}", source_suffix)
+source_state = spark.table(f"{catalog}.gold.industry_sales_source_snapshot_state{source_suffix}").collect()
+if len(source_state) != 1 or not source_state[0]["snapshot_id"]:
+    raise ValueError("A complete local source snapshot is required before allocation")
+as_of_date = source_state[0]["snapshot_as_of_date"]
+snapshot_sources = validate_manifest(json.loads((config_path / "source_snapshots.json").read_text())["sources"])
+source_receipts = json.loads(source_state[0]["source_receipts"])
+validate_complete_receipts(snapshot_sources, source_receipts)
+pinned_views = []
+for input_source in snapshot_sources:
+    receipt = next(item for item in source_receipts if item["source"] == input_source["source_table"])
+    raw = f"{catalog}.bronze.`{input_source['snapshot_table'].replace(SNAPSHOT_PREFIX, 'industry_sales_raw_', 1)}{source_suffix}`"
+    view_name = input_source["snapshot_table"] + source_suffix
+    spark.sql(pinned_snapshot_query(raw, source_state[0]["snapshot_id"], receipt["columns"])).createOrReplaceTempView(view_name)
+    pinned_views.append(view_name)
+    source = source.replace(f"`{catalog}`.silver.`{view_name}`", f"`{view_name}`")
 destination = f"{catalog}.gold.{output_table_name(mapping_table_name)}"
 if args.candidate:
     destination += "_candidate"
@@ -60,7 +76,9 @@ try:
     row_count = output.count()
     if row_count == 0:
         raise ValueError("Allocation output is empty; refusing to replace existing gold data")
-    published = output.withColumn("allocation_as_of_date", sql_functions.lit(as_of_date)).withColumn("allocation_refreshed_at", sql_functions.current_timestamp())
+    if spark.table(f"{catalog}.gold.industry_sales_source_snapshot_state{source_suffix}").first()["snapshot_id"] != source_state[0]["snapshot_id"]:
+        raise ValueError("Source snapshot changed during allocation; refusing to publish a mixed result")
+    published = output.withColumn("allocation_as_of_date", sql_functions.lit(as_of_date)).withColumn("allocation_refreshed_at", sql_functions.current_timestamp()).withColumn("source_snapshot_id", sql_functions.lit(source_state[0]["snapshot_id"]))
     published.createOrReplaceTempView("industry_allocation_publish")
     spark.sql(
         f"CREATE OR REPLACE TABLE {destination} USING DELTA "
@@ -77,3 +95,5 @@ finally:
     for name, frame in reversed(cached):
         spark.catalog.dropTempView(name)
         frame.unpersist()
+    for name in pinned_views:
+        spark.catalog.dropTempView(name)

@@ -10,6 +10,7 @@ SPEC = importlib.util.spec_from_file_location(
 )
 renderer = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(renderer)
+from source_snapshots import replace_source_references
 
 
 class DashboardPreservationTests(unittest.TestCase):
@@ -40,15 +41,25 @@ class DashboardPreservationTests(unittest.TestCase):
                 for before, after in zip(
                     original["datasets"], transformed["datasets"], strict=True
                 ):
-                    expected = json.dumps(before)
-                    for prefix in renderer.SOURCE_PREFIXES:
-                        expected = expected.replace(prefix, "`${var.source_catalog}`.pbi.")
+                    expected_dataset = dict(before)
+                    query = replace_source_references("".join(before["queryLines"]))
+                    expected_dataset["queryLines"] = query.splitlines(keepends=True)
+                    expected = json.dumps(expected_dataset)
                     for prefix in renderer.MAPPING_PREFIXES:
                         expected = expected.replace(
                             prefix,
                             "${var.catalog}.gold.${var.mapping_table_name}",
                         )
                     self.assertEqual(json.loads(expected), after)
+
+    def test_consumer_dashboard_definitions_have_no_foreign_source_references(self):
+        for key in renderer.DASHBOARDS:
+            resource = renderer.render(key)
+            self.assertNotIn("synapse-prd", resource)
+            self.assertNotIn("${var.source_catalog}", resource)
+            self.assertNotIn("supply_chain_sandbox", resource)
+            self.assertIn("${var.catalog}", resource)
+            self.assertIn(".silver.", resource)
 
     def test_unknown_source_shape_is_rejected(self):
         from unittest.mock import patch

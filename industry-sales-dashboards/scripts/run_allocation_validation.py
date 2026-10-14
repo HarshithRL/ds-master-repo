@@ -27,7 +27,9 @@ def main():
     files = (
         "src/allocation_stages.py",
         "src/industry_config.py",
+        "src/source_snapshots.py",
         "src/config/open_orders_allocation.sql",
+        "src/config/source_snapshots.json",
         "src/notebooks/materialize_allocation.py",
     )
     for relative in files:

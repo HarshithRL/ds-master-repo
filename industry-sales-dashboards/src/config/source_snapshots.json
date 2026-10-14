@@ -1,0 +1,132 @@
+{
+  "sources": [
+    {
+      "source_table": "dbx_date_delivery",
+      "snapshot_table": "industry_sales_src_dbx_date_delivery",
+      "columns": null
+    },
+    {
+      "source_table": "dbx_dim_customer",
+      "snapshot_table": "industry_sales_src_dbx_dim_customer",
+      "columns": [
+        "Country",
+        "Customer & Text",
+        "Customer Key",
+        "Name 1"
+      ]
+    },
+    {
+      "source_table": "dbx_dim_material",
+      "snapshot_table": "industry_sales_src_dbx_dim_material",
+      "columns": [
+        "Material Code",
+        "Material Key",
+        "Material Text"
+      ]
+    },
+    {
+      "source_table": "dbx_dim_order_reason_desc",
+      "snapshot_table": "industry_sales_src_dbx_dim_order_reason_desc",
+      "columns": [
+        "Description",
+        "Language Code",
+        "Order Reason Code"
+      ]
+    },
+    {
+      "source_table": "dbx_dim_plant",
+      "snapshot_table": "industry_sales_src_dbx_dim_plant",
+      "columns": [
+        "Plant Code & Text",
+        "Plant Key"
+      ]
+    },
+    {
+      "source_table": "dbx_dim_product_hierarchy",
+      "snapshot_table": "industry_sales_src_dbx_dim_product_hierarchy",
+      "columns": [
+        "L2 Product Description",
+        "Material Code"
+      ]
+    },
+    {
+      "source_table": "dbx_dim_rejection_reason",
+      "snapshot_table": "industry_sales_src_dbx_dim_rejection_reason",
+      "columns": [
+        "Rejection Reason Description",
+        "Rejection Reason Id"
+      ]
+    },
+    {
+      "source_table": "dbx_dim_sales_organization",
+      "snapshot_table": "industry_sales_src_dbx_dim_sales_organization",
+      "columns": null
+    },
+    {
+      "source_table": "dbx_dim_users",
+      "snapshot_table": "industry_sales_src_dbx_dim_users",
+      "columns": [
+        "User ID",
+        "User Key",
+        "User Name"
+      ]
+    },
+    {
+      "source_table": "dbx_fact_billing_document_line_item",
+      "snapshot_table": "industry_sales_src_dbx_fact_billing_document_line_item",
+      "columns": [
+        "Billed Quantity",
+        "Billing Date",
+        "NET Value in Statistical Currency",
+        "SD Document Category",
+        "Sales Document Item Number",
+        "Sales Document Number",
+        "Sales Organization Key"
+      ]
+    },
+    {
+      "source_table": "dbx_fact_o2c_-_self_service_-_sales_orders",
+      "snapshot_table": "industry_sales_src_dbx_fact_o2c___self_service___sales_orders",
+      "columns": [
+        "Date - Item Changed",
+        "Date - Item Creation",
+        "Document Type",
+        "FK Material",
+        "FK Sales Organization",
+        "FK Sold to Party",
+        "Net Value Euro",
+        "Order Item Number",
+        "Order Number",
+        "Rejection Reason",
+        "Rejection Status"
+      ]
+    },
+    {
+      "source_table": "dbx_fact_sales_distribution_delivery_item",
+      "snapshot_table": "industry_sales_src_dbx_fact_sales_distribution_delivery_item",
+      "columns": [
+        "Goods Movement Status",
+        "Measure Actual Delivery Quantity",
+        "Reference Document",
+        "Reference Item"
+      ]
+    },
+    {
+      "source_table": "dbx_fact_sales_distribution_sales_document_item",
+      "snapshot_table": "industry_sales_src_dbx_fact_sales_distribution_sales_document_item",
+      "columns": null
+    },
+    {
+      "source_table": "dbx_fact_sales_distribution_schedule_line",
+      "snapshot_table": "industry_sales_src_dbx_fact_sales_distribution_schedule_line",
+      "columns": [
+        "Goods Issue Date",
+        "Measure Confirmed Quantity",
+        "Measure Order Quantity",
+        "Sales Document Item Number",
+        "Sales Document Number",
+        "Schedule Line Number"
+      ]
+    }
+  ]
+}
