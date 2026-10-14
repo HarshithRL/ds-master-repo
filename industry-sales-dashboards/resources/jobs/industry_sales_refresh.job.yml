@@ -42,24 +42,6 @@ resources:
                 package: sqlglot==27.20.0
           job_cluster_key: mapping_cluster
           timeout_seconds: 3600
-        - task_key: refresh_open_orders
-          depends_on:
-            - task_key: refresh_cs_team_mapping
-            - task_key: materialize_open_orders_allocation
-          dashboard_task:
-            dashboard_id: ${resources.dashboards.industry_open_orders.id}
-            warehouse_id: ${var.warehouse_id}
-          max_retries: 1
-          min_retry_interval_millis: 60000
-        - task_key: refresh_quotations
-          depends_on:
-            - task_key: refresh_cs_team_mapping
-            - task_key: refresh_open_orders
-          dashboard_task:
-            dashboard_id: ${resources.dashboards.industry_quotations.id}
-            warehouse_id: ${var.warehouse_id}
-          max_retries: 1
-          min_retry_interval_millis: 60000
       job_clusters:
         - job_cluster_key: mapping_cluster
           new_cluster:

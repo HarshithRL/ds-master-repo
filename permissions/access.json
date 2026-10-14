@@ -901,6 +901,81 @@
       ]
     },
     {
+      "data_product": "industry-sales-dashboards",
+      "warehouse": false,
+      "consumer_groups": [
+        {
+          "tier": "READ",
+          "grants": [
+            {
+              "catalog": "automation",
+              "privileges": [
+                "USE_CATALOG"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "industry_sales_cs_team_sales_org_mapping",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_cs_team_sales_org_mapping",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "industry_sales_cs_team_sales_org_mapping",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "industry_sales_open_orders_allocation",
+              "privileges": [
+                "SELECT"
+              ]
+            }
+          ],
+          "members": [
+            "francois.leclercq@etexgroup.com",
+            "noel.vranckx@etexgroup.com",
+            "mustafaarda.bicakci@etexgroup.com"
+          ]
+        }
+      ]
+    },
+    {
       "data_product": "master-data-app",
       "warehouse": false,
       "consumer_groups": [
