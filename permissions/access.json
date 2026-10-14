@@ -965,6 +965,90 @@
               "privileges": [
                 "SELECT"
               ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_src_dbx_date_delivery",
+              "privileges": ["SELECT"]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_src_dbx_dim_customer",
+              "privileges": ["SELECT"]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_src_dbx_dim_material",
+              "privileges": ["SELECT"]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_src_dbx_dim_order_reason_desc",
+              "privileges": ["SELECT"]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_src_dbx_dim_plant",
+              "privileges": ["SELECT"]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_src_dbx_dim_product_hierarchy",
+              "privileges": ["SELECT"]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_src_dbx_dim_rejection_reason",
+              "privileges": ["SELECT"]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_src_dbx_dim_sales_organization",
+              "privileges": ["SELECT"]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_src_dbx_dim_users",
+              "privileges": ["SELECT"]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_src_dbx_fact_billing_document_line_item",
+              "privileges": ["SELECT"]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_src_dbx_fact_o2c___self_service___sales_orders",
+              "privileges": ["SELECT"]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_src_dbx_fact_sales_distribution_delivery_item",
+              "privileges": ["SELECT"]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_src_dbx_fact_sales_distribution_sales_document_item",
+              "privileges": ["SELECT"]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "industry_sales_src_dbx_fact_sales_distribution_schedule_line",
+              "privileges": ["SELECT"]
             }
           ],
           "members": [

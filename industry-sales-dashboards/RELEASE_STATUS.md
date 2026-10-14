@@ -1,5 +1,19 @@
 # Release Status - 2026-10-13
 
+## Automation-Only Sources - 2026-10-14
+
+This section supersedes the earlier routing and two-task descriptions. Foundation confirmed that the access pipeline grants only the product's own catalog; `synapse-prd` consumer permissions are Terraform-owned, not supported by the existing JSON flow.
+
+- Prepared in DEV source only: job graph mapping -> snapshot_dashboard_sources -> allocation. The A/P 06:30 Europe/Brussels schedule is unchanged, D/T remain paused, and native dashboard refresh tasks are not reintroduced.
+- Both dashboard definitions and the allocation calculation now reference automation silver snapshot views. No direct `synapse-prd`, `${var.source_catalog}`, or DEV sandbox reference remains in consumer dashboard JSON. The job identity alone reads upstream Synapse.
+- The source plan covers all 14 required tables, with no row/date filters, deduplication, or source quantity/type rewriting. All planned columns were checked against actual DEV source metadata. Where column scope is ambiguous, the whole table schema is retained, including 297 columns for the sales-document fact. Full-source volume and runtime have not yet been validated; this transfer must not be called production-ready on unit tests alone.
+- Raw bronze batches are ownership-tagged and column-mapped Delta tables; silver views expose original columns from a single complete published batch. Exact write/read multiset checks, one receipt per source, and a post-completion state swap prevent a partial batch becoming current. Current/previous successful batches are retained. Sequential upstream reads are not a transactionally atomic Synapse snapshot.
+- Allocation pins raw inputs to the completed batch UUID and business date, refuses a changed state pointer before publication, and records source_snapshot_id. If source publication succeeds but allocation fails, prior gold allocation and new silver sources can differ in freshness; operators must compare the IDs/dates rather than assume synchronized current data.
+- Consumer JSON keeps the existing three members and eight output/parent grants, and adds exactly 14 SELECT grants on automation silver views. It adds no raw/state consumer access, no foreign catalog, no CREATE SCHEMA, and no new warehouse. View ownership/dependency grants and warehouse CAN_USE remain separate prerequisites.
+- Structured SQL rewrite tests preserve all original query expressions and aliases while changing only source relation locations. Spark publication tests cover duplicates, NULL/fractional values, old-versus-partial batches, and pinned reads. D/T resolved-bundle and complete regression checks must pass before source handoff; live first-transfer/performance/browser/access acceptance is still required in DEV before the user promotes.
+- DEV metadata confirmed all projected source columns. Empty-schema Spark checks matched projected versus full native types for 17 queries. Two original Databricks-specific expressions (allocation Decimal STACK and potential-match QUALIFY) fail identically with full input schemas under local Spark; these are explicit native-runtime validation gaps, not passed analyzer tests. SQL expressions were not altered to hide those engine differences.
+- The earlier direct Synapse consumer SQL handoff is obsolete and must not be run. No SQL GRANT or ACC/PRD mutation is performed for this change. Only the user will promote via pipeline.
+
 ## Latest Source Update - 2026-10-14
 
 This section supersedes the earlier source/configuration status below. It describes the commit-ready source change, not a successful runtime deployment.

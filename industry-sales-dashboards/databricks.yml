@@ -17,7 +17,7 @@ variables:
   catalog:
     description: Target automation catalog containing existing bronze, silver, and gold schemas
   source_catalog:
-    description: Shared read-only Synapse source catalog, independently configurable from the output catalog
+    description: Upstream Synapse catalog read only by the job identity, never by dashboard consumers
     default: synapse-prd
   policy_id:
     description: Target workspace Job Compute policy
@@ -29,8 +29,11 @@ variables:
     description: Bundle-owned lookup table name within each fixed schema
     default: industry_sales_cs_team_sales_org_mapping
   allocation_table_name:
-    description: Allocation gold snapshot populated before the Open Orders refresh
+    description: Allocation gold snapshot populated after local source snapshots
     default: industry_sales_open_orders_allocation
+  source_snapshot_suffix:
+    description: Isolated DEV suffix for source snapshot tables, views, and state
+    default: ""
 
 permissions:
   - user_name: mustafaarda.bicakci@etexgroup.com
@@ -58,6 +61,7 @@ targets:
       refresh_pause_status: PAUSED
       mapping_table_name: industry_sales_cs_team_sales_org_mapping_dev
       allocation_table_name: industry_sales_open_orders_allocation_dev
+      source_snapshot_suffix: _dev
 
   T:
     mode: production
