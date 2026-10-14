@@ -23,7 +23,9 @@ The 108-row CS-team mapping was captured completely from `supply_chain_sandbox_d
 
 The refresh validates existing schemas and source access, publishes the seed through bronze, silver, and gold, and independently verifies exact write/read parity at each layer. Only tables tagged `industry_sales.bundle=industry-sales-dashboards` can be replaced. The gold mapping is `industry_sales_cs_team_sales_org_mapping`; D uses the `_dev` suffix so development does not claim TEST's tables. The mapping is release-managed configuration, not a live synchronization from the sandbox. Changes require a new verified capture and release.
 
-The tasks run in order: mapping, allocation materialization, Open Orders refresh, then Quotations refresh. A failed prerequisite prevents downstream refreshes; job concurrency is one. The new `materialize_open_orders_allocation` task runs the original allocation SQL's 18 CTEs once, with eager checkpoints to truncate repeated foreign-source query plans. Its parser dependency is pinned to `sqlglot==27.20.0` on that task only. It creates no schemas and replaces only its bundle-owned gold output.
+The job contains only two tasks: mapping, then allocation materialization. A failed mapping task prevents allocation production; job concurrency is one. The `materialize_open_orders_allocation` task runs the original allocation SQL's 18 CTEs once, with eager checkpoints to truncate repeated foreign-source query plans. Its parser dependency is pinned to `sqlglot==27.20.0` on that task only. It creates no schemas and replaces only its bundle-owned gold output.
+
+The native `refresh_open_orders` and `refresh_quotations` tasks are removed. The scheduled job finishes when table production finishes; it does not precompute dashboard query caches or send native dashboard subscription snapshots. Both dashboard resources and their publication remain intact. Dashboard queries run interactively when needed; cached browser results may still require refresh. This removal does not accelerate the remaining foreign-source queries or change their business logic.
 
 The Open Orders `ds_overview_allocation` dataset reads the six original result columns from `gold.industry_sales_open_orders_allocation`, with `_dev` appended for D. All its measures and widgets stay unchanged; the exact original business SQL is versioned in `src/config/open_orders_allocation.sql`. Other datasets, including all Quotations queries, are unchanged. This is a daily snapshot, not a fresh foreign-source recomputation per widget. `allocation_as_of_date` and `allocation_refreshed_at` record its business date and write time. The business date is fixed at task start; a failed later refresh leaves the previous snapshot, which must not be treated as current.
 
@@ -38,15 +40,15 @@ This is a new top-level bundle under DS-Master-Repo. Shared TEST/ACC/PRD pipelin
 1. Review and commit only this new project folder in the existing Master Git Folder. The local DS-Master-Repo directory is a partial workspace export, not a Git checkout.
 2. Use the repository's TEST validation and ACC PR/build-validation flow, then merge to main for PRD. Do not deploy ACC/PRD as a human to bypass the protected automation root.
 3. Ensure the CI identity has source SELECT, target schema/table creation and ownership rights, warehouse use, Job Compute policy use, and the relevant workspace principals exist.
-4. Validate the new materialization in DEV first. After deployment, run `industry_sales_refresh` once and verify all four tasks succeed, the allocation table has an appropriate business date, published browser pages render, and original readers have the required SELECT grants. A paused D/T schedule does not prevent a manual smoke run. Do not promote the unverified snapshot change to ACC/PRD just because source validation passes.
+4. Validate the new materialization in DEV first. After deployment, run `industry_sales_refresh` once and verify both table-production tasks succeed and the allocation table has an appropriate business date. Check published browser pages and reader SELECT grants separately; a successful table job is not proof that every dashboard query or widget succeeds. A paused D/T schedule does not prevent a manual smoke run. Do not promote an unverified change to ACC/PRD just because source validation passes.
 
-The helper explicitly publishes without embedded credentials and runs the first refresh:
+The helper explicitly publishes without embedded credentials and runs the first table-production job, not a native dashboard refresh:
 
 ```bash
 bash scripts/deploy_and_publish.sh T <ci-profile>
 ```
 
-Do not assume the shared external deployment template automatically invokes that helper or performs a successful first refresh. The native scheduled job owns subsequent ACC/PRD refreshes.
+Do not assume the shared external deployment template automatically invokes that helper or performs a successful first table build. The scheduled job owns subsequent ACC/PRD mapping and allocation table updates. Dashboard opening and query execution are separate from that schedule.
 
 ## Validation
 
