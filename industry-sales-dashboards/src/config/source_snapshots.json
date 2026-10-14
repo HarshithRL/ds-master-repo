@@ -3,7 +3,10 @@
     {
       "source_table": "dbx_date_delivery",
       "snapshot_table": "industry_sales_src_dbx_date_delivery",
-      "columns": null
+      "columns": [
+        "Date Delivery",
+        "Date Delivery Key"
+      ]
     },
     {
       "source_table": "dbx_dim_customer",
@@ -60,7 +63,12 @@
     {
       "source_table": "dbx_dim_sales_organization",
       "snapshot_table": "industry_sales_src_dbx_dim_sales_organization",
-      "columns": null
+      "columns": [
+        "Business Unit 2",
+        "Country key",
+        "Sales Organization Key",
+        "Sales_Organization ID"
+      ]
     },
     {
       "source_table": "dbx_dim_users",
@@ -114,7 +122,39 @@
     {
       "source_table": "dbx_fact_sales_distribution_sales_document_item",
       "snapshot_table": "industry_sales_src_dbx_fact_sales_distribution_sales_document_item",
-      "columns": null
+      "columns": [
+        "Application area Description",
+        "Created By",
+        "Created By Key",
+        "Created On",
+        "Customer Key",
+        "Delivery Block",
+        "Delivery Block Description",
+        "Delivery Date To Key",
+        "Incoterms Description",
+        "Material Code",
+        "Material Key",
+        "Measure Net Value in Euro",
+        "Measure Sales Order Quantity",
+        "Order Reason",
+        "Order Status",
+        "Plant",
+        "Plant Key",
+        "Quotation Valid From",
+        "Quotation Valid To",
+        "Quote Number",
+        "Reason for Rejection",
+        "Rejection Status",
+        "Sales Document Item Number",
+        "Sales Document Number",
+        "Sales Document Type",
+        "Sales Document Type Description",
+        "Sales Employee",
+        "Sales Order Quantity Unit of Measure",
+        "Sales Organization Key",
+        "Shipping Conditions Description",
+        "Sold To Party"
+      ]
     },
     {
       "source_table": "dbx_fact_sales_distribution_schedule_line",
