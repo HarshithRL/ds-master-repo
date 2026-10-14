@@ -12,6 +12,23 @@ SPEC.loader.exec_module(snapshots)
 
 
 class SourceSnapshotRuntimeTests(unittest.TestCase):
+    def test_narrow_batch_retains_native_values_inside_existing_wide_schema(self):
+        spark = SparkSession.builder.master("local[2]").appName("snapshot-storage-compatibility").config("spark.sql.shuffle.partitions", "2").getOrCreate()
+        spark.sparkContext.setLogLevel("ERROR")
+        try:
+            frame = spark.sql("SELECT * FROM VALUES (1,12.125BD,'new'),(1,12.125BD,'new'),(2,CAST(NULL AS DECIMAL(8,3)),'new') AS source(`Order Key`,quantity,__industry_snapshot_id)")
+            stored = spark.sql("SELECT CAST(NULL AS STRING) AS `Unused Field`, CAST(NULL AS DECIMAL(8,3)) AS quantity, CAST(NULL AS INT) AS `Order Key`, CAST(NULL AS STRING) AS __industry_snapshot_id").schema
+            aligned = snapshots.align_storage_rows(frame, stored)
+            self.assertEqual(aligned.columns, ["Unused Field", "quantity", "Order Key", "__industry_snapshot_id"])
+            self.assertEqual(aligned.count(), 3)
+            self.assertEqual(aligned.where("`Unused Field` IS NOT NULL").count(), 0)
+            selected = aligned.select("`Order Key`", "quantity", "__industry_snapshot_id")
+            self.assertEqual(frame.exceptAll(selected).count(), 0)
+            self.assertEqual(selected.exceptAll(frame).count(), 0)
+            self.assertEqual(aligned.schema["Unused Field"].dataType, stored["Unused Field"].dataType)
+        finally:
+            spark.stop()
+
     def test_unpublished_partial_batch_does_not_replace_visible_rows(self):
         spark = SparkSession.builder.master("local[2]").appName("source-snapshot-publication").config("spark.sql.shuffle.partitions", "2").getOrCreate()
         spark.sparkContext.setLogLevel("ERROR")

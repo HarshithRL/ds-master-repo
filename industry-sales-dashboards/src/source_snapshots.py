@@ -37,23 +37,30 @@ def replace_source_references(statement, catalog="${var.catalog}", suffix="${var
     return statement
 
 
-def collect_source_columns(statements):
+def collect_source_columns(statements, source_schemas=None):
     columns = {}
     wildcard = set()
+    source_schemas = source_schemas or {}
     for statement in statements:
         query = sqlglot.parse_one(statement, read="databricks")
         for table in query.find_all(exp.Table):
             if is_source(table):
                 columns.setdefault(table.name, set())
         for scope in traverse_scope(query):
-            direct = {alias: source for alias, source in scope.sources.items() if is_source(source)}
+            selected = {alias: source for alias, (_, source) in scope.selected_sources.items()}
+            direct = {alias: source for alias, source in selected.items() if is_source(source)}
             for column in scope.columns:
                 if column.table in direct:
                     columns[direct[column.table].name].add(column.name)
                 elif not column.table:
-                    if len(scope.sources) == 1 and len(direct) == 1:
+                    if len(selected) == 1 and len(direct) == 1:
                         columns[next(iter(direct.values())).name].add(column.name)
                     elif direct:
+                        if len(selected) == len(direct) and all(table.name in source_schemas for table in direct.values()):
+                            owners = [table for table in direct.values() if column.name.casefold() in {name.casefold() for name in source_schemas[table.name]}]
+                            if len(owners) == 1:
+                                columns[owners[0].name].add(column.name)
+                                continue
                         wildcard.update(table.name for table in direct.values())
             for selection in scope.expression.selects:
                 if isinstance(selection, exp.Star):
@@ -107,3 +114,33 @@ def pinned_snapshot_query(raw, snapshot_id, columns):
     if not projection:
         raise ValueError("A pinned snapshot requires source columns")
     return f"SELECT {projection} FROM {raw} WHERE `__industry_snapshot_id` = '{snapshot_id}'"
+
+
+def validate_storage_projection(required_fields, stored_fields):
+    required = dict(required_fields)
+    stored = dict(stored_fields)
+    if len(required) != len(required_fields) or len(stored) != len(stored_fields):
+        raise ValueError("Duplicate native storage columns are not supported")
+    for name, field_type in required.items():
+        if name not in stored or stored[name] != field_type:
+            raise ValueError(f"Required source field changed; explicit migration required: {name}")
+    return [name for name, field_type in stored_fields if name not in required]
+
+
+def snapshot_view_ddl(view, query, exists):
+    if exists:
+        return f"ALTER VIEW {view} AS {query}"
+    return f"CREATE VIEW {view} TBLPROPERTIES ('industry_sales.bundle'='industry-sales-dashboards') AS {query}"
+
+
+def align_storage_rows(frame, stored_schema):
+    from pyspark.sql import functions as sql_functions
+
+    validate_storage_projection(
+        [(field.name, field.dataType) for field in frame.schema.fields],
+        [(field.name, field.dataType) for field in stored_schema.fields],
+    )
+    return frame.select(*[
+        sql_functions.col(quote_column(field.name)) if field.name in frame.columns else sql_functions.lit(None).cast(field.dataType).alias(field.name)
+        for field in stored_schema.fields
+    ])

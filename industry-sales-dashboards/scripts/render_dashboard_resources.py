@@ -138,7 +138,8 @@ def main():
         metadata = json.loads((ROOT / "source_dashboards" / f"{key}.metadata.json").read_text())
         original = json.loads(metadata["serialized_dashboard"])
         source_statements.extend("".join(dataset["queryLines"]) for dataset in original["datasets"])
-    snapshot_sources = collect_source_columns(source_statements)
+    source_schemas = json.loads((ROOT / "src/config/source_column_names.json").read_text())
+    snapshot_sources = collect_source_columns(source_statements, source_schemas)
     if not snapshot_sources:
         raise ValueError("No source tables found in native dashboard definitions")
     generated = {
