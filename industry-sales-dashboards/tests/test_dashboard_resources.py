@@ -79,7 +79,21 @@ class DashboardPreservationTests(unittest.TestCase):
             for entry in acl["access_control_list"]:
                 user_name = entry.get("user_name")
                 if user_name and user_name not in renderer.MANAGERS:
-                    self.assertIn(f"user_name: {user_name}", resource)
+                    levels = [permission["permission_level"] for permission in entry["all_permissions"] if not permission["inherited"]]
+                    if levels == ["CAN_READ"] and user_name.lower() not in renderer.dashboard_members(key):
+                        self.assertNotIn(f"user_name: {user_name}", resource)
+                    else:
+                        self.assertIn(f"user_name: {user_name}", resource)
+
+    def test_acc_prd_readers_are_scoped_to_one_dashboard_with_read_only_acl(self):
+        resource = renderer.render_reader_permissions()
+        self.assertNotIn("  D:", resource)
+        self.assertNotIn("  T:", resource)
+        self.assertEqual(resource.count("level: CAN_READ"), 4)
+        self.assertNotIn("CAN_EDIT", resource)
+        self.assertNotIn("CAN_MANAGE", resource)
+        self.assertEqual(resource.count("group_name: AUTOMATION.INDUSTRYSALESDASHBOARDS.CONSUMER.READ\n"), 2)
+        self.assertEqual(resource.count("group_name: AUTOMATION.INDUSTRYSALESDASHBOARDS.CONSUMER.WRITE\n"), 2)
 
     def test_every_query_uses_its_compiled_result_without_changing_dataset_metadata(self):
         for key in renderer.DASHBOARDS:
