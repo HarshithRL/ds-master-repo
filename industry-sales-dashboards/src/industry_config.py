@@ -2,6 +2,10 @@ import re
 
 
 MAPPING_COLUMNS = ("sales_org_code", "sales_organization", "cs_team")
+OWNED_TABLE_PREFIX = "SC_BI_"
+MAPPING_TABLE_NAME = OWNED_TABLE_PREFIX + "industry_sales_cs_team_sales_org_mapping"
+RESULT_STATE_TABLE_NAME = OWNED_TABLE_PREFIX + "industry_sales_dashboard_result_state"
+SOURCE_STATE_TABLE_NAME = OWNED_TABLE_PREFIX + "industry_sales_source_snapshot_state"
 WORKSPACE_CATALOGS = {
     "7181820732839861": "automation_d",
     "4796304964978539": "automation_a",
@@ -23,7 +27,7 @@ def validate_dev_validation_job(host, job_id):
 
 
 def validate_table_name(table_name, target):
-    if not re.fullmatch(r"industry_sales_cs_team_sales_org_mapping(?:_dev)?", table_name):
+    if not re.fullmatch(re.escape(MAPPING_TABLE_NAME) + r"(?:_dev)?", table_name):
         raise ValueError(f"Invalid mapping table name: {table_name!r}")
     if table_name.endswith("_dev") != (target == "D"):
         raise ValueError(f"Target {target!r} cannot use mapping table {table_name!r}")

@@ -9,12 +9,15 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from industry_config import MAPPING_COLUMNS, validate_mapping
 from source_snapshots import collect_source_columns, replace_source_references
+from dataset_results import compile_dataset, table_edits, unique_result_producers
+from sqlglot import exp, parse_one
 
 
 DASHBOARDS = {
     "open_orders": (10, 6, 86),
     "quotations": (9, 4, 49),
 }
+RETIRED_DATASETS = {"open_orders": {"ds_top_late_orders", "ds_cancellations_trend"}, "quotations": set()}
 SOURCE_PREFIXES = (
     "`synapse-prd`.`pbi`.",
     "`synapse-prd`.pbi.",
@@ -54,15 +57,43 @@ def parameterize(value):
     return value
 
 
+def active_datasets(original, key):
+    retired = RETIRED_DATASETS[key]
+    if any(name in json.dumps(original["pages"]) for name in retired):
+        raise ValueError("Cannot retire a dataset referenced by a page")
+    return [dataset for dataset in original["datasets"] if dataset["name"] not in retired]
+
+
 def prepare_dashboard(original, key):
-    dashboard = parameterize(original)
-    if key == "open_orders":
-        allocation = next(item for item in dashboard["datasets"] if item["name"] == "ds_overview_allocation")
-        allocation["queryLines"] = [
-            "SELECT scope, cs_team, segment, plant, bucket, value_eur\n",
-            "FROM ${var.catalog}.gold.${var.allocation_table_name}\n",
-        ]
+    dashboard = json.loads(json.dumps(original))
+    dashboard["datasets"] = active_datasets(dashboard, key)
+    for graph in dashboard.get("relationshipGraphs", []):
+        graph["sources"] = [source for source in graph["sources"] if source["datasetName"] not in RETIRED_DATASETS[key]]
+    schemas = json.loads((ROOT / "src/config/source_column_names.json").read_text())
+    for dataset in dashboard["datasets"]:
+        source = "".join(dataset["queryLines"])
+        plan = compile_dataset(key, dataset["name"], source, schemas)
+        dataset["queryLines"] = (plan["consumer_sql"] + "\n").splitlines(keepends=True)
     return dashboard
+
+
+def prepare_result_plans():
+    schemas = json.loads((ROOT / "src/config/source_column_names.json").read_text())
+    plans = []
+    for key in DASHBOARDS:
+        metadata = json.loads((ROOT / "source_dashboards" / f"{key}.metadata.json").read_text())
+        for dataset in active_datasets(json.loads(metadata["serialized_dashboard"]), key):
+            plan = compile_dataset(key, dataset["name"], "".join(dataset["queryLines"]), schemas)
+            for producer in plan["producers"]:
+                statement = producer["sql"]
+                replacements = {"supply_chain_sandbox_d.datamodel.cs_team_sales_org_mapping": "`${var.catalog}`.gold.`${var.mapping_table_name}`"}
+                for table in parse_one(statement, read="databricks").find_all(exp.Table):
+                    if table.catalog == "synapse-prd" and table.db == "pbi":
+                        replacements[".".join((table.catalog, table.db, table.name))] = f"`${{var.source_catalog}}`.pbi.`{table.name}`"
+                producer["sql"] = table_edits(statement, replacements)
+            plans.append(plan)
+            unique_result_producers(plans)
+    return plans
 
 
 def render(key):
@@ -150,6 +181,7 @@ def main():
         },
         "source_dependencies.json": {"pbi_tables": [source["source_table"] for source in snapshot_sources]},
         "source_snapshots.json": {"sources": snapshot_sources},
+        "dashboard_results.json": {"datasets": prepare_result_plans()},
     }
     for filename, value in generated.items():
         destination = ROOT / "src" / "config" / filename

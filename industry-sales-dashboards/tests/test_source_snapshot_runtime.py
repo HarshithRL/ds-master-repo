@@ -1,4 +1,5 @@
 import importlib.util
+import sys
 import unittest
 from pathlib import Path
 
@@ -6,6 +7,7 @@ from pyspark.sql import SparkSession
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
 SPEC = importlib.util.spec_from_file_location("snapshot_view_runtime", ROOT / "src/source_snapshots.py")
 snapshots = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(snapshots)

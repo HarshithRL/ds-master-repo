@@ -46,7 +46,7 @@ class IndustryConfigurationTests(unittest.TestCase):
             config.validate_environment("automation_d", "synapse-prd`; DROP TABLE x", "D", "7181820732839861")
 
     def test_dev_and_ci_mapping_names_cannot_be_crossed(self):
-        base_name = "industry_sales_cs_team_sales_org_mapping"
+        base_name = "SC_BI_industry_sales_cs_team_sales_org_mapping"
         config.validate_table_name(base_name + "_dev", "D")
         for target in ("T", "A", "P"):
             config.validate_table_name(base_name, target)

@@ -33,9 +33,9 @@ class AllocationStageTests(unittest.TestCase):
         self.assertFalse(any(sqlglot.parse_one(statement, read="databricks").find(exp.CurrentDate) for name, statement in stages))
 
     def test_isolated_output_names(self):
-        mapping = "industry_sales_cs_team_sales_org_mapping"
-        self.assertEqual(staging.output_table_name(mapping), "industry_sales_open_orders_allocation")
-        self.assertEqual(staging.output_table_name(mapping + "_dev"), "industry_sales_open_orders_allocation_dev")
+        mapping = "SC_BI_industry_sales_cs_team_sales_org_mapping"
+        self.assertEqual(staging.output_table_name(mapping), "SC_BI_industry_sales_open_orders_allocation")
+        self.assertEqual(staging.output_table_name(mapping + "_dev"), "SC_BI_industry_sales_open_orders_allocation_dev")
         with self.assertRaises(ValueError):
             staging.output_table_name("unrelated_table")
 

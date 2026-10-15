@@ -2,7 +2,7 @@
   "sources": [
     {
       "source_table": "dbx_date_delivery",
-      "snapshot_table": "industry_sales_src_dbx_date_delivery",
+      "snapshot_table": "SC_BI_industry_sales_src_dbx_date_delivery",
       "columns": [
         "Date Delivery",
         "Date Delivery Key"
@@ -10,7 +10,7 @@
     },
     {
       "source_table": "dbx_dim_customer",
-      "snapshot_table": "industry_sales_src_dbx_dim_customer",
+      "snapshot_table": "SC_BI_industry_sales_src_dbx_dim_customer",
       "columns": [
         "Country",
         "Customer & Text",
@@ -20,7 +20,7 @@
     },
     {
       "source_table": "dbx_dim_material",
-      "snapshot_table": "industry_sales_src_dbx_dim_material",
+      "snapshot_table": "SC_BI_industry_sales_src_dbx_dim_material",
       "columns": [
         "Material Code",
         "Material Key",
@@ -29,7 +29,7 @@
     },
     {
       "source_table": "dbx_dim_order_reason_desc",
-      "snapshot_table": "industry_sales_src_dbx_dim_order_reason_desc",
+      "snapshot_table": "SC_BI_industry_sales_src_dbx_dim_order_reason_desc",
       "columns": [
         "Description",
         "Language Code",
@@ -38,7 +38,7 @@
     },
     {
       "source_table": "dbx_dim_plant",
-      "snapshot_table": "industry_sales_src_dbx_dim_plant",
+      "snapshot_table": "SC_BI_industry_sales_src_dbx_dim_plant",
       "columns": [
         "Plant Code & Text",
         "Plant Key"
@@ -46,7 +46,7 @@
     },
     {
       "source_table": "dbx_dim_product_hierarchy",
-      "snapshot_table": "industry_sales_src_dbx_dim_product_hierarchy",
+      "snapshot_table": "SC_BI_industry_sales_src_dbx_dim_product_hierarchy",
       "columns": [
         "L2 Product Description",
         "Material Code"
@@ -54,7 +54,7 @@
     },
     {
       "source_table": "dbx_dim_rejection_reason",
-      "snapshot_table": "industry_sales_src_dbx_dim_rejection_reason",
+      "snapshot_table": "SC_BI_industry_sales_src_dbx_dim_rejection_reason",
       "columns": [
         "Rejection Reason Description",
         "Rejection Reason Id"
@@ -62,7 +62,7 @@
     },
     {
       "source_table": "dbx_dim_sales_organization",
-      "snapshot_table": "industry_sales_src_dbx_dim_sales_organization",
+      "snapshot_table": "SC_BI_industry_sales_src_dbx_dim_sales_organization",
       "columns": [
         "Business Unit 2",
         "Country key",
@@ -72,7 +72,7 @@
     },
     {
       "source_table": "dbx_dim_users",
-      "snapshot_table": "industry_sales_src_dbx_dim_users",
+      "snapshot_table": "SC_BI_industry_sales_src_dbx_dim_users",
       "columns": [
         "User ID",
         "User Key",
@@ -81,7 +81,7 @@
     },
     {
       "source_table": "dbx_fact_billing_document_line_item",
-      "snapshot_table": "industry_sales_src_dbx_fact_billing_document_line_item",
+      "snapshot_table": "SC_BI_industry_sales_src_dbx_fact_billing_document_line_item",
       "columns": [
         "Billed Quantity",
         "Billing Date",
@@ -94,7 +94,7 @@
     },
     {
       "source_table": "dbx_fact_o2c_-_self_service_-_sales_orders",
-      "snapshot_table": "industry_sales_src_dbx_fact_o2c___self_service___sales_orders",
+      "snapshot_table": "SC_BI_industry_sales_src_dbx_fact_o2c___self_service___sales_orders",
       "columns": [
         "Date - Item Changed",
         "Date - Item Creation",
@@ -111,7 +111,7 @@
     },
     {
       "source_table": "dbx_fact_sales_distribution_delivery_item",
-      "snapshot_table": "industry_sales_src_dbx_fact_sales_distribution_delivery_item",
+      "snapshot_table": "SC_BI_industry_sales_src_dbx_fact_sales_distribution_delivery_item",
       "columns": [
         "Goods Movement Status",
         "Measure Actual Delivery Quantity",
@@ -121,7 +121,7 @@
     },
     {
       "source_table": "dbx_fact_sales_distribution_sales_document_item",
-      "snapshot_table": "industry_sales_src_dbx_fact_sales_distribution_sales_document_item",
+      "snapshot_table": "SC_BI_industry_sales_src_dbx_fact_sales_distribution_sales_document_item",
       "columns": [
         "Application area Description",
         "Created By",
@@ -158,7 +158,7 @@
     },
     {
       "source_table": "dbx_fact_sales_distribution_schedule_line",
-      "snapshot_table": "industry_sales_src_dbx_fact_sales_distribution_schedule_line",
+      "snapshot_table": "SC_BI_industry_sales_src_dbx_fact_sales_distribution_schedule_line",
       "columns": [
         "Goods Issue Date",
         "Measure Confirmed Quantity",
