@@ -1,4 +1,4 @@
-"""Databricks chat model via AI Gateway (visitor OBO, or app SP / CLI fallback)."""
+"""Databricks chat models via Unity Catalog AI Gateway (visitor OBO, or CLI / app SP)."""
 
 from __future__ import annotations
 
@@ -20,58 +20,64 @@ from shared.databricks_runtime import (
     request_workspace_client,
     workspace_client,
 )
+from shared.db.paths import uc_catalog
 from shared.logger_global import get_logger
 
 log = get_logger(__name__, service="ai_brain")
 
 DEFAULT_PROFILE = "adb-7181820732839861"
-# Registered under system.ai WITH the databricks- prefix; dropping it 404s.
-DEFAULT_MODEL = "system.ai.databricks-claude-opus-4-5"
-# Workspace FMAPI caps input tokens per minute. Parallel bids trip it, and a
-# per-minute cap clears on its own, so back off instead of failing the bid.
 LLM_MAX_RETRIES = 5
 DEFAULT_MAX_TOKENS = 1024
 _LLM_YAML = Path(__file__).with_name("llm.yaml")
-# Retired Unity Gateway model-service ids. Env leftover from older deploys
-# must not override llm.yaml (that 404 is "I could not generate a reply").
-_RETIRED_MODEL_MARKERS = (
-    "automation_d.ai_models.",
-    "automation_a.ai_models.",
-    "automation_p.ai_models.",
-    "gw_dev_claude",
-)
 _GATEWAY_SCOPE = "ai-gateway"
-# Off: the gateway path only triggered for visitors whose token happened to
-# carry ai-gateway, so the same project succeeded for one user and 404'd for
-# another. Everyone now goes through the attached serving endpoints.
-PREFER_AI_GATEWAY = False
-_SERVING_SCOPES = frozenset({"model-serving", "serving.serving-endpoints"})
-_SERVING_ENDPOINTS: dict[str, str] = {
-    "fast": "databricks-claude-sonnet-4-5",
-    "thinking": "databricks-claude-opus-4-6",
+_LLM_SCHEMA = "ai_models"
+_GATEWAY_PREFIX_BY_CATALOG = {
+    "automation_d": "gw_dev",
+    "automation_a": "gw_acc",
+    "automation_p": "gw_prd",
 }
 
 ModelKind = Literal["fast", "thinking"]
 
 
 def _usable_model_name(raw: str | None) -> str | None:
+    """Accept catalog FQNs. Ignore leftover system.ai chat ids so they cannot win."""
     value = (raw or "").strip()
     if not value:
         return None
-    lowered = value.lower()
-    if any(marker in lowered for marker in _RETIRED_MODEL_MARKERS):
-        log.warning("ignoring retired DATABRICKS_* model env value={}", value)
+    if value.lower().startswith("system.ai."):
+        log.warning("ignoring system.ai chat model env value={}", value)
         return None
     return value
 
 
+def _catalog_gateway_fqn(short_name: str) -> str:
+    """``{catalog}.ai_models.{prefix}_{short}_aut`` for the current environment."""
+    catalog = (uc_catalog() or "").strip()
+    if not catalog:
+        raise RuntimeError(
+            "MATE_UC_CATALOG is required to resolve catalog chat models "
+            "(or DATABRICKS_HOST must match a known workspace)."
+        )
+    prefix = _GATEWAY_PREFIX_BY_CATALOG.get(catalog)
+    if not prefix:
+        raise RuntimeError(
+            f"No AI Gateway prefix for catalog={catalog}. "
+            "Expected automation_d, automation_a, or automation_p."
+        )
+    short = short_name.strip()
+    if f".{_LLM_SCHEMA}." in short:
+        return short
+    return f"{catalog}.{_LLM_SCHEMA}.{prefix}_{short}_aut"
+
+
 @lru_cache(maxsize=1)
 def _load_model_names() -> dict[str, str]:
-    """Read ``fast_model`` / ``thinking_model`` from env, then ``llm.yaml``.
+    """Read short names from ``llm.yaml``, then env FQNs, then compose catalog routes.
 
-    Apps set ``DATABRICKS_FAST_MODEL`` / ``DATABRICKS_THINKING_MODEL`` (and
-    ``DATABRICKS_MODEL``) from bundle vars. Defaults are workspace Foundation
-    Model APIs under ``system.ai`` (same names on D/T/A/P).
+    Apps set ``DATABRICKS_FAST_MODEL`` / ``DATABRICKS_THINKING_MODEL`` from bundle
+    vars to full ``{catalog}.ai_models.gw_*_aut`` ids. Local runs compose the
+    same pattern from ``MATE_UC_CATALOG`` (or the host → catalog map).
     """
     with _LLM_YAML.open(encoding="utf-8") as fh:
         data = yaml.safe_load(fh) or {}
@@ -83,17 +89,19 @@ def _load_model_names() -> dict[str, str]:
             f"{_LLM_YAML} must define models.fast_model and models.thinking_model"
         )
     shared = _usable_model_name(os.getenv("DATABRICKS_MODEL"))
-    fast = (
-        _usable_model_name(os.getenv("DATABRICKS_FAST_MODEL"))
-        or shared
-        or str(yaml_fast)
-    )
-    thinking = (
-        _usable_model_name(os.getenv("DATABRICKS_THINKING_MODEL"))
-        or shared
-        or str(yaml_thinking)
-    )
-    return {"fast": fast, "thinking": thinking}
+    fast = _usable_model_name(os.getenv("DATABRICKS_FAST_MODEL")) or shared
+    thinking = _usable_model_name(os.getenv("DATABRICKS_THINKING_MODEL")) or shared
+    return {
+        "fast": _as_gateway_name(fast, str(yaml_fast)),
+        "thinking": _as_gateway_name(thinking, str(yaml_thinking)),
+    }
+
+
+def _as_gateway_name(value: str | None, yaml_short: str) -> str:
+    raw = (value or yaml_short).strip()
+    if f".{_LLM_SCHEMA}." in raw:
+        return raw
+    return _catalog_gateway_fqn(raw)
 
 
 def get_fast_model_name() -> str:
@@ -119,13 +127,6 @@ def get_extract_model_kind() -> ModelKind:
     return "thinking"
 
 
-def _serving_endpoint_name(kind: ModelKind) -> str:
-    env_key = (
-        "DATABRICKS_FAST_ENDPOINT" if kind == "fast" else "DATABRICKS_THINKING_ENDPOINT"
-    )
-    return (os.getenv(env_key) or "").strip() or _SERVING_ENDPOINTS[kind]
-
-
 def get_workspace_client() -> WorkspaceClient:
     """Visitor OBO when X-Forwarded-Access-Token is bound; else app SP / CLI."""
     if obo_is_bound():
@@ -137,31 +138,33 @@ def get_workspace_client() -> WorkspaceClient:
     return request_workspace_client()
 
 
-def get_llm(kind: ModelKind = "fast", *, max_tokens: int | None = None) -> ChatDatabricks:
-    """
-    ChatDatabricks for Procura.
+def _require_gateway_scope() -> None:
+    """Fail when a parseable visitor JWT is missing ai-gateway. Do not use system.ai."""
+    scopes = obo_token_scopes()
+    if not scopes:
+        return
+    if _GATEWAY_SCOPE not in set(scopes):
+        raise RuntimeError(
+            "Visitor OBO token is missing scope 'ai-gateway'. "
+            "Catalog chat models require AI Gateway; "
+            "refusing system.ai serving-endpoint fallback."
+        )
 
-    Prefer Unity AI Gateway ``system.ai.*`` with visitor
-    ``X-Forwarded-Access-Token`` when that JWT includes ``ai-gateway``.
-    Otherwise use the attached Foundation Model serving endpoints (app SP
-    unless the token already has ``model-serving`` /
-    ``serving.serving-endpoints``). Cached agents keep the first path;
-    serving endpoints are the safe default until visitors re-consent.
+
+def get_llm(kind: ModelKind = "fast", *, max_tokens: int | None = None) -> ChatDatabricks:
+    """ChatDatabricks for Procura via the environment's ``ai_models`` gateway routes.
+
+    Visitor OBO (``X-Forwarded-Access-Token``) uses ``RequestScopedWorkspaceClient``.
+    Local / no OBO uses the CLI profile or app SP. Always ``use_ai_gateway=True``
+    with the catalog FQN — never workspace Foundation Model serving endpoints.
     """
     names = _load_model_names()
-    scopes = set(obo_token_scopes())
-    use_ai_gateway = (
-        PREFER_AI_GATEWAY and obo_is_bound() and _GATEWAY_SCOPE in scopes
-    )
-    if use_ai_gateway:
-        model = names.get(kind) or DEFAULT_MODEL
+    model = names[kind]
+    if obo_is_bound():
+        _require_gateway_scope()
         client: WorkspaceClient = RequestScopedWorkspaceClient()
     else:
-        model = _serving_endpoint_name(kind)
-        if obo_is_bound() and scopes & _SERVING_SCOPES:
-            client = RequestScopedWorkspaceClient()
-        else:
-            client = workspace_client()
+        client = workspace_client()
 
     if max_tokens is None:
         max_tokens_raw = os.getenv("DATABRICKS_MAX_TOKENS", str(DEFAULT_MAX_TOKENS))
@@ -176,10 +179,9 @@ def get_llm(kind: ModelKind = "fast", *, max_tokens: int | None = None) -> ChatD
         temperature = float(temperature_raw)
 
     log.info(
-        "creating ChatDatabricks kind={} model={} gateway={} max_tokens={} obo={} client={}",
+        "creating ChatDatabricks kind={} model={} gateway=true max_tokens={} obo={} client={}",
         kind,
         model,
-        use_ai_gateway,
         max_tokens,
         obo_is_bound(),
         type(client).__name__,
@@ -188,7 +190,7 @@ def get_llm(kind: ModelKind = "fast", *, max_tokens: int | None = None) -> ChatD
     kwargs: dict = {
         "model": model,
         "workspace_client": client,
-        "use_ai_gateway": use_ai_gateway,
+        "use_ai_gateway": True,
         "max_tokens": max_tokens,
         "max_retries": LLM_MAX_RETRIES,
     }
