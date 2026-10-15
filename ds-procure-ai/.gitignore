@@ -3,6 +3,13 @@
 .env.*
 !.env.studio.example
 .venv/
+.databricks/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
 frontend/node_modules/
 # Built UI is committed so the shared DAB pipeline can deploy the app
 # without an npm build step. Rebuild with `npm run build` in frontend/.
