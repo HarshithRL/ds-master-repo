@@ -43,6 +43,7 @@ class WarehouseResultTests(unittest.TestCase):
     def test_preflight_requires_same_workspace_identity_and_quoted_native_plan(self):
         workspace = Mock()
         workspace.config.host = "https://adb-4796304964978539.19.azuredatabricks.net"
+        workspace.api_client.do.return_value = {"X-Databricks-Org-Id": "4796304964978539"}
         workspace.statement_execution.execute_statement.side_effect = [response(rows=[["run-sp"]]), response(rows=[['External engine query: SELECT "x" FROM "PBI"."DBX_Fact_O2C_-_Self_Service_-_Sales_Orders"']])]
         warehouse.preflight_cancellation_warehouse(workspace, "0ef3e37fbbd5b772", "SELECT source", "run-sp", "4796304964978539")
         self.assertEqual(workspace.statement_execution.execute_statement.call_count, 2)
@@ -52,8 +53,46 @@ class WarehouseResultTests(unittest.TestCase):
         self.assertIn("different-sp", str(mismatch.exception))
         self.assertIn("run-sp", str(mismatch.exception))
         workspace.config.host = "https://adb-4844910598668398.18.azuredatabricks.net"
+        workspace.api_client.do.return_value = {"X-Databricks-Org-Id": "4844910598668398"}
         with self.assertRaises(ValueError):
             warehouse.preflight_cancellation_warehouse(workspace, "0ef3e37fbbd5b772", "SELECT source", "run-sp", "4796304964978539")
+
+    def test_server_workspace_id_accepts_valid_host_variants_not_just_public_url_shape(self):
+        for host in ("https://adb-4796304964978539.19.azuredatabricks.net", "https://adb-4796304964978539.19.azuredatabricks.net:443/", "https://wespokemdpa.azuredatabricks.net", "https://ADB-4796304964978539.19.AZUREDATABRICKS.NET/", "https://adb-4796304964978539.19.azuredatabricks.net/?o=4796304964978539"):
+            with self.subTest(host=host):
+                workspace = Mock()
+                workspace.config.host = host
+                workspace.api_client.do.return_value = {"x-databricks-org-id": "4796304964978539"}
+                warehouse.validate_warehouse_workspace(workspace, "4796304964978539")
+                workspace.api_client.do.assert_called_once_with("GET", "/api/2.0/preview/scim/v2/Me", response_headers=["X-Databricks-Org-Id"])
+                workspace.statement_execution.execute_statement.assert_not_called()
+
+    def test_server_mismatch_missing_header_or_access_failure_blocks_sql_before_submission(self):
+        for evidence in ({"X-Databricks-Org-Id": "4844910598668398"}, {}, {"X-Databricks-Org-Id": "invalid"}):
+            with self.subTest(evidence=evidence):
+                workspace = Mock()
+                workspace.config.host = "https://adb-4796304964978539.19.azuredatabricks.net"
+                workspace.config.workspace_id = "4796304964978539"
+                workspace.api_client.do.return_value = evidence
+                with self.assertRaises(ValueError):
+                    warehouse.preflight_cancellation_warehouse(workspace, "0ef3e37fbbd5b772", "SELECT source", "run-sp", "4796304964978539")
+                workspace.statement_execution.execute_statement.assert_not_called()
+        workspace.api_client.do.side_effect = ConnectionError("metadata request failed")
+        with self.assertRaises(RuntimeError) as failure:
+            warehouse.preflight_cancellation_warehouse(workspace, "0ef3e37fbbd5b772", "SELECT source", "run-sp", "4796304964978539")
+        self.assertIn("4796304964978539", str(failure.exception))
+        self.assertIsInstance(failure.exception.__cause__, ConnectionError)
+        workspace.statement_execution.execute_statement.assert_not_called()
+
+    def test_untrusted_host_is_rejected_before_credentials_or_sql_are_sent(self):
+        for host in ("http://adb-4796304964978539.19.azuredatabricks.net", "https://adb-4796304964978539.19.azuredatabricks.net.evil.example", "https://user:secret@adb-4796304964978539.19.azuredatabricks.net", "https://accounts.azuredatabricks.net/api", "https://adb-4796304964978539.19.azuredatabricks.net:8443", "https://unrelated.example"):
+            with self.subTest(host=host):
+                workspace = Mock()
+                workspace.config.host = host
+                with self.assertRaises(ValueError):
+                    warehouse.validate_warehouse_workspace(workspace, "4796304964978539")
+                workspace.api_client.do.assert_not_called()
+                workspace.statement_execution.execute_statement.assert_not_called()
 
     def test_timeout_cancels_only_the_submitted_statement_and_failure_cannot_succeed(self):
         workspace = Mock()

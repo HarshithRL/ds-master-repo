@@ -2,6 +2,7 @@ import re
 from json import dumps
 from pathlib import Path
 from time import monotonic, sleep
+from urllib.parse import urlsplit
 
 
 CANCELLATION_DATASET = "ds_cancellations_detail_7d"
@@ -54,10 +55,27 @@ def validate_quoted_order_scan(plan):
         raise ValueError("Warehouse plan must quote the hyphenated O2C remote table; refusing the broken job-compute JDBC path")
 
 
+def validate_warehouse_workspace(workspace, expected_workspace_id):
+    expected = str(expected_workspace_id)
+    if not re.fullmatch(r"[0-9]+", expected):
+        raise ValueError("The validated job workspace ID must be numeric")
+    host = urlsplit(workspace.config.host.strip())
+    hostname = host.hostname or ""
+    if host.scheme != "https" or not hostname.endswith(".azuredatabricks.net") or host.username or host.password or host.port not in (None, 443) or host.path not in ("", "/") or host.fragment:
+        raise ValueError("SQL warehouse client must use an HTTPS Azure Databricks workspace origin")
+    endpoint = hostname + (":" + str(host.port) if host.port else "")
+    try:
+        response = workspace.api_client.do("GET", "/api/2.0/preview/scim/v2/Me", response_headers=["X-Databricks-Org-Id"])
+        actual = next((str(value).strip() for name, value in response.items() if name.casefold() == "x-databricks-org-id"), None)
+    except Exception as error:
+        raise RuntimeError(f"Cannot verify SQL warehouse workspace at {endpoint}; expected workspace {expected}: {type(error).__name__}") from error
+    if actual != expected:
+        raise ValueError(f"SQL warehouse workspace mismatch at {endpoint}: expected {expected}, server returned {actual!r}")
+    print(dumps({"stage": "warehouse_workspace_verified", "host": endpoint, "workspace_id": actual}), flush=True)
+
+
 def preflight_cancellation_warehouse(workspace, warehouse_id, source_statement, expected_identity, expected_workspace_id):
-    host = workspace.config.host.rstrip("/")
-    if not re.fullmatch(r"https://adb-" + re.escape(str(expected_workspace_id)) + r"\.[0-9]+\.azuredatabricks\.net", host):
-        raise ValueError("SQL warehouse client does not match the validated job workspace")
+    validate_warehouse_workspace(workspace, expected_workspace_id)
     identity = execute_warehouse_statement(workspace, warehouse_id, "SELECT current_user() AS job_identity", timeout_seconds=60)
     rows = identity.result.data_array if identity.result else []
     if len(rows) != 1 or len(rows[0]) != 1 or not isinstance(rows[0][0], str) or rows[0][0].casefold() != expected_identity.casefold():

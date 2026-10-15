@@ -1,5 +1,15 @@
 # Release Status - 2026-10-13
 
+## Server-Verified Workspace Guard - 2026-10-15
+
+ACC run 455655436887784/task 1040505461490844 failed in the smoke workspace guard before any warehouse statement or production task. Logs reach smoke_warehouse_started at 20.435 execution seconds; the UI task duration includes earlier startup. This is neither a missing warehouse-ID error nor evidence of a new Synapse/volume failure. The supplied ACC and PRD connection screenshots match the existing configured warehouse IDs.
+
+- The old guard required one exact public URL shape before it would query anything. The replacement keeps a trusted HTTPS Azure Databricks origin check, then compares the authenticated server's X-Databricks-Org-Id response header from /api/2.0/preview/scim/v2/Me with the job's validated Spark workspace ID. It follows the SDK's own server workspace-ID verification mechanism without trusting a configured ID or parsing workspace identity out of a hostname. Same-job current_user, quoted remote SQL, path isolation and all smoke gating remain intact.
+- Tests accept valid alternate/default-port/case host forms for the same server ID, reject a different server workspace even when the hostname/configured ID look correct, and fail closed on missing/invalid headers, verification request errors and untrusted origins. Real DEV metadata verification succeeded; the same DEV client rejected an ACC-ID expectation before SQL as a native negative control. No data query, job or file write was used for that verification.
+- The failed ACC SDK host value has not been retrieved because ACC authentication remains expired. The exact URL representation or a genuine client workspace mismatch must not be guessed from the screenshot. The new guard logs the verified safe hostname/ID, and an actual mismatch error reports expected versus server ID. No assertion of ACC/PRD end-to-end success is made from local tests or DEV metadata checks.
+- All 80 local regression tests passed in 32.181 seconds, including host-variant positives, wrong/missing server workspace negatives, no-SQL-on-failure and existing same-principal checks. Deterministic dashboard/permission generation and Pylance helper syntax checks passed. Native DEV server-header verification and a wrong-ACC-ID negative control passed using metadata requests only; ACC service-principal execution remains unverified.
+- Only DEV source is uploaded and byte-verified for user CI promotion. Warehouse IDs, reader groups, SQL calculations, runtime, job graph/timeouts and consumer manifests are unchanged. No live ACC/PRD deployment, restart, job run/repair or grant change is performed.
+
 ## First-Task Smoke Gate And Bounded Logs - 2026-10-15
 
 This section supersedes earlier two-task and full-plan-console descriptions. It changes DEV source only; ACC/PRD jobs use it only after user CI promotion.
