@@ -199,12 +199,6 @@
   font-weight: 500;
 }
 
-.navbar-user-role {
-  margin-top: 2px;
-  color: var(--text-subtle);
-  font-size: 10px;
-}
-
 .navbar-user-menu {
   margin-left: auto;
   padding: 4px;

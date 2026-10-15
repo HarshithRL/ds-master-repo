@@ -35,6 +35,13 @@
     "    table    SELECT, MODIFY",
     "    volume   READ_VOLUME, WRITE_VOLUME",
     "",
+    "  ds-procure-ai also requests USE_SCHEMA + EXECUTE on schema ai_models so ACC/PRD",
+    "  visitors can see and call catalog AI Gateway Services (gw_acc_* / gw_prd_*).",
+    "  Payload tables in that schema are not the chat routes. EXECUTE is not in the",
+    "  allow-list above; the central pipeline may reject this grant until platform",
+    "  extends the schema. Do not name gw_acc_* / gw_prd_* here — the pipeline only",
+    "  suffixes the catalog (automation -> automation_a / automation_p).",
+    "",
     "  catalog is the BASE name: the pipeline appends _a / _p, so one file serves both",
     "  environments. An environment-suffixed catalog is rejected.",
     "",
@@ -349,6 +356,14 @@
             },
             {
               "catalog": "automation",
+              "schema": "ai_models",
+              "privileges": [
+                "USE_SCHEMA",
+                "EXECUTE"
+              ]
+            },
+            {
+              "catalog": "automation",
               "schema": "bronze",
               "volume": "bronze_volume",
               "privileges": [
@@ -575,6 +590,14 @@
               "schema": "bronze",
               "privileges": [
                 "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "ai_models",
+              "privileges": [
+                "USE_SCHEMA",
+                "EXECUTE"
               ]
             },
             {

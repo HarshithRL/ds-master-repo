@@ -29,14 +29,14 @@ variables:
   catalog:
     description: The Unity Catalog to use (contains bronze/silver/gold schemas)
   databricks_model:
-    description: Fallback DATABRICKS_MODEL (system.ai Foundation Model API)
-    default: system.ai.claude-opus-4-5
+    description: Fallback DATABRICKS_MODEL (catalog AI Gateway FQN)
+    default: automation_d.ai_models.gw_dev_gpt-5_aut
   fast_model:
-    description: Fast chat model (system.ai Foundation Model API)
-    default: system.ai.claude-sonnet-4-5
+    description: Fast chat model (catalog AI Gateway Sonnet 4.6)
+    default: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
   thinking_model:
-    description: Thinking chat model (system.ai Foundation Model API)
-    default: system.ai.claude-opus-4-6
+    description: Thinking chat model (catalog AI Gateway GPT-5)
+    default: automation_d.ai_models.gw_dev_gpt-5_aut
   sql_warehouse_id:
     description: SQL warehouse id for Mate UC (DATABRICKS_WAREHOUSE_ID). D/T use dau-automation-sqlwh-d-01; override on A/P.
     default: "69ada62b2fb9b9e2"
@@ -84,9 +84,9 @@ targets:
       catalog: automation_d
       lakebase_branch: projects/ds-vendor-agent/branches/production
       lakebase_database: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
-      databricks_model: system.ai.claude-opus-4-5
-      fast_model: system.ai.claude-sonnet-4-5
-      thinking_model: system.ai.claude-opus-4-6
+      databricks_model: automation_d.ai_models.gw_dev_gpt-5_aut
+      fast_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+      thinking_model: automation_d.ai_models.gw_dev_gpt-5_aut
     resources:
       apps:
         ds_procure_ai:
@@ -114,10 +114,6 @@ targets:
                 value: ${var.fast_model}
               - name: DATABRICKS_THINKING_MODEL
                 value: ${var.thinking_model}
-              - name: DATABRICKS_FAST_ENDPOINT
-                value: databricks-claude-sonnet-4-5
-              - name: DATABRICKS_THINKING_ENDPOINT
-                value: databricks-claude-opus-4-6
               - name: FLASK_SECRET_KEY
                 value: ${bundle.name}-${bundle.target}
               - name: MATE_LOG_FORMAT
@@ -151,9 +147,9 @@ targets:
       catalog: automation_d
       lakebase_branch: projects/ds-vendor-agent/branches/production
       lakebase_database: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
-      databricks_model: system.ai.claude-opus-4-5
-      fast_model: system.ai.claude-sonnet-4-5
-      thinking_model: system.ai.claude-opus-4-6
+      databricks_model: automation_d.ai_models.gw_dev_gpt-5_aut
+      fast_model: automation_d.ai_models.gw_dev_claude-sonnet-4-6_aut
+      thinking_model: automation_d.ai_models.gw_dev_gpt-5_aut
     resources:
       apps:
         ds_procure_ai:
@@ -181,10 +177,6 @@ targets:
                 value: ${var.fast_model}
               - name: DATABRICKS_THINKING_MODEL
                 value: ${var.thinking_model}
-              - name: DATABRICKS_FAST_ENDPOINT
-                value: databricks-claude-sonnet-4-5
-              - name: DATABRICKS_THINKING_ENDPOINT
-                value: databricks-claude-opus-4-6
               - name: FLASK_SECRET_KEY
                 value: ${bundle.name}-${bundle.target}
               - name: MATE_LOG_FORMAT
@@ -229,9 +221,9 @@ targets:
     variables:
       sql_warehouse_id: "69bb7020516c64f5"  # aut-dsprocureai-consumer-sqlwh-a
       catalog: automation_a
-      databricks_model: system.ai.claude-opus-4-5
-      fast_model: system.ai.claude-sonnet-4-5
-      thinking_model: system.ai.claude-opus-4-6
+      databricks_model: automation_a.ai_models.gw_acc_gpt-5_aut
+      fast_model: automation_a.ai_models.gw_acc_claude-sonnet-4-6_aut
+      thinking_model: automation_a.ai_models.gw_acc_gpt-5_aut
       lakebase_branch: ${resources.postgres_projects.ds_vendor_agent.id}/branches/production
       lakebase_database: ${resources.postgres_projects.ds_vendor_agent.id}/branches/production/databases/databricks-postgres
     permissions:
@@ -271,10 +263,6 @@ targets:
                 value: ${var.fast_model}
               - name: DATABRICKS_THINKING_MODEL
                 value: ${var.thinking_model}
-              - name: DATABRICKS_FAST_ENDPOINT
-                value: databricks-claude-sonnet-4-5
-              - name: DATABRICKS_THINKING_ENDPOINT
-                value: databricks-claude-opus-4-6
               - name: FLASK_SECRET_KEY
                 value: ${bundle.name}-${bundle.target}
               - name: MATE_LOG_FORMAT
@@ -305,9 +293,9 @@ targets:
       root_path: /Workspace/automation/${bundle.name}/${bundle.target}
     variables:
       catalog: automation_p
-      databricks_model: system.ai.claude-opus-4-5
-      fast_model: system.ai.claude-sonnet-4-5
-      thinking_model: system.ai.claude-opus-4-6
+      databricks_model: automation_p.ai_models.gw_prd_gpt-5_aut
+      fast_model: automation_p.ai_models.gw_prd_claude-sonnet-4-6_aut
+      thinking_model: automation_p.ai_models.gw_prd_gpt-5_aut
       # Confirm PRD Lakebase paths before merge to main (PRD pipeline deploys --target P).
       lakebase_branch: projects/ds-vendor-agent/branches/production
       lakebase_database: projects/ds-vendor-agent/branches/production/databases/databricks-postgres
