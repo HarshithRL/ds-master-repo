@@ -16,6 +16,7 @@ from allocation_stages import freeze_sql_date, query_parts
 from dataset_results import result_name, result_storage_name, unique_result_producers, validate_result_receipts
 from durable_results import cleanup_result_scratch, result_dataset_scratch, stage_result_frame
 from source_snapshots import quote_column
+from warehouse_results import is_cancellation_plan
 
 
 class SharedResultRuntimeTests(unittest.TestCase):
@@ -59,7 +60,7 @@ class SharedResultRuntimeTests(unittest.TestCase):
             proxy = Mock(wraps=spark)
             logs = Mock()
             self.assertNotIn("localCheckpoint", runtime_path.read_text())
-            environment = {"spark": proxy, "plans": plans, "batch": batch, "marker": marker, "business_date": date(2026, 10, 14), "receipts": receipts, "verified_results": verified_results, "relation": relation, "store_result": store_result, "resolve": lambda statement: statement.replace("`synapse-prd`.pbi.dbx_conversion_fixture", "fixture_conversion"), "log": logs, "sql_functions": sql_functions, "quote_column": quote_column, "result_storage_name": result_storage_name, "freeze_sql_date": freeze_sql_date, "query_parts": query_parts, "scratch": scratch, "stage_result_frame": stage_result_frame, "result_dataset_scratch": result_dataset_scratch, "cleanup_result_scratch": cleanup_result_scratch}
+            environment = {"spark": proxy, "plans": plans, "batch": batch, "marker": marker, "business_date": date(2026, 10, 14), "receipts": receipts, "verified_results": verified_results, "relation": relation, "store_result": store_result, "resolve": lambda statement: statement.replace("`synapse-prd`.pbi.dbx_conversion_fixture", "fixture_conversion"), "log": logs, "sql_functions": sql_functions, "quote_column": quote_column, "result_storage_name": result_storage_name, "freeze_sql_date": freeze_sql_date, "query_parts": query_parts, "scratch": scratch, "stage_result_frame": stage_result_frame, "result_dataset_scratch": result_dataset_scratch, "cleanup_result_scratch": cleanup_result_scratch, "is_cancellation_plan": is_cancellation_plan}
             exec(compile(ast.Module(body=[loop], type_ignores=[]), str(runtime_path), "exec"), environment)
             self.assertEqual(writes.count(shared), 1)
             self.assertEqual(sum(call.args == ("SELECT quote_number FROM fixture_conversion",) for call in proxy.sql.call_args_list), 1)

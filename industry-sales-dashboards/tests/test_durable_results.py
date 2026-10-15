@@ -6,7 +6,7 @@ import unittest
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
 from pyspark.sql import SparkSession
 
@@ -25,14 +25,17 @@ class DurableResultTests(unittest.TestCase):
         frame.write.mode.return_value.parquet.side_effect = cause
         frame.explain.side_effect = lambda **options: print('External engine query: SELECT "Date - Item Changed" FROM "PBI"."Orders-With-Hyphen"')
         emitted = StringIO()
-        with redirect_stdout(emitted):
-            with self.assertRaises(RuntimeError) as failure:
-                stage_result_frame(spark, frame, "/Volumes/example/stage")
+        with tempfile.TemporaryDirectory() as directory:
+            with redirect_stdout(emitted):
+                with self.assertRaises(RuntimeError) as failure:
+                    stage_result_frame(spark, frame, Path(directory) / "stage")
+            receipt = json.loads(emitted.getvalue())
+            diagnostics = json.loads(Path(receipt["diagnostics_path"]).read_text())
         self.assertIs(failure.exception, cause)
-        receipt = json.loads(emitted.getvalue())
         self.assertEqual(receipt["stage"], "scratch_write_failed")
         self.assertIn("SQLServerException", receipt["error"])
-        self.assertIn('FROM "PBI"."Orders-With-Hyphen"', receipt["physical_plan"])
+        self.assertIn('FROM "PBI"."Orders-With-Hyphen"', diagnostics["physical_plan"])
+        self.assertNotIn("physical_plan", receipt)
         frame.explain.assert_called_once_with(mode="formatted")
         self.assertEqual(spark.conf.set.call_count, 4)
 
@@ -44,12 +47,48 @@ class DurableResultTests(unittest.TestCase):
         frame.write.mode.return_value.parquet.side_effect = cause
         frame.explain.side_effect = ValueError("Plan unavailable")
         emitted = StringIO()
-        with redirect_stdout(emitted):
-            with self.assertRaises(RuntimeError) as failure:
-                stage_result_frame(spark, frame, "/Volumes/example/stage")
+        with tempfile.TemporaryDirectory() as directory:
+            with redirect_stdout(emitted):
+                with self.assertRaises(RuntimeError) as failure:
+                    stage_result_frame(spark, frame, Path(directory) / "stage")
+            diagnostics = json.loads(Path(json.loads(emitted.getvalue())["diagnostics_path"]).read_text())
         self.assertIs(failure.exception, cause)
-        self.assertEqual(json.loads(emitted.getvalue())["plan_error"], "ValueError: Plan unavailable")
+        self.assertEqual(diagnostics["plan_error"], "ValueError: Plan unavailable")
         self.assertEqual(spark.conf.set.call_count, 4)
+
+    def test_large_logs_are_bounded_but_full_diagnostics_and_failure_are_preserved(self):
+        spark = Mock()
+        frame = Mock()
+        frame.schema = Mock(fields=[])
+        cause = RuntimeError("\U0001f600" * 20000)
+        frame.write.mode.return_value.parquet.side_effect = cause
+        plan = "External engine query: " + "SQL " * 50000
+        frame.explain.side_effect = lambda **options: print(plan)
+        emitted = StringIO()
+        with tempfile.TemporaryDirectory() as directory:
+            with redirect_stdout(emitted):
+                with self.assertRaises(RuntimeError) as failure:
+                    stage_result_frame(spark, frame, Path(directory) / "stage")
+            receipt = json.loads(emitted.getvalue())
+            diagnostics = json.loads(Path(receipt["diagnostics_path"]).read_text())
+            self.assertEqual(diagnostics["error"], str(cause))
+            self.assertEqual(diagnostics["physical_plan"], plan + "\n")
+        self.assertIs(failure.exception, cause)
+        self.assertLessEqual(len(emitted.getvalue().encode("utf-8")), 8193)
+
+    def test_diagnostic_file_error_cannot_hide_original_failure(self):
+        spark = Mock()
+        frame = Mock()
+        frame.schema = Mock(fields=[])
+        cause = RuntimeError("Original JDBC failure")
+        frame.write.mode.return_value.parquet.side_effect = cause
+        emitted = StringIO()
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(Path, "open", side_effect=PermissionError("diagnostic write denied")), redirect_stdout(emitted):
+                with self.assertRaises(RuntimeError) as failure:
+                    stage_result_frame(spark, frame, Path(directory) / "stage")
+        self.assertIs(failure.exception, cause)
+        self.assertIn("PermissionError", json.loads(emitted.getvalue())["diagnostics_error"])
 
     def test_staging_mode_serializes_with_real_spark_connect_writer(self):
         from pyspark.sql.connect import proto
