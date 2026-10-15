@@ -1,7 +1,9 @@
+import ast
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, Mock
 
 from pyspark.sql import SparkSession
 
@@ -12,6 +14,37 @@ from durable_results import cleanup_result_scratch, result_scratch_root, stage_r
 
 
 class DurableResultTests(unittest.TestCase):
+    def test_staging_mode_serializes_with_real_spark_connect_writer(self):
+        from pyspark.sql.connect import proto
+        from pyspark.sql.connect.plan import Range, WriteOperation
+
+        spark = Mock()
+        frame = Mock()
+        schema = Mock(fields=[])
+        frame.schema = schema
+        stored = spark.read.schema.return_value.option.return_value.option.return_value.parquet.return_value
+        stored.schema = schema
+        self.assertIs(stage_result_frame(spark, frame, "/Volumes/example/stage"), stored)
+        mode = frame.write.mode.call_args.args[0]
+        operation = WriteOperation(Range(0, 1, 1, None))
+        operation.mode = mode
+        self.assertEqual(operation.command(Mock()).write_operation.mode, proto.WriteOperation.SaveMode.SAVE_MODE_ERROR_IF_EXISTS)
+        operation.mode = "errorifexists"
+        with self.assertRaises(ValueError):
+            operation.command(Mock())
+
+    def test_preflight_preserves_real_error_instead_of_claiming_missing_grants(self):
+        runtime = ROOT / "src/notebooks/materialize_dashboard_results.py"
+        tree = ast.parse(runtime.read_text())
+        preflight = next(statement for statement in tree.body if isinstance(statement, ast.Try))
+        cause = ValueError("Unsupported writer save mode")
+        environment = {"scratch": MagicMock(), "stage_result_frame": Mock(side_effect=cause), "spark": Mock(), "cleanup_result_scratch": Mock()}
+        with self.assertRaises(RuntimeError) as failure:
+            exec(compile(ast.Module(body=[preflight], type_ignores=[]), str(runtime), "exec"), environment)
+        self.assertIs(failure.exception.__cause__, cause)
+        self.assertIn("ValueError: Unsupported writer save mode", str(failure.exception))
+        self.assertNotIn("requires READ_VOLUME", str(failure.exception))
+
     def test_scratch_paths_are_batch_and_target_scoped_in_existing_volume(self):
         batch = "a" * 32
         for target, catalog in (("D", "automation_d"), ("T", "automation_d"), ("A", "automation_a"), ("P", "automation_p")):
