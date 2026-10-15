@@ -22,13 +22,15 @@ class JobRuntimeTests(unittest.TestCase):
         self.assertEqual(cluster["node_type_id"], "Standard_DS3_v2")
         self.assertEqual(cluster["autoscale"], {"min_workers": 1, "max_workers": 2})
         producer = next(task for task in job["tasks"] if task["task_key"] == "materialize_dashboard_results")
+        self.assertEqual(producer["timeout_seconds"], 5400)
+        self.assertEqual(job["timeout_seconds"], 7200)
         parameters = producer["spark_python_task"]["parameters"]
         self.assertEqual(parameters[parameters.index("--warehouse-id") + 1], "${var.warehouse_id}")
         tasks = {task["task_key"]: task for task in job["tasks"]}
         self.assertEqual(tasks["refresh_cs_team_mapping"]["depends_on"], [{"task_key": "smoke_test_dashboard_sources"}])
         self.assertEqual(tasks["materialize_dashboard_results"]["depends_on"], [{"task_key": "refresh_cs_team_mapping"}])
         smoke = tasks["smoke_test_dashboard_sources"]
-        self.assertEqual(smoke["timeout_seconds"], 600)
+        self.assertEqual(smoke["timeout_seconds"], 1200)
         self.assertEqual(smoke["max_retries"], 0)
         self.assertNotIn("depends_on", smoke)
         for task in job["tasks"]:
