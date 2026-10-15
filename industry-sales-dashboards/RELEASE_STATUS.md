@@ -1,5 +1,16 @@
 # Release Status - 2026-10-13
 
+## Smoke Cold-Start Budget - 2026-10-16
+
+This supersedes the earlier description of a 600-second execution-only smoke timeout. Only the smoke task-duration budget changes; smoke SQL, sampling, staging, source order and all production calculations remain unchanged.
+
+- ACC run 884652521715996/task 329057006322902 shows a 10m44s task duration, with UI start around 00:08 and end around 00:19. Its first Python log is 2026-10-15T22:15:38.392 UTC (00:15:38 Europe/Brussels), and the last source-start log is 22:18:25.601 UTC, only 167.209 seconds into Python smoke execution. The visible timing is consistent with roughly seven minutes before the first Python log, not ten minutes executing the last source. Exact setup/execution/cleanup durations could not be retrieved: ACC CLI authentication is expired and the browser redirects to login.
+- The previous workspace guard passed on the actual ACC alternate hostname, westeurope-c2.azuredatabricks.net, with server workspace ID 4796304964978539. Warehouse identity/quoted-plan statements and the real one-row O2C warehouse-to-volume probe succeeded. Six sources are verified before dbx_dim_product_hierarchy starts. There is no evidence in this screenshot that the hierarchy source is malformed, lacks access or is stalled; it is simply the final visible operation when the task budget expires.
+- Increase only smoke task timeout_seconds from 600 to 1200 to allow cold compute/library setup plus useful checking time. Keep max_retries 0, the same cluster/runtime, the three-task ALL_SUCCESS gate, the 5400-second materializer limit and 7200-second job limit. This is a total task-duration safety limit, not a guaranteed 20-minute Python execution allowance or a guarantee that every smoke run finishes.
+- A local per-source cancellation experiment was removed before upload after timestamp comparison changed the diagnosis. Source helper and smoke tests match their prior remote bytes; no speculative 90-second source restriction, retry, skipped source or alternate execution engine is introduced.
+- All 80 local regression tests passed in 33.542 seconds; deterministic dashboard/permission generation checks passed. The job regression requires the new smoke budget and explicitly protects unchanged production limits, dependencies and compute settings. Native ACC/PRD complete smoke and final publication remain acceptance gates.
+- Only DEV Master Repo source is uploaded and byte-verified for user commit/CI promotion. No live ACC/PRD job settings, deployment, run/repair, grants, consumer manifest, foreign metadata or data are changed by the assistant.
+
 ## Server-Verified Workspace Guard - 2026-10-15
 
 ACC run 455655436887784/task 1040505461490844 failed in the smoke workspace guard before any warehouse statement or production task. Logs reach smoke_warehouse_started at 20.435 execution seconds; the UI task duration includes earlier startup. This is neither a missing warehouse-ID error nor evidence of a new Synapse/volume failure. The supplied ACC and PRD connection screenshots match the existing configured warehouse IDs.
