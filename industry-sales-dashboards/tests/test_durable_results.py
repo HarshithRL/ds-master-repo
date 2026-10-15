@@ -1,7 +1,10 @@
 import ast
+import json
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from unittest.mock import MagicMock, Mock
 
@@ -14,6 +17,40 @@ from durable_results import cleanup_result_scratch, result_scratch_root, stage_r
 
 
 class DurableResultTests(unittest.TestCase):
+    def test_write_failure_reports_actual_remote_plan_without_changing_error(self):
+        spark = Mock()
+        frame = Mock()
+        frame.schema = Mock(fields=[])
+        cause = RuntimeError("SQLServerException: Incorrect syntax near '-'")
+        frame.write.mode.return_value.parquet.side_effect = cause
+        frame.explain.side_effect = lambda **options: print('External engine query: SELECT "Date - Item Changed" FROM "PBI"."Orders-With-Hyphen"')
+        emitted = StringIO()
+        with redirect_stdout(emitted):
+            with self.assertRaises(RuntimeError) as failure:
+                stage_result_frame(spark, frame, "/Volumes/example/stage")
+        self.assertIs(failure.exception, cause)
+        receipt = json.loads(emitted.getvalue())
+        self.assertEqual(receipt["stage"], "scratch_write_failed")
+        self.assertIn("SQLServerException", receipt["error"])
+        self.assertIn('FROM "PBI"."Orders-With-Hyphen"', receipt["physical_plan"])
+        frame.explain.assert_called_once_with(mode="formatted")
+        self.assertEqual(spark.conf.set.call_count, 4)
+
+    def test_plan_diagnostic_failure_does_not_mask_original_write_error(self):
+        spark = Mock()
+        frame = Mock()
+        frame.schema = Mock(fields=[])
+        cause = RuntimeError("Original JDBC parse failure")
+        frame.write.mode.return_value.parquet.side_effect = cause
+        frame.explain.side_effect = ValueError("Plan unavailable")
+        emitted = StringIO()
+        with redirect_stdout(emitted):
+            with self.assertRaises(RuntimeError) as failure:
+                stage_result_frame(spark, frame, "/Volumes/example/stage")
+        self.assertIs(failure.exception, cause)
+        self.assertEqual(json.loads(emitted.getvalue())["plan_error"], "ValueError: Plan unavailable")
+        self.assertEqual(spark.conf.set.call_count, 4)
+
     def test_staging_mode_serializes_with_real_spark_connect_writer(self):
         from pyspark.sql.connect import proto
         from pyspark.sql.connect.plan import Range, WriteOperation
