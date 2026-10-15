@@ -27,7 +27,7 @@ resources:
             - pypi:
                 package: sqlglot==27.20.0
           job_cluster_key: mapping_cluster
-          timeout_seconds: 600
+          timeout_seconds: 1200
           max_retries: 0
         - task_key: refresh_cs_team_mapping
           depends_on:
