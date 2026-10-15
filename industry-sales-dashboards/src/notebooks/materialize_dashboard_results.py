@@ -6,7 +6,6 @@ from pathlib import Path
 from time import monotonic
 from uuid import uuid4
 
-from pyspark import StorageLevel
 from pyspark.sql import SparkSession, functions as sql_functions
 
 
@@ -20,6 +19,7 @@ sys.path.insert(0, str(config_path.parent))
 from allocation_stages import freeze_sql_date, query_parts
 from industry_config import RESULT_STATE_TABLE_NAME, validate_environment, validate_table_name
 from dataset_results import result_storage_name, unique_result_producers, validate_result_receipts
+from durable_results import cleanup_result_scratch, result_dataset_scratch, result_scratch_root, stage_result_frame
 from source_snapshots import quote_column, snapshot_view_ddl, snapshot_view_query, validate_storage_projection
 
 
@@ -59,6 +59,16 @@ def log(stage, **details):
 
 for layer in ("silver", "gold"):
     spark.sql(f"DESCRIBE SCHEMA {catalog}.{layer}").collect()
+scratch = result_scratch_root(catalog, args.target, batch)
+try:
+    scratch.mkdir(parents=True, exist_ok=False)
+    probe = stage_result_frame(spark, spark.sql("SELECT CAST(1 AS INT) AS ready"), scratch / "preflight")
+    if probe.first()["ready"] != 1:
+        raise ValueError("Durable staging readback failed")
+    cleanup_result_scratch(scratch / "preflight")
+except Exception as error:
+    raise RuntimeError(f"Cannot initialize durable staging at {scratch}; the job identity requires READ_VOLUME and WRITE_VOLUME on the existing {catalog}.bronze.bronze_volume") from error
+log("scratch_ready", path=str(scratch))
 check_owned(state)
 tables = list(unique_result_producers(plans))
 for table in tables:
@@ -104,16 +114,17 @@ def store_result(table, frame, plan):
 
 
 for plan in plans:
-    checkpoints = []
+    staged_frames = []
     temporary_views = []
+    dataset_scratch = result_dataset_scratch(scratch, plan["dashboard"], plan["dataset"])
+    dataset_succeeded = False
     log("dataset_started", dashboard=plan["dashboard"], dataset=plan["dataset"], mode=plan["mode"])
     try:
         for producer in plan["producers"]:
             if producer.get("shared") and producer["table"] in verified_results:
                 receipt = dict(verified_results[producer["table"]], dashboard=plan["dashboard"], dataset=plan["dataset"])
                 raw = relation(result_storage_name(producer["table"]), "silver")
-                result = spark.table(raw).where(sql_functions.col(marker) == batch).select(*[sql_functions.col(quote_column(field)) for field in receipt["columns"]]).localCheckpoint(eager=True)
-                checkpoints.append(result)
+                result = spark.table(raw).where(sql_functions.col(marker) == batch).select(*[sql_functions.col(quote_column(field)) for field in receipt["columns"]])
                 result.createOrReplaceTempView(producer["component"])
                 temporary_views.append(producer["component"])
                 receipts.append(receipt)
@@ -123,22 +134,26 @@ for plan in plans:
             stages, final = query_parts(statement)
             for name, stage_sql in stages:
                 log("compute_started", dataset=plan["dataset"], component=producer["component"], cte=name)
-                frame = spark.sql(stage_sql).localCheckpoint(eager=True)
-                checkpoints.append(frame)
+                frame = stage_result_frame(spark, spark.sql(stage_sql), dataset_scratch / str(len(staged_frames)))
+                staged_frames.append(frame)
                 frame.createOrReplaceTempView(name)
                 temporary_views.append(name)
             log("compute_started", dataset=plan["dataset"], component=producer["component"])
-            result = spark.sql(final).localCheckpoint(eager=True)
-            checkpoints.append(result)
+            result = stage_result_frame(spark, spark.sql(final), dataset_scratch / str(len(staged_frames)))
+            staged_frames.append(result)
             result.createOrReplaceTempView(producer["component"])
             temporary_views.append(producer["component"])
             if producer["table"]:
                 store_result(producer["table"], result, plan)
+        dataset_succeeded = True
     finally:
         for name in set(temporary_views):
             spark.catalog.dropTempView(name)
-        for frame in reversed(checkpoints):
-            frame.unpersist()
+        if dataset_succeeded:
+            try:
+                cleanup_result_scratch(dataset_scratch)
+            except Exception as error:
+                log("scratch_cleanup_failed", path=str(dataset_scratch), error=str(error))
 
 validate_result_receipts(plans, receipts)
 completed = spark.createDataFrame([(batch, business_date, json.dumps(receipts))], "snapshot_id STRING,snapshot_as_of_date DATE,result_receipts STRING").withColumn("snapshot_completed_at", sql_functions.current_timestamp())
@@ -150,3 +165,7 @@ keep = ",".join("'" + value + "'" for value in retained)
 for table in tables:
     raw = relation(result_storage_name(table), "silver")
     spark.sql(f"DELETE FROM {raw} WHERE `{marker}` NOT IN ({keep})").collect()
+try:
+    cleanup_result_scratch(scratch)
+except Exception as error:
+    log("scratch_cleanup_failed", path=str(scratch), error=str(error))
