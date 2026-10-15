@@ -19,8 +19,8 @@ args = parser.parse_args()
 config_path = Path(args.config_path)
 sys.path.insert(0, str(config_path.parent))
 
-from industry_config import validate_environment
-from source_snapshots import SNAPSHOT_PREFIX, align_storage_rows, quote_column, snapshot_view_ddl, snapshot_view_query, validate_complete_receipts, validate_manifest, validate_storage_projection
+from industry_config import SOURCE_STATE_TABLE_NAME, validate_environment
+from source_snapshots import RAW_SNAPSHOT_PREFIX, SNAPSHOT_PREFIX, align_storage_rows, quote_column, snapshot_view_ddl, snapshot_view_query, validate_complete_receipts, validate_manifest, validate_storage_projection
 
 
 spark = SparkSession.builder.getOrCreate()
@@ -29,7 +29,7 @@ validate_environment(catalog, args.source_catalog, args.target, spark.conf.get("
 suffix = "_dev" if args.target == "D" else ""
 sources = validate_manifest(json.loads((config_path / "source_snapshots.json").read_text())["sources"])
 snapshot_id = uuid4().hex
-state = f"{catalog}.gold.industry_sales_source_snapshot_state{suffix}"
+state = f"{catalog}.gold.{SOURCE_STATE_TABLE_NAME}{suffix}"
 owner = "industry-sales-dashboards"
 reserved = "__industry_snapshot_id"
 
@@ -49,7 +49,7 @@ for layer in ("bronze", "silver", "gold"):
     spark.sql(f"DESCRIBE SCHEMA {catalog}.{layer}").collect()
 check_owned(state)
 for source in sources:
-    check_owned(f"{catalog}.bronze.`{source['snapshot_table'].replace(SNAPSHOT_PREFIX, 'industry_sales_raw_', 1)}{suffix}`")
+    check_owned(f"{catalog}.bronze.`{source['snapshot_table'].replace(SNAPSHOT_PREFIX, RAW_SNAPSHOT_PREFIX, 1)}{suffix}`")
     check_owned(f"{catalog}.silver.`{source['snapshot_table']}{suffix}`")
 
 spark.sql(
@@ -67,7 +67,7 @@ receipts = []
 for source in sources:
     started = monotonic()
     projection = "*" if source["columns"] is None else ", ".join(quote_column(column) for column in source["columns"])
-    raw = f"{catalog}.bronze.`{source['snapshot_table'].replace(SNAPSHOT_PREFIX, 'industry_sales_raw_', 1)}{suffix}`"
+    raw = f"{catalog}.bronze.`{source['snapshot_table'].replace(SNAPSHOT_PREFIX, RAW_SNAPSHOT_PREFIX, 1)}{suffix}`"
     view = f"{catalog}.silver.`{source['snapshot_table']}{suffix}`"
     log_stage(source["source_table"], "read_started", started, projected_columns=len(source["columns"]) if source["columns"] is not None else "ALL")
     frame = spark.sql(f"SELECT {projection} FROM `{args.source_catalog}`.pbi.`{source['source_table']}`").persist(StorageLevel.DISK_ONLY)
@@ -114,6 +114,6 @@ spark.sql(
 print(json.dumps({"snapshot_id": snapshot_id, "business_date": business_date.isoformat(), "sources": len(receipts), "published": True}), flush=True)
 keep = [snapshot_id] + ([previous_id] if previous_id else [])
 for source in sources:
-    raw = f"{catalog}.bronze.`{source['snapshot_table'].replace(SNAPSHOT_PREFIX, 'industry_sales_raw_', 1)}{suffix}`"
+    raw = f"{catalog}.bronze.`{source['snapshot_table'].replace(SNAPSHOT_PREFIX, RAW_SNAPSHOT_PREFIX, 1)}{suffix}`"
     retained = ", ".join(f"'{batch}'" for batch in keep)
     spark.sql(f"DELETE FROM {raw} WHERE `{reserved}` NOT IN ({retained})").collect()

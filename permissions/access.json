@@ -937,7 +937,7 @@
             {
               "catalog": "automation",
               "schema": "bronze",
-              "table": "industry_sales_cs_team_sales_org_mapping",
+              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
               "privileges": [
                 "SELECT"
               ]
@@ -945,15 +945,7 @@
             {
               "catalog": "automation",
               "schema": "silver",
-              "table": "industry_sales_cs_team_sales_org_mapping",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "industry_sales_cs_team_sales_org_mapping",
+              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
               "privileges": [
                 "SELECT"
               ]
@@ -961,7 +953,7 @@
             {
               "catalog": "automation",
               "schema": "gold",
-              "table": "industry_sales_open_orders_allocation",
+              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
               "privileges": [
                 "SELECT"
               ]
@@ -969,176 +961,330 @@
             {
               "catalog": "automation",
               "schema": "gold",
-              "table": "industry_sales_source_snapshot_state",
-              "privileges": ["SELECT"]
+              "table": "SC_BI_industry_sales_dashboard_result_state",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "bronze",
-              "table": "industry_sales_raw_dbx_date_delivery",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_all_open_orders_result",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "bronze",
-              "table": "industry_sales_raw_dbx_dim_customer",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_cancellations_detail_7d_filtered_rows",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "bronze",
-              "table": "industry_sales_raw_dbx_dim_material",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_cm_daily_billing_result",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "bronze",
-              "table": "industry_sales_raw_dbx_dim_order_reason_desc",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_current_month_by_team_result",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "bronze",
-              "table": "industry_sales_raw_dbx_dim_plant",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_daily_tracking_result",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "bronze",
-              "table": "industry_sales_raw_dbx_dim_product_hierarchy",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_order_size_dist_result",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "bronze",
-              "table": "industry_sales_raw_dbx_dim_rejection_reason",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_overview_allocation_result",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "bronze",
-              "table": "industry_sales_raw_dbx_dim_sales_organization",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_segment_focus_result",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "bronze",
-              "table": "industry_sales_raw_dbx_dim_users",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_country_options_result",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "bronze",
-              "table": "industry_sales_raw_dbx_fact_billing_document_line_item",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_expiring_quotes_quotes_rows",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "bronze",
-              "table": "industry_sales_raw_dbx_fact_o2c___self_service___sales_orders",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_expiring_quotes_quotes_with_match",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "bronze",
-              "table": "industry_sales_raw_dbx_fact_sales_distribution_delivery_item",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_potential_matches_filtered_rows",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "bronze",
-              "table": "industry_sales_raw_dbx_fact_sales_distribution_sales_document_item",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_priority_options_result",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "bronze",
-              "table": "industry_sales_raw_dbx_fact_sales_distribution_schedule_line",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_quotations_detail_lookup_dbx_dim_order_reason_desc",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "silver",
-              "table": "industry_sales_src_dbx_date_delivery",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_quotations_detail_quotes_rows",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "silver",
-              "table": "industry_sales_src_dbx_dim_customer",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_quotations_q_rows",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "silver",
-              "table": "industry_sales_src_dbx_dim_material",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_segment_kpis_result",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "silver",
-              "table": "industry_sales_src_dbx_dim_order_reason_desc",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_segment_options_result",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
-              "schema": "silver",
-              "table": "industry_sales_src_dbx_dim_plant",
-              "privileges": ["SELECT"]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "industry_sales_src_dbx_dim_product_hierarchy",
-              "privileges": ["SELECT"]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "industry_sales_src_dbx_dim_rejection_reason",
-              "privileges": ["SELECT"]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "industry_sales_src_dbx_dim_sales_organization",
-              "privileges": ["SELECT"]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "industry_sales_src_dbx_dim_users",
-              "privileges": ["SELECT"]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "industry_sales_src_dbx_fact_billing_document_line_item",
-              "privileges": ["SELECT"]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "industry_sales_src_dbx_fact_o2c___self_service___sales_orders",
-              "privileges": ["SELECT"]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "industry_sales_src_dbx_fact_sales_distribution_delivery_item",
-              "privileges": ["SELECT"]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "industry_sales_src_dbx_fact_sales_distribution_sales_document_item",
-              "privileges": ["SELECT"]
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_top_quotes_segment_result",
+              "privileges": [
+                "SELECT"
+              ]
             },
             {
               "catalog": "automation",
               "schema": "silver",
-              "table": "industry_sales_src_dbx_fact_sales_distribution_schedule_line",
-              "privileges": ["SELECT"]
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_all_open_orders_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_cancellations_detail_7d_filtered_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_cm_daily_billing_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_current_month_by_team_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_daily_tracking_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_order_size_dist_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_overview_allocation_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_segment_focus_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_country_options_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_expiring_quotes_quotes_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_expiring_quotes_quotes_with_match",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_potential_matches_filtered_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_priority_options_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_quotations_detail_lookup_dbx_dim_order_reason_desc",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_quotations_detail_quotes_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_quotations_q_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_segment_kpis_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_segment_options_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_top_quotes_segment_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_shared_converted",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_shared_converted",
+              "privileges": [
+                "SELECT"
+              ]
             }
           ],
           "members": [
