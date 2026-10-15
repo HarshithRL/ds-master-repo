@@ -1,5 +1,24 @@
 # Release Status - 2026-10-13
 
+## Runtime Upgrade To 16.4 LTS - 2026-10-15
+
+At the user's request, the shared source job now pins `16.4.x-scala2.12` instead of `15.4.x-scala2.12`. Both mapping and materialization tasks use the upgraded cluster for D/T/A/P. This is a DEV source change for user CI promotion, not a live cluster/job update.
+
+- DEV and PRD APIs list 16.4 LTS (Spark 3.5.2, Scala 2.12); both existing Job Compute policies have an unrestricted spark_version rule. ACC availability/policy checks remain unverified due expired authentication. Newer 17/18 runtimes introduce Spark 4 and are not silently selected via auto:latest-lts.
+- Runtime is the only job-resource difference. Photon, policy IDs, node type, security mode, autoscaling, spot settings, tasks, schedules and timeouts are unchanged. Consumer-group ACLs remain excluded for tables-first deployment; reader memberships, manifests and the 44-object inventory are unchanged.
+- The 60-test local suite passed after the Connect compatibility fix, including the actual Connect command serializer, preflight error-chain checks, existing-path refusal and exact lost-checkpoint recovery. The new runtime contract test passed separately. Resolved D/T/P bundle checks confirm the pinned runtime and absence of deferred consumer-group ACL references. PRD retains the pre-existing workspace-folder permission warning; those permissions were not changed.
+- These tests use OSS Spark 3.5.3, not the Databricks 16.4 image. Runtime age is not a proven cause of the screenshot failure. The independently reproduced save-mode incompatibility is corrected and original error messages preserved; target preflight, native schemas, output parity, runtime and complete batch publication still need a successful promoted run.
+- Only DEV Master Repo source is uploaded and byte-verified. No ACC/PRD deployment, cluster restart, policy edit, data write, job run/repair, SQL grant or Git commit/push is performed by the assistant.
+
+## Spark Connect Staging Compatibility - 2026-10-15
+
+This source correction supersedes the generic volume-permission diagnosis in the earlier scratch preflight. It changes no grants and does not claim a successful ACC/PRD run.
+
+- The user showed existing READ_VOLUME/WRITE_VOLUME grants for the ACC job identity and run 556695518470808/task 385572399235335 failing with an inner PySparkValueError in the Connect Parquet writer. The outer wrapper incorrectly suggested a privilege problem for every initialization failure. ACC API access remains blocked by an expired refresh token, so the complete nested live traceback has not been retrieved.
+- The installed Spark 3.5 Connect WriteOperation serializer reproduces a concrete incompatibility: `errorifexists`, accepted by the classic writer, is rejected before a write command is sent. `error` correctly serializes to SAVE_MODE_ERROR_IF_EXISTS. The helper now uses that supported spelling; existing-path refusal and scratch isolation remain unchanged.
+- Preflight now includes the original exception class and message and preserves its chained cause instead of asserting missing READ_VOLUME/WRITE_VOLUME privileges. Tests exercise the actual Connect command serializer without a remote session, reject the old spelling as a negative control, and execute the production preflight error path to verify diagnostics.
+- Only DEV source is uploaded for user CI promotion. No live permission, group, data, job, deployment or ACC/PRD mutation is performed. The tables-first include list, deferred reader ACL plan, member lists, permission manifest and durable cloud-backed design are unchanged. Native target execution still needs validation after promotion; this client compatibility test is not cloud storage or end-to-end runtime certification.
+
 ## Tables-First Deployment - 2026-10-15
 
 This section supersedes the automatic A/P reader-group ACL binding described below. Consumer provisioning is explicitly deferred until after successful target data production.

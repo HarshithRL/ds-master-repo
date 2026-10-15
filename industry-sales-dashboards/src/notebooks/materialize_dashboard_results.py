@@ -67,7 +67,7 @@ try:
         raise ValueError("Durable staging readback failed")
     cleanup_result_scratch(scratch / "preflight")
 except Exception as error:
-    raise RuntimeError(f"Cannot initialize durable staging at {scratch}; the job identity requires READ_VOLUME and WRITE_VOLUME on the existing {catalog}.bronze.bronze_volume") from error
+    raise RuntimeError(f"Cannot initialize durable staging at {scratch}: {type(error).__name__}: {error}") from error
 log("scratch_ready", path=str(scratch))
 check_owned(state)
 tables = list(unique_result_producers(plans))
