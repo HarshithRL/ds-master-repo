@@ -26,7 +26,7 @@ def stage_result_frame(spark, frame, path):
     try:
         for name in settings:
             spark.conf.set(name, "CORRECTED")
-        frame.write.mode("errorifexists").parquet(str(path))
+        frame.write.mode("error").parquet(str(path))
     finally:
         for name, value in previous.items():
             spark.conf.set(name, value)
