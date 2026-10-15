@@ -3,6 +3,8 @@ import json
 import unittest
 from pathlib import Path
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location(
@@ -79,7 +81,31 @@ class DashboardPreservationTests(unittest.TestCase):
             for entry in acl["access_control_list"]:
                 user_name = entry.get("user_name")
                 if user_name and user_name not in renderer.MANAGERS:
-                    self.assertIn(f"user_name: {user_name}", resource)
+                    levels = [permission["permission_level"] for permission in entry["all_permissions"] if not permission["inherited"]]
+                    if levels == ["CAN_READ"] and user_name.lower() not in renderer.dashboard_members(key):
+                        self.assertNotIn(f"user_name: {user_name}", resource)
+                    else:
+                        self.assertIn(f"user_name: {user_name}", resource)
+
+    def test_deferred_acc_prd_readers_are_scoped_to_one_dashboard_with_read_only_acl(self):
+        resource = renderer.render_reader_permissions()
+        self.assertNotIn("  D:", resource)
+        self.assertNotIn("  T:", resource)
+        self.assertEqual(resource.count("level: CAN_READ"), 4)
+        self.assertNotIn("CAN_EDIT", resource)
+        self.assertNotIn("CAN_MANAGE", resource)
+        self.assertEqual(resource.count("group_name: AUTOMATION.INDUSTRYSALESDASHBOARDS.CONSUMER.READ\n"), 2)
+        self.assertEqual(resource.count("group_name: AUTOMATION.INDUSTRYSALESDASHBOARDS.CONSUMER.WRITE\n"), 2)
+
+    def test_initial_deployment_does_not_include_unprovisioned_reader_groups(self):
+        config = yaml.safe_load((ROOT / "databricks.yml").read_text())
+        included = {path.relative_to(ROOT).as_posix() for pattern in config["include"] for path in ROOT.glob(pattern)}
+        self.assertIn("resources/dashboards/open_orders.dashboard.yml", included)
+        self.assertIn("resources/dashboards/quotations.dashboard.yml", included)
+        self.assertIn("resources/jobs/industry_sales_refresh.job.yml", included)
+        self.assertNotIn("resources/dashboards/readers.permissions.yml", included)
+        for relative in included:
+            self.assertNotIn("AUTOMATION.INDUSTRYSALESDASHBOARDS.CONSUMER.", (ROOT / relative).read_text())
 
     def test_every_query_uses_its_compiled_result_without_changing_dataset_metadata(self):
         for key in renderer.DASHBOARDS:

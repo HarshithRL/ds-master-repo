@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from dataset_results import result_name, result_storage_name, unique_result_producers
+from dashboard_access import consumer_reader_groups
 from industry_config import MAPPING_TABLE_NAME, OWNED_TABLE_PREFIX, RESULT_STATE_TABLE_NAME, validate_table_name
 from sqlglot import exp, parse_one
 
@@ -32,11 +33,12 @@ class OwnedTableNameTests(unittest.TestCase):
             self.assertTrue(name.startswith(OWNED_TABLE_PREFIX))
         manifest = json.loads((ROOT.parent / "permissions/access.json").read_text())
         product = next(item for item in manifest["data_products"] if item["data_product"] == "industry-sales-dashboards")
-        group = next(item for item in product["consumer_groups"] if item["tier"] == "READ")
-        grant_relations = {(grant["schema"], grant["table"]) for grant in group["grants"] if "table" in grant}
+        self.assertEqual(product["consumer_groups"], consumer_reader_groups(plans))
+        grant_relations = {(grant["schema"], grant["table"]) for group in product["consumer_groups"] for grant in group["grants"] if "table" in grant}
         self.assertEqual(grant_relations, tables | views)
-        self.assertEqual(len(group["grants"]), 48)
-        self.assertEqual(set(group["members"]), {"francois.leclercq@etexgroup.com", "noel.vranckx@etexgroup.com", "mustafaarda.bicakci@etexgroup.com"})
+        self.assertEqual(sum(len(group["grants"]) for group in product["consumer_groups"]), 56)
+        for group in product["consumer_groups"]:
+            self.assertTrue({"francois.leclercq@etexgroup.com", "noel.vranckx@etexgroup.com", "mustafaarda.bicakci@etexgroup.com"}.issubset(group["members"]))
 
     def test_consumer_queries_use_only_prefixed_owned_tables_or_ctes(self):
         plans = json.loads((ROOT / "src/config/dashboard_results.json").read_text())["datasets"]

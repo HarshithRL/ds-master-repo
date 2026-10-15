@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from industry_config import MAPPING_COLUMNS, validate_mapping
 from source_snapshots import collect_source_columns, replace_source_references
 from dataset_results import compile_dataset, table_edits, unique_result_producers
+from dashboard_access import dashboard_members, reader_config
 from sqlglot import exp, parse_one
 
 
@@ -130,6 +131,8 @@ def render(key):
         explicit = [permission for permission in entry["all_permissions"] if not permission["inherited"]]
         if len(explicit) != 1:
             raise ValueError(f"Unexpected original permissions for {user_name}")
+        if explicit[0]["permission_level"] == "CAN_READ" and user_name.lower() not in dashboard_members(key):
+            continue
         permissions.append((user_name, explicit[0]["permission_level"]))
     if permissions:
         lines.append("      permissions:")
@@ -137,6 +140,16 @@ def render(key):
             lines.extend([f"        - user_name: {user_name}", f"          level: {level}"])
     lines.append("      serialized_dashboard: |-")
     lines.extend(f"        {line}" for line in serialized.splitlines())
+    return "\n".join(lines) + "\n"
+
+
+def render_reader_permissions():
+    config = reader_config()
+    lines = ["targets:"]
+    for target in ("A", "P"):
+        lines.extend([f"  {target}:", "    resources:", "      dashboards:"])
+        for key in DASHBOARDS:
+            lines.extend([f"        industry_{key}:", "          permissions:", f"            - group_name: {config['dashboards'][key]['group_name']}", "              level: CAN_READ"])
     return "\n".join(lines) + "\n"
 
 
@@ -154,6 +167,14 @@ def main():
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_text(content)
         print(f"{'Checked' if args.check else 'Rendered'} {key}")
+    destination = ROOT / "resources/dashboards/readers.permissions.yml"
+    content = render_reader_permissions()
+    if args.check:
+        if not destination.exists() or destination.read_text() != content:
+            raise ValueError("Stale generated dashboard reader ACLs")
+    else:
+        destination.write_text(content)
+    print(f"{'Checked' if args.check else 'Rendered'} dashboard reader ACLs")
     mapping = json.loads((ROOT / "source_dashboards" / "mapping_statement.json").read_text())
     if mapping["status"]["state"] != "SUCCEEDED" or mapping["manifest"]["truncated"]:
         raise ValueError("Mapping source capture was unsuccessful or truncated")
