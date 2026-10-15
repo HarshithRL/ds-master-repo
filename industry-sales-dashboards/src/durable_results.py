@@ -34,6 +34,27 @@ def failed_stage_details(frame, path, error):
     return details
 
 
+def report_stage_failure(frame, path, error):
+    details = failed_stage_details(frame, path, error)
+    summary = {"stage": "scratch_write_failed", "path": str(path), "error_type": details["error_type"], "error": details["error"].splitlines()[0] if details["error"] else "", "physical_plan_chars": len(details.get("physical_plan", ""))}
+    try:
+        destination = Path(path).with_name(Path(path).name + ".failure.json")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with destination.open("x", encoding="utf-8") as output:
+            output.write(dumps(details))
+        summary["diagnostics_path"] = str(destination)
+    except Exception as diagnostic_error:
+        summary["diagnostics_error"] = f"{type(diagnostic_error).__name__}: {diagnostic_error}"
+    serialized = dumps(summary)
+    while len(serialized.encode("utf-8")) > 8192:
+        key = max((name for name, value in summary.items() if isinstance(value, str)), key=lambda name: len(summary[name]))
+        text = summary[key]
+        half = max(8, len(text) // 4)
+        summary[key] = text[:half] + " ... " + text[-half:]
+        serialized = dumps(summary)
+    print(serialized, flush=True)
+
+
 def stage_result_frame(spark, frame, path):
     schema = frame.schema
     settings = ("spark.sql.parquet.datetimeRebaseModeInWrite", "spark.sql.parquet.int96RebaseModeInWrite")
@@ -44,7 +65,7 @@ def stage_result_frame(spark, frame, path):
         try:
             frame.write.mode("error").parquet(str(path))
         except Exception as error:
-            print(dumps({"stage": "scratch_write_failed", **failed_stage_details(frame, path, error)}), flush=True)
+            report_stage_failure(frame, path, error)
             raise
     finally:
         for name, value in previous.items():
