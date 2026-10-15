@@ -1,4 +1,7 @@
 import re
+from contextlib import redirect_stdout
+from io import StringIO
+from json import dumps
 from pathlib import Path
 from shutil import rmtree
 
@@ -19,6 +22,18 @@ def result_dataset_scratch(root, dashboard, dataset):
     return Path(root) / dashboard / dataset
 
 
+def failed_stage_details(frame, path, error):
+    details = {"path": str(path), "error_type": type(error).__name__, "error": str(error)}
+    try:
+        output = StringIO()
+        with redirect_stdout(output):
+            frame.explain(mode="formatted")
+        details["physical_plan"] = output.getvalue()
+    except Exception as plan_error:
+        details["plan_error"] = f"{type(plan_error).__name__}: {plan_error}"
+    return details
+
+
 def stage_result_frame(spark, frame, path):
     schema = frame.schema
     settings = ("spark.sql.parquet.datetimeRebaseModeInWrite", "spark.sql.parquet.int96RebaseModeInWrite")
@@ -26,7 +41,11 @@ def stage_result_frame(spark, frame, path):
     try:
         for name in settings:
             spark.conf.set(name, "CORRECTED")
-        frame.write.mode("error").parquet(str(path))
+        try:
+            frame.write.mode("error").parquet(str(path))
+        except Exception as error:
+            print(dumps({"stage": "scratch_write_failed", **failed_stage_details(frame, path, error)}), flush=True)
+            raise
     finally:
         for name, value in previous.items():
             spark.conf.set(name, value)

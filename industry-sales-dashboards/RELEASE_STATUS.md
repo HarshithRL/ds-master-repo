@@ -1,5 +1,15 @@
 # Release Status - 2026-10-13
 
+## Cancellation Foreign SQL Failure: Unresolved - 2026-10-15
+
+ACC run 148533505285491/task 441575123257615 passed scratch preflight and verified seven Open Orders results, including ds_daily_tracking and ds_overview_allocation. It then failed while computing ds_cancellations_detail_7d filtered_rows: SQLServerException, parse error at remote SQL column 239, incorrect syntax near '-'. This is a new foreign read failure, not a recurrence of the local checkpoint or client save-mode error. Final publication was not reached; seven receipts are not a complete dashboard batch.
+
+- The generated source query quotes the hyphenated O2C foreign-table name and its `Date - Item Creation`/`Date - Item Changed` columns. DEV metadata confirms SQLDW_FORMAT and integer date fields. A bounded DEV SQL warehouse read of the quoted source columns succeeded. EXPLAIN FORMATTED of original/producer queries shows quoted external scan SQL; the joined one-row producer probe was canceled at 50 seconds, not passed or proven invalid.
+- ACC API authentication is expired, and attaching to the already-running DEV 16.4 interactive cluster was denied. No new cluster/job was started and no alternate job cluster was used. These access limits prevent confirming the exact failing runtime-generated SQL; the error position alone does not prove which identifier was malformed. No unverified pushdown setting, source rename, date rewrite, filter reduction or wider source copy is introduced.
+- Diagnostic-only source now logs the failed frame's formatted physical plan and original exception before reraising the same error. A secondary EXPLAIN error cannot replace the original write error. The DEV-only bounded SQL diagnostic script is retained, and its receipts live under ignored validation. This update does not claim that the native Synapse parser failure is fixed.
+- To close the native issue, inspect the failing scan's External engine query/remote SQL in the ACC Spark SQL plan (stage 619), or retrieve the new scratch_write_failed diagnostic after source promotion. Adaptive query execution may change the actual remote statement. Apply a targeted connector/query fix only after the actual SQL is verified, and then validate cancellation output/filter equivalence and all 17 datasets before publication acceptance.
+- Only DEV diagnostic source is uploaded and byte-verified. No ACC/PRD mutation, deployment, job run/repair, grant, source-table change or Git commit/push is performed. Runtime 16.4, shared job controls, 44-object inventory, reader memberships and deferred group ACLs remain unchanged.
+
 ## Runtime Upgrade To 16.4 LTS - 2026-10-15
 
 At the user's request, the shared source job now pins `16.4.x-scala2.12` instead of `15.4.x-scala2.12`. Both mapping and materialization tasks use the upgraded cluster for D/T/A/P. This is a DEV source change for user CI promotion, not a live cluster/job update.
