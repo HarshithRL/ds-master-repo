@@ -1,5 +1,15 @@
 # Release Status - 2026-10-13
 
+## Tables-First Deployment - 2026-10-15
+
+This section supersedes the automatic A/P reader-group ACL binding described below. Consumer provisioning is explicitly deferred until after successful target data production.
+
+- ACC build 320785 failed while applying Quotations dashboard permissions because AUTOMATION.INDUSTRYSALESDASHBOARDS.CONSUMER.WRITE did not exist. This was a dashboard principal lookup failure, not evidence that the producer ran or that a table grant was missing. The log shows bundle files uploaded before resource deployment failed; the failed deployment is not proof that nothing changed.
+- Root `databricks.yml` now includes only the two dashboard definition files and the existing job resource files. The generated `resources/dashboards/readers.permissions.yml` is retained as a deferred plan but not included. No target deployment binds either consumer group until that file is explicitly enabled later. Tests reject premature wildcard inclusion and confirm both dashboards and the producer remain included.
+- Reader lists, the two read-only consumer-group declarations and all 56 permission entries covering 44 distinct objects are preserved. Neither the central access pipeline nor any live group/grant is invoked by this change. Durable producer code, native queries, job graph, schedules and compute settings are unchanged.
+- Rollout order: deploy the corrected bundle through the existing user-owned CI path; run and verify the target producer and all declared objects; run the central consumer-access pipeline; confirm group existence and warehouse access; then explicitly include the deferred reader ACL file in a reviewed follow-up source change and deploy. Do not run grant reconciliation against missing replacement objects because the supplied Oct15 log showed old grants were revoked despite failed additions.
+- Only DEV source is uploaded and byte-verified. No ACC/PRD deployment, job run/repair, live permission update, commit/push or branch switch is performed by this handoff. Native runtime success remains a separate acceptance gate.
+
 ## Durable Producer And Reader Lists - 2026-10-15
 
 This is the current DEV source handoff and supersedes earlier localCheckpoint, single-consumer-group and 48-grant descriptions. It is not a deployment or completed ACC/PRD run.
