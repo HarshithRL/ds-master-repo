@@ -11,6 +11,7 @@ SPEC = importlib.util.spec_from_file_location(
 renderer = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(renderer)
 from source_snapshots import replace_source_references
+from dataset_results import compile_dataset
 
 
 class DashboardPreservationTests(unittest.TestCase):
@@ -25,9 +26,11 @@ class DashboardPreservationTests(unittest.TestCase):
                 self.assertEqual(original["pages"], transformed["pages"])
                 self.assertEqual(original.keys(), transformed.keys())
                 self.assertEqual(
-                    [dataset["name"] for dataset in original["datasets"]],
+                    [dataset["name"] for dataset in renderer.active_datasets(original, key)],
                     [dataset["name"] for dataset in transformed["datasets"]],
                 )
+                for name in renderer.RETIRED_DATASETS[key]:
+                    self.assertNotIn(name, json.dumps(transformed))
                 renderer.render(key)
 
     def test_business_sql_changes_only_at_source_references(self):
@@ -59,7 +62,8 @@ class DashboardPreservationTests(unittest.TestCase):
             self.assertNotIn("${var.source_catalog}", resource)
             self.assertNotIn("supply_chain_sandbox", resource)
             self.assertIn("${var.catalog}", resource)
-            self.assertIn(".silver.", resource)
+            self.assertIn(".gold.", resource)
+            self.assertNotIn("industry_sales_src_", resource)
 
     def test_unknown_source_shape_is_rejected(self):
         from unittest.mock import patch
@@ -77,24 +81,20 @@ class DashboardPreservationTests(unittest.TestCase):
                 if user_name and user_name not in renderer.MANAGERS:
                     self.assertIn(f"user_name: {user_name}", resource)
 
-    def test_only_allocation_query_changes_to_gold_snapshot(self):
+    def test_every_query_uses_its_compiled_result_without_changing_dataset_metadata(self):
         for key in renderer.DASHBOARDS:
             metadata = json.loads((ROOT / "source_dashboards" / f"{key}.metadata.json").read_text())
             original = json.loads(metadata["serialized_dashboard"])
-            baseline = renderer.parameterize(original)
+            baseline = original
             transformed = renderer.prepare_dashboard(original, key)
-            for before, after in zip(baseline["datasets"], transformed["datasets"], strict=True):
-                if key == "open_orders" and before["name"] == "ds_overview_allocation":
-                    self.assertEqual(after["queryLines"], [
-                        "SELECT scope, cs_team, segment, plant, bucket, value_eur\n",
-                        "FROM ${var.catalog}.gold.${var.allocation_table_name}\n",
-                    ])
-                    self.assertEqual(
-                        {name: value for name, value in before.items() if name != "queryLines"},
-                        {name: value for name, value in after.items() if name != "queryLines"},
-                    )
-                else:
-                    self.assertEqual(before, after)
+            schemas = json.loads((ROOT / "src/config/source_column_names.json").read_text())
+            for before, after in zip(renderer.active_datasets(baseline, key), transformed["datasets"], strict=True):
+                plan = compile_dataset(key, before["name"], "".join(before["queryLines"]), schemas)
+                self.assertEqual("".join(after["queryLines"]), plan["consumer_sql"] + "\n")
+                self.assertEqual(
+                    {name: value for name, value in before.items() if name != "queryLines"},
+                    {name: value for name, value in after.items() if name != "queryLines"},
+                )
 
     def test_job_calculation_keeps_the_exact_original_business_sql(self):
         metadata = json.loads((ROOT / "source_dashboards/open_orders.metadata.json").read_text())

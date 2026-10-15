@@ -9,7 +9,7 @@ from databricks.sdk.service.workspace import ImportFormat
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from industry_config import DEV_VALIDATION_JOB_ID, validate_dev_validation_job
+from industry_config import DEV_VALIDATION_JOB_ID, MAPPING_TABLE_NAME, validate_dev_validation_job
 
 
 def main():
@@ -43,7 +43,7 @@ def main():
             "task_key": task_key,
             "spark_python_task": {
                 "python_file": f"{remote_root}/src/notebooks/materialize_allocation.py",
-                "parameters": ["--catalog", "automation_d", "--source-catalog", "synapse-prd", "--target", "D", "--config-path", f"{remote_root}/src/config", "--mapping-table-name", "industry_sales_cs_team_sales_org_mapping_dev", "--candidate"],
+                "parameters": ["--catalog", "automation_d", "--source-catalog", "synapse-prd", "--target", "D", "--config-path", f"{remote_root}/src/config", "--mapping-table-name", MAPPING_TABLE_NAME + "_dev", "--candidate"],
             },
             "job_cluster_key": original["settings"]["job_clusters"][0]["job_cluster_key"],
             "libraries": [{"pypi": {"package": "sqlglot==27.20.0"}}],

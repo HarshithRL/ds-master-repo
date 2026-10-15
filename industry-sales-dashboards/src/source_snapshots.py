@@ -3,11 +3,13 @@ import re
 import sqlglot
 from sqlglot import exp
 from sqlglot.optimizer.scope import traverse_scope
+from industry_config import OWNED_TABLE_PREFIX
 
 
 SOURCE_CATALOG = "synapse-prd"
 SOURCE_SCHEMA = "pbi"
-SNAPSHOT_PREFIX = "industry_sales_src_"
+SNAPSHOT_PREFIX = OWNED_TABLE_PREFIX + "industry_sales_src_"
+RAW_SNAPSHOT_PREFIX = OWNED_TABLE_PREFIX + "industry_sales_raw_"
 
 
 def snapshot_name(source_table, suffix=""):

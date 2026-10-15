@@ -21,31 +21,11 @@ resources:
           job_cluster_key: mapping_cluster
           max_retries: 1
           min_retry_interval_millis: 60000
-        - task_key: snapshot_dashboard_sources
+        - task_key: materialize_dashboard_results
           depends_on:
             - task_key: refresh_cs_team_mapping
           spark_python_task:
-            python_file: ../../src/notebooks/snapshot_sources.py
-            parameters:
-              - --catalog
-              - ${var.catalog}
-              - --source-catalog
-              - ${var.source_catalog}
-              - --target
-              - ${bundle.target}
-              - --config-path
-              - ${workspace.file_path}/src/config
-          libraries:
-            - pypi:
-                package: sqlglot==27.20.0
-          job_cluster_key: mapping_cluster
-          timeout_seconds: 5400
-        - task_key: materialize_open_orders_allocation
-          depends_on:
-            - task_key: refresh_cs_team_mapping
-            - task_key: snapshot_dashboard_sources
-          spark_python_task:
-            python_file: ../../src/notebooks/materialize_allocation.py
+            python_file: ../../src/notebooks/materialize_dashboard_results.py
             parameters:
               - --catalog
               - ${var.catalog}
@@ -61,7 +41,7 @@ resources:
             - pypi:
                 package: sqlglot==27.20.0
           job_cluster_key: mapping_cluster
-          timeout_seconds: 3600
+          timeout_seconds: 5400
       job_clusters:
         - job_cluster_key: mapping_cluster
           new_cluster:

@@ -27,12 +27,15 @@ variables:
     description: Schedule pause status; DEV and TEST remain paused
   mapping_table_name:
     description: Bundle-owned lookup table name within each fixed schema
-    default: industry_sales_cs_team_sales_org_mapping
+    default: SC_BI_industry_sales_cs_team_sales_org_mapping
   allocation_table_name:
     description: Allocation gold snapshot populated after local source snapshots
-    default: industry_sales_open_orders_allocation
+    default: SC_BI_industry_sales_open_orders_allocation
   source_snapshot_suffix:
     description: Isolated DEV suffix for source snapshot tables, views, and state
+    default: ""
+  result_suffix:
+    description: DEV-only isolation for published dataset results and result state
     default: ""
 
 permissions:
@@ -59,9 +62,10 @@ targets:
       policy_id: 306312B9730019AB
       warehouse_id: 69ada62b2fb9b9e2
       refresh_pause_status: PAUSED
-      mapping_table_name: industry_sales_cs_team_sales_org_mapping_dev
-      allocation_table_name: industry_sales_open_orders_allocation_dev
+      mapping_table_name: SC_BI_industry_sales_cs_team_sales_org_mapping_dev
+      allocation_table_name: SC_BI_industry_sales_open_orders_allocation_dev
       source_snapshot_suffix: _dev
+      result_suffix: _dev
 
   T:
     mode: production

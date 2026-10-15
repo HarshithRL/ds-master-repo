@@ -10,8 +10,8 @@ WITH industry_orders AS (
     COALESCE(item.`Application area Description`, 'Unknown') AS segment,
     item.`Order Status` AS order_status
   FROM
-    `${var.catalog}`.silver.`industry_sales_src_dbx_fact_sales_distribution_sales_document_item${var.source_snapshot_suffix}` item
-      JOIN `${var.catalog}`.silver.`industry_sales_src_dbx_dim_sales_organization${var.source_snapshot_suffix}` sorg
+    `${var.catalog}`.silver.`SC_BI_industry_sales_src_dbx_fact_sales_distribution_sales_document_item${var.source_snapshot_suffix}` item
+      JOIN `${var.catalog}`.silver.`SC_BI_industry_sales_src_dbx_dim_sales_organization${var.source_snapshot_suffix}` sorg
         ON sorg.`Sales Organization Key` = item.`Sales Organization Key`
       LEFT JOIN ${var.catalog}.gold.${var.mapping_table_name} csm
         ON sorg.`Sales_Organization ID` = csm.`sales_org_code`
@@ -37,7 +37,7 @@ all_confirmed_sl_raw AS (
     sl.`Measure Confirmed Quantity` AS confirmed_qty,
     sl.`Measure Order Quantity` AS sl_oq
   FROM
-    `${var.catalog}`.silver.`industry_sales_src_dbx_fact_sales_distribution_schedule_line${var.source_snapshot_suffix}` sl
+    `${var.catalog}`.silver.`SC_BI_industry_sales_src_dbx_fact_sales_distribution_schedule_line${var.source_snapshot_suffix}` sl
       INNER JOIN industry_orders io
         ON sl.`Sales Document Number` = io.`Sales Document Number`
         AND sl.`Sales Document Item Number` = io.`Sales Document Item Number`
@@ -63,7 +63,7 @@ all_unconfirmed_sl AS (
     TO_DATE(CAST(sl.`Goods Issue Date` AS STRING), 'yyyyMMdd') AS gi_date,
     sl.`Measure Order Quantity` AS sl_order_qty
   FROM
-    `${var.catalog}`.silver.`industry_sales_src_dbx_fact_sales_distribution_schedule_line${var.source_snapshot_suffix}` sl
+    `${var.catalog}`.silver.`SC_BI_industry_sales_src_dbx_fact_sales_distribution_schedule_line${var.source_snapshot_suffix}` sl
       INNER JOIN industry_orders io
         ON sl.`Sales Document Number` = io.`Sales Document Number`
         AND sl.`Sales Document Item Number` = io.`Sales Document Item Number`
@@ -264,7 +264,7 @@ rule2 AS (
           `Date Delivery Key`,
           `Date Delivery` AS dim_date
         FROM
-          `${var.catalog}`.silver.`industry_sales_src_dbx_date_delivery${var.source_snapshot_suffix}`
+          `${var.catalog}`.silver.`SC_BI_industry_sales_src_dbx_date_delivery${var.source_snapshot_suffix}`
       ) dd
         ON dd.`Date Delivery Key` = io.`Delivery Date To Key`
   WHERE
@@ -313,7 +313,7 @@ billing AS (
     b.`Sales Document Item Number`,
     SUM(b.`Billed Quantity`) AS billed_qty
   FROM
-    `${var.catalog}`.silver.`industry_sales_src_dbx_fact_billing_document_line_item${var.source_snapshot_suffix}` b
+    `${var.catalog}`.silver.`SC_BI_industry_sales_src_dbx_fact_billing_document_line_item${var.source_snapshot_suffix}` b
       INNER JOIN orders_in_scope ois
         ON ois.`Sales Document Number` = b.`Sales Document Number`
         AND ois.`Sales Document Item Number` = b.`Sales Document Item Number`
@@ -330,7 +330,7 @@ delivery_tbl AS (
     d.`Reference Item` AS `Sales Document Item Number`,
     SUM(d.`Measure Actual Delivery Quantity`) AS delivered_qty
   FROM
-    `${var.catalog}`.silver.`industry_sales_src_dbx_fact_sales_distribution_delivery_item${var.source_snapshot_suffix}` d
+    `${var.catalog}`.silver.`SC_BI_industry_sales_src_dbx_fact_sales_distribution_delivery_item${var.source_snapshot_suffix}` d
       INNER JOIN orders_in_scope ois
         ON ois.`Sales Document Number` = d.`Reference Document`
         AND ois.`Sales Document Item Number` = d.`Reference Item`
@@ -477,7 +477,7 @@ SELECT
   b.value_eur
 FROM
   agg a
-    LEFT JOIN `${var.catalog}`.silver.`industry_sales_src_dbx_dim_plant${var.source_snapshot_suffix}` p
+    LEFT JOIN `${var.catalog}`.silver.`SC_BI_industry_sales_src_dbx_dim_plant${var.source_snapshot_suffix}` p
       ON p.`Plant Key` = a.`Plant Key`
   LATERAL VIEW
     STACK(

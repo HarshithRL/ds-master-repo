@@ -14,9 +14,18 @@ def freeze_date(expression, as_of_date):
 def build_stages(source, as_of_date):
     if not isinstance(as_of_date, date):
         raise ValueError("An explicit business date is required")
+    stages, final = query_parts(source)
+    if not stages:
+        raise ValueError("Expected an allocation CTE query")
+    return [(name, freeze_sql_date(statement, as_of_date)) for name, statement in stages], freeze_sql_date(final, as_of_date)
+
+
+def query_parts(source):
     query = sqlglot.parse_one(source, read="databricks")
     with_clause = query.args.get("with")
-    if with_clause is None or with_clause.args.get("recursive"):
+    if with_clause is None:
+        return [], source.strip().rstrip(";")
+    if with_clause.args.get("recursive"):
         raise ValueError("Expected a nonrecursive allocation CTE query")
     stages = []
     names = set()
@@ -43,8 +52,8 @@ def build_stages(source, as_of_date):
             closing_index += 1
         closing_index -= 1
         body = source[tokens[opening_index].end + 1:tokens[closing_index].start]
-        stages.append((name, freeze_sql_date(body, as_of_date)))
-    final = freeze_sql_date(source[tokens[closing_index].end + 1:].strip().rstrip(";"), as_of_date)
+        stages.append((name, body))
+    final = source[tokens[closing_index].end + 1:].strip().rstrip(";")
     return stages, final
 
 
@@ -64,7 +73,7 @@ def freeze_sql_date(statement, as_of_date):
 
 
 def output_table_name(mapping_table_name):
-    prefix = "industry_sales_cs_team_sales_org_mapping"
+    prefix = "SC_BI_industry_sales_cs_team_sales_org_mapping"
     if mapping_table_name not in (prefix, prefix + "_dev"):
         raise ValueError("Unexpected mapping table name")
-    return "industry_sales_open_orders_allocation" + ("_dev" if mapping_table_name.endswith("_dev") else "")
+    return "SC_BI_industry_sales_open_orders_allocation" + ("_dev" if mapping_table_name.endswith("_dev") else "")

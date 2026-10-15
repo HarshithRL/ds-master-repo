@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import sys
 import unittest
 from pathlib import Path
 
@@ -8,6 +9,7 @@ from sqlglot import exp
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
 SPEC = importlib.util.spec_from_file_location("source_snapshots", ROOT / "src/source_snapshots.py")
 snapshots = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(snapshots)
@@ -83,14 +85,14 @@ class SourceSnapshotTests(unittest.TestCase):
             snapshots.snapshot_name("dbx_fact_example", "_prd")
 
     def test_manifest_rejects_unrelated_destinations_and_duplicate_sources(self):
-        source = {"source_table": "dbx_fact_example", "snapshot_table": "industry_sales_src_dbx_fact_example", "columns": ["Order Key"]}
+        source = {"source_table": "dbx_fact_example", "snapshot_table": "SC_BI_industry_sales_src_dbx_fact_example", "columns": ["Order Key"]}
         self.assertEqual(snapshots.validate_manifest([source]), [source])
         for invalid in ([source, source], [dict(source, snapshot_table="unrelated_table")], [dict(source, columns=["key`evil"])]):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 snapshots.validate_manifest(invalid)
 
     def test_incomplete_or_duplicate_receipts_cannot_publish(self):
-        sources = [{"source_table": "dbx_fact_example", "snapshot_table": "industry_sales_src_dbx_fact_example", "columns": ["Order Key"]}]
+        sources = [{"source_table": "dbx_fact_example", "snapshot_table": "SC_BI_industry_sales_src_dbx_fact_example", "columns": ["Order Key"]}]
         snapshots.validate_complete_receipts(sources, [{"source": "dbx_fact_example"}])
         for receipts in ([], [{"source": "unrelated"}], [{"source": "dbx_fact_example"}, {"source": "dbx_fact_example"}]):
             with self.subTest(receipts=receipts), self.assertRaises(ValueError):
