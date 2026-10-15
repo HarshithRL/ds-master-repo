@@ -9,7 +9,29 @@ resources:
         timezone_id: Europe/Brussels
         pause_status: ${var.refresh_pause_status}
       tasks:
+        - task_key: smoke_test_dashboard_sources
+          spark_python_task:
+            python_file: ../../src/notebooks/smoke_test_dashboard_sources.py
+            parameters:
+              - --catalog
+              - ${var.catalog}
+              - --source-catalog
+              - ${var.source_catalog}
+              - --target
+              - ${bundle.target}
+              - --warehouse-id
+              - ${var.warehouse_id}
+              - --config-path
+              - ${workspace.file_path}/src/config
+          libraries:
+            - pypi:
+                package: sqlglot==27.20.0
+          job_cluster_key: mapping_cluster
+          timeout_seconds: 600
+          max_retries: 0
         - task_key: refresh_cs_team_mapping
+          depends_on:
+            - task_key: smoke_test_dashboard_sources
           notebook_task:
             notebook_path: ../../src/notebooks/refresh_cs_team_mapping.py
             base_parameters:
@@ -33,6 +55,8 @@ resources:
               - ${var.source_catalog}
               - --target
               - ${bundle.target}
+              - --warehouse-id
+              - ${var.warehouse_id}
               - --mapping-table-name
               - ${var.mapping_table_name}
               - --config-path

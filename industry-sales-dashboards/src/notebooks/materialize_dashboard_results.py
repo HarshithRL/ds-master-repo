@@ -6,11 +6,12 @@ from pathlib import Path
 from time import monotonic
 from uuid import uuid4
 
+from databricks.sdk import WorkspaceClient
 from pyspark.sql import SparkSession, functions as sql_functions
 
 
 parser = argparse.ArgumentParser()
-for parameter in ("catalog", "source-catalog", "target", "mapping-table-name", "config-path"):
+for parameter in ("catalog", "source-catalog", "target", "mapping-table-name", "config-path", "warehouse-id"):
     parser.add_argument("--" + parameter, required=True)
 args = parser.parse_args()
 config_path = Path(args.config_path)
@@ -21,16 +22,19 @@ from industry_config import RESULT_STATE_TABLE_NAME, validate_environment, valid
 from dataset_results import result_storage_name, unique_result_producers, validate_result_receipts
 from durable_results import cleanup_result_scratch, result_dataset_scratch, result_scratch_root, stage_result_frame
 from source_snapshots import quote_column, snapshot_view_ddl, snapshot_view_query, validate_storage_projection
+from warehouse_results import is_cancellation_plan, preflight_cancellation_warehouse, prioritize_cancellation, stage_cancellation_warehouse
 
 
 spark = SparkSession.builder.getOrCreate()
 catalog = args.catalog
-validate_environment(catalog, args.source_catalog, args.target, spark.conf.get("spark.databricks.clusterUsageTags.orgId"))
+workspace_id = spark.conf.get("spark.databricks.clusterUsageTags.orgId")
+validate_environment(catalog, args.source_catalog, args.target, workspace_id)
 validate_table_name(args.mapping_table_name, args.target)
 suffix = "_dev" if args.target == "D" else ""
 plans = json.loads((config_path / "dashboard_results.json").read_text())["datasets"]
 if len(plans) != 17 or len({(plan["dashboard"], plan["dataset"]) for plan in plans}) != 17:
     raise ValueError("A unique complete plan is required for all 17 active datasets")
+plans = prioritize_cancellation(plans)
 state = f"{catalog}.gold.{RESULT_STATE_TABLE_NAME}{suffix}"
 batch = uuid4().hex
 marker = "__industry_snapshot_id"
@@ -69,6 +73,16 @@ try:
 except Exception as error:
     raise RuntimeError(f"Cannot initialize durable staging at {scratch}: {type(error).__name__}: {error}") from error
 log("scratch_ready", path=str(scratch))
+job_context = spark.sql("SELECT current_user() AS job_identity, CURRENT_DATE() AS business_date").first()
+business_date = job_context["business_date"]
+workspace = WorkspaceClient()
+cancellation_plan = next(plan for plan in plans if is_cancellation_plan(plan))
+if len(cancellation_plan["producers"]) != 1 or cancellation_plan["producers"][0]["component"] != "filtered_rows":
+    raise ValueError("Cancellation warehouse boundary requires its single complete filtered-row producer")
+cancellation_sql = freeze_sql_date(resolve(cancellation_plan["producers"][0]["sql"]), business_date)
+log("warehouse_preflight_started", warehouse_id=args.warehouse_id)
+preflight_cancellation_warehouse(workspace, args.warehouse_id, cancellation_sql, job_context["job_identity"], workspace_id)
+log("warehouse_preflight_verified", warehouse_id=args.warehouse_id, dataset=cancellation_plan["dataset"])
 check_owned(state)
 tables = list(unique_result_producers(plans))
 for table in tables:
@@ -83,7 +97,6 @@ old = spark.table(state).collect()
 if len(old) > 1:
     raise ValueError("Result state contains multiple active batches")
 previous_batch = old[0]["snapshot_id"] if old else None
-business_date = spark.sql("SELECT CURRENT_DATE() AS business_date").first()["business_date"]
 receipts = []
 verified_results = {}
 
@@ -131,15 +144,19 @@ for plan in plans:
                 log("result_reused", **receipt)
                 continue
             statement = freeze_sql_date(resolve(producer["sql"]), business_date)
-            stages, final = query_parts(statement)
-            for name, stage_sql in stages:
-                log("compute_started", dataset=plan["dataset"], component=producer["component"], cte=name)
-                frame = stage_result_frame(spark, spark.sql(stage_sql), dataset_scratch / str(len(staged_frames)))
-                staged_frames.append(frame)
-                frame.createOrReplaceTempView(name)
-                temporary_views.append(name)
-            log("compute_started", dataset=plan["dataset"], component=producer["component"])
-            result = stage_result_frame(spark, spark.sql(final), dataset_scratch / str(len(staged_frames)))
+            if is_cancellation_plan(plan):
+                log("warehouse_compute_started", dataset=plan["dataset"], component=producer["component"], warehouse_id=args.warehouse_id)
+                result = stage_cancellation_warehouse(spark, workspace, args.warehouse_id, statement, dataset_scratch / str(len(staged_frames)))
+            else:
+                stages, final = query_parts(statement)
+                for name, stage_sql in stages:
+                    log("compute_started", dataset=plan["dataset"], component=producer["component"], cte=name)
+                    frame = stage_result_frame(spark, spark.sql(stage_sql), dataset_scratch / str(len(staged_frames)))
+                    staged_frames.append(frame)
+                    frame.createOrReplaceTempView(name)
+                    temporary_views.append(name)
+                log("compute_started", dataset=plan["dataset"], component=producer["component"])
+                result = stage_result_frame(spark, spark.sql(final), dataset_scratch / str(len(staged_frames)))
             staged_frames.append(result)
             result.createOrReplaceTempView(producer["component"])
             temporary_views.append(producer["component"])
