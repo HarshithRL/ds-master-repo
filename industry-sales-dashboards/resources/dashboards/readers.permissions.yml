@@ -1,0 +1,23 @@
+targets:
+  A:
+    resources:
+      dashboards:
+        industry_open_orders:
+          permissions:
+            - group_name: AUTOMATION.INDUSTRYSALESDASHBOARDS.CONSUMER.READ
+              level: CAN_READ
+        industry_quotations:
+          permissions:
+            - group_name: AUTOMATION.INDUSTRYSALESDASHBOARDS.CONSUMER.WRITE
+              level: CAN_READ
+  P:
+    resources:
+      dashboards:
+        industry_open_orders:
+          permissions:
+            - group_name: AUTOMATION.INDUSTRYSALESDASHBOARDS.CONSUMER.READ
+              level: CAN_READ
+        industry_quotations:
+          permissions:
+            - group_name: AUTOMATION.INDUSTRYSALESDASHBOARDS.CONSUMER.WRITE
+              level: CAN_READ

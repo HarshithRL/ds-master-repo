@@ -9,8 +9,6 @@ resources:
           level: CAN_READ
         - user_name: francois.leclercq@etexgroup.com
           level: CAN_MANAGE
-        - user_name: roberta.villa@etexgroup.com
-          level: CAN_READ
         - user_name: sabu.thomas@etexgroup.com
           level: CAN_READ
         - user_name: wouter.toonder@etexgroup.com

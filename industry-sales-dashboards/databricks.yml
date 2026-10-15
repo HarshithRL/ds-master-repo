@@ -2,7 +2,8 @@ bundle:
   name: industry-sales-dashboards
 
 include:
-  - resources/dashboards/*.yml
+  - resources/dashboards/open_orders.dashboard.yml
+  - resources/dashboards/quotations.dashboard.yml
   - resources/jobs/*.yml
 
 sync:
