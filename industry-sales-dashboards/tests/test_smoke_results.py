@@ -30,7 +30,7 @@ class SmokeResultTests(unittest.TestCase):
             spark.sql("SELECT * FROM VALUES ('O1',12.125BD,'YOR','C',1),('O2',7.75BD,'YOR','C',1) AS source(`Order Number`,`Net Value Euro`,`Document Type`,`Rejection Status`,`FK Sales Organization`)").createOrReplaceTempView("fixture_smoke_orders")
             spark.sql("SELECT * FROM VALUES (1,'BE'),(2,'DE') AS source(source_key,country)").createOrReplaceTempView("fixture_smoke_lookup")
             source = "SELECT o.`Order Number` AS order_id, o.`Net Value Euro` AS value_eur FROM `synapse-prd`.pbi.`" + smoke.REMOTE_ORDER_TABLE + "` o WHERE o.`Document Type`='YOR' AND o.`Rejection Status`='C' AND o.`FK Sales Organization` IS NOT NULL"
-            plans = [compile_dataset("open_orders", "ds_smoke_" + str(index), source, {}) for index in range(16)]
+            plans = [compile_dataset("open_orders", "ds_smoke_" + str(index), source, {}) for index in range(17)]
             plans.append(compile_dataset("quotations", "ds_smoke_lookup", "SELECT source_key, country FROM `synapse-prd`.pbi.dbx_dim_example", {}))
             replacements = {"synapse-prd.pbi." + smoke.REMOTE_ORDER_TABLE: "fixture_smoke_orders", "synapse-prd.pbi.dbx_dim_example": "fixture_smoke_lookup"}
             schemas = {smoke.REMOTE_ORDER_TABLE: ["Order Number", "Net Value Euro", "Document Type", "Rejection Status", "FK Sales Organization"], "dbx_dim_example": ["source_key", "country"]}
@@ -53,7 +53,7 @@ class SmokeResultTests(unittest.TestCase):
                 verified = [call for call in log.call_args_list if call.args[0] == "smoke_source_verified"]
                 self.assertEqual(len(verified), 2)
                 self.assertTrue(all(call.kwargs["rows"] <= 1 for call in verified))
-                self.assertEqual(sum(call.args[0] == "smoke_dataset_verified" for call in log.call_args_list), 17)
+                self.assertEqual(sum(call.args[0] == "smoke_dataset_verified" for call in log.call_args_list), 18)
                 self.assertEqual(log.call_args_list[-1].args[0], "smoke_checks_passed")
                 self.assertFalse(any(call.args[0].lstrip().upper().startswith(("CREATE ", "INSERT ", "DELETE ", "ALTER ", "DROP ")) for call in proxy.sql.call_args_list))
                 scratch.mkdir()

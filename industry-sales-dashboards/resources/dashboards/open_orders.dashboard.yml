@@ -141,6 +141,14 @@ resources:
               ]
             },
             {
+              "name": "ds_top_late_orders",
+              "displayName": "Top Late Orders (CM + YTD)",
+              "queryLines": [
+                "SELECT * FROM `${var.catalog}`.gold.`SC_BI_industry_sales_open_orders_ds_top_late_orders_result${var.result_suffix}`\n",
+                "ORDER BY period, open_value_eur DESC\n"
+              ]
+            },
+            {
               "name": "ds_cm_daily_billing",
               "displayName": "CM Daily Cumulative Billing",
               "queryLines": [
@@ -247,6 +255,10 @@ resources:
                 {
                   "name": "Overview_Allocation_Consolidated",
                   "datasetName": "ds_overview_allocation"
+                },
+                {
+                  "name": "Top_Late_Orders_CM__YTD",
+                  "datasetName": "ds_top_late_orders"
                 },
                 {
                   "name": "CM_Daily_Cumulative_Billing",

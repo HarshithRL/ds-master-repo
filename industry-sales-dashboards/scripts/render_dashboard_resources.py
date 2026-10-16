@@ -18,7 +18,7 @@ DASHBOARDS = {
     "open_orders": (10, 6, 86),
     "quotations": (9, 4, 49),
 }
-RETIRED_DATASETS = {"open_orders": {"ds_top_late_orders", "ds_cancellations_trend"}, "quotations": set()}
+RETIRED_DATASETS = {"open_orders": {"ds_cancellations_trend"}, "quotations": set()}
 SOURCE_PREFIXES = (
     "`synapse-prd`.`pbi`.",
     "`synapse-prd`.pbi.",
@@ -60,7 +60,8 @@ def parameterize(value):
 
 def active_datasets(original, key):
     retired = RETIRED_DATASETS[key]
-    if any(name in json.dumps(original["pages"]) for name in retired):
+    retired_sources = {source["name"] for graph in original.get("relationshipGraphs", []) for source in graph["sources"] if source["datasetName"] in retired}
+    if any(name in json.dumps(original["pages"]) for name in retired | retired_sources):
         raise ValueError("Cannot retire a dataset referenced by a page")
     return [dataset for dataset in original["datasets"] if dataset["name"] not in retired]
 

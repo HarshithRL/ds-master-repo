@@ -216,6 +216,14 @@
             },
             {
               "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_top_late_orders_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
               "schema": "silver",
               "table": "SC_BI_industry_sales_calc_open_orders_ds_all_open_orders_result",
               "privileges": [
@@ -274,6 +282,14 @@
               "catalog": "automation",
               "schema": "silver",
               "table": "SC_BI_industry_sales_calc_open_orders_ds_segment_focus_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_top_late_orders_result",
               "privileges": [
                 "SELECT"
               ]

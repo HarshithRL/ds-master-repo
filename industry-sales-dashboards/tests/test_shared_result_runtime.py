@@ -70,7 +70,7 @@ class SharedResultRuntimeTests(unittest.TestCase):
             for plan in plans:
                 self.assertEqual(Counter(outputs[result_name("quotations", plan["dataset"])]), Counter(outputs[shared]))
                 self.assertEqual(len(outputs[result_name("quotations", plan["dataset"])]), 3)
-            extra = [{"dashboard": "open_orders", "dataset": "fixture_" + str(index), "producers": [{"table": "fixture_" + str(index), "sql": "SELECT 1"}]} for index in range(14)]
+            extra = [{"dashboard": "open_orders", "dataset": "fixture_" + str(index), "producers": [{"table": "fixture_" + str(index), "sql": "SELECT 1"}]} for index in range(15)]
             extra_receipts = [{"dashboard": plan["dashboard"], "dataset": plan["dataset"], "table": plan["producers"][0]["table"]} for plan in extra]
             validate_result_receipts(plans + extra, receipts + extra_receipts)
             with self.assertRaises(ValueError):

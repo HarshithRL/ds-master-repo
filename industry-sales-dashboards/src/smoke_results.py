@@ -56,8 +56,8 @@ def check_dataset_contract(spark, plan, replacements, business_date):
 
 def run_smoke_checks(spark, workspace, warehouse_id, plans, source_schemas, mapping_rows, source_catalog, scratch, workspace_id, log):
     identities = {(plan["dashboard"], plan["dataset"]) for plan in plans}
-    if len(plans) != 17 or len(identities) != 17:
-        raise ValueError("Smoke checks require all 17 unique active datasets")
+    if len(plans) != 18 or len(identities) != 18:
+        raise ValueError("Smoke checks require all 18 unique active datasets")
     unique_result_producers(plans)
     context = spark.sql("SELECT current_user() AS job_identity, CURRENT_DATE() AS business_date").first()
     sources = collect_source_columns([plan["source_sql"] for plan in plans], source_schemas)

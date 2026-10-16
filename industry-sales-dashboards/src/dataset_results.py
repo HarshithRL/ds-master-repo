@@ -246,8 +246,8 @@ def unique_result_producers(plans):
 
 def validate_result_receipts(plans, receipts):
     identities = [(plan["dashboard"], plan["dataset"]) for plan in plans]
-    if len(identities) != 17 or len(set(identities)) != 17:
-        raise ValueError("All seventeen unique active dataset plans are required")
+    if len(identities) != 18 or len(set(identities)) != 18:
+        raise ValueError("All eighteen unique active dataset plans are required")
     unique_result_producers(plans)
     expected = [(plan["dashboard"], plan["dataset"], producer["table"]) for plan in plans for producer in plan["producers"] if producer["table"]]
     actual = [(receipt["dashboard"], receipt["dataset"], receipt["table"]) for receipt in receipts]

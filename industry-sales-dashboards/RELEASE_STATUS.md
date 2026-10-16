@@ -1,5 +1,16 @@
 # Release Status - 2026-10-13
 
+## Restore Referenced Top Orders Dataset - 2026-10-16
+
+This supersedes earlier claims that ds_top_late_orders was unused and the active inventory was 17 datasets/20 outputs/44 relations. The user's PRD screenshots show KPI values but both overview Top Orders tables fail with INVALID_PARAMETER_VALUE: No lowest common ancestors found for sources.
+
+- Root cause: top10_current and top5_ytd reference relationship source Top_Late_Orders_CM__YTD, which maps to ds_top_late_orders. The earlier retirement check searched only technical dataset names in pages, missed that alias, and removed the required dataset and graph source. This was a source-generation defect, not evidence of missing viewer permissions or failed data freshness.
+- Restore the original dataset and alias registration without modifying any page/widget, encoding, period filter or original business SQL. Strengthen retirement guards and regression tests to follow relationship aliases. All used aliases in both original dashboards must still resolve; only the unused cancellation-trend dataset remains retired.
+- Regenerate one added producer plan and the Open Orders dashboard definition. All 17 existing producer plans remain structurally identical. New inventory: 18 active datasets (nine per dashboard), 13 final/five filtered, 21 unique outputs, 25 physical tables/21 views = 46 persistent relations. Smoke, materializer and receipt gates require the complete 18-plan set; the obsolete 17-plan set is rejected.
+- Add only two SELECT declarations for the Open Orders READ group: gold.SC_BI_industry_sales_open_orders_ds_top_late_orders_result and silver.SC_BI_industry_sales_calc_open_orders_ds_top_late_orders_result. Use the current remote DEV manifest as the upload source; preserve every manual member edit, the WRITE group and all unrelated products. READ has 26 grant entries, WRITE remains 32, combined 58 declarations. No live grants are applied.
+- All 82 regression tests passed in 32.040 seconds, with deterministic generation checks. New tests reproduce the missing alias, reject future alias-only retirement, validate original ranking tail behavior in real Spark (10/5 ranks before original join multiplicity, NULL block fields, material fallback, native schema and duplicate-preserving equality), and retain exact publication safeguards. The full original ranking upstream business calculation was not certified against live enterprise data by the small tail fixture.
+- Promotion requires CI deployment followed by one successful complete refresh job to materialize the two restored objects, then their central consumer grants and native browser verification of both overview tables. A dashboard deployment alone cannot create this missing result. Source API/SQL/test success is not proof that the PRD widgets render. No native ACC/PRD job, repair, deployment or permission mutation is executed by the assistant.
+
 ## Dashboard Consumer ACL Activation - 2026-10-16
 
 This supersedes the earlier reader-ACL deferral. The user confirmed group creation and catalog/schema/table grants; the supplied ACC gold mapping permissions screenshot shows SELECT for both Industry Sales consumer groups. That single-object evidence is not an independent audit of all members, all objects, warehouse use or PRD workspace assignment.

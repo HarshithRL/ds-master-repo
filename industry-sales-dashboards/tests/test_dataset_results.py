@@ -53,9 +53,11 @@ class DatasetResultPlanTests(unittest.TestCase):
         self.assertEqual({name: count for name, count in Counter(names).items() if count > 1}, {results.result_name("quotations", "shared", "converted"): 3})
 
     def test_missing_or_duplicate_results_cannot_publish(self):
-        plans = [{"dashboard": "open_orders", "dataset": "ds_" + str(index), "producers": [{"table": "result_" + str(index), "sql": "SELECT 1"}]} for index in range(17)]
-        receipts = [{"dashboard": "open_orders", "dataset": "ds_" + str(index), "table": "result_" + str(index)} for index in range(17)]
+        plans = [{"dashboard": "open_orders", "dataset": "ds_" + str(index), "producers": [{"table": "result_" + str(index), "sql": "SELECT 1"}]} for index in range(18)]
+        receipts = [{"dashboard": "open_orders", "dataset": "ds_" + str(index), "table": "result_" + str(index)} for index in range(18)]
         results.validate_result_receipts(plans, receipts)
+        with self.assertRaises(ValueError):
+            results.validate_result_receipts(plans[:-1], receipts[:-1])
         for incomplete in (receipts[:-1], receipts + [receipts[0]], receipts[:-1] + [receipts[0]]):
             with self.subTest(receipts=incomplete), self.assertRaises(ValueError):
                 results.validate_result_receipts(plans, incomplete)
