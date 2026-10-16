@@ -86,6 +86,665 @@
       ]
     },
     {
+      "data_product": "industry-sales-dashboards",
+      "warehouse": false,
+      "consumer_groups": [
+        {
+          "tier": "READ",
+          "grants": [
+            {
+              "catalog": "automation",
+              "privileges": [
+                "USE_CATALOG"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_dashboard_result_state",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_all_open_orders_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_cancellations_detail_7d_filtered_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_cm_daily_billing_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_current_month_by_team_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_daily_tracking_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_order_size_dist_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_overview_allocation_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_open_orders_ds_segment_focus_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_all_open_orders_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_cancellations_detail_7d_filtered_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_cm_daily_billing_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_current_month_by_team_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_daily_tracking_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_order_size_dist_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_overview_allocation_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_open_orders_ds_segment_focus_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
+              "privileges": [
+                "SELECT"
+              ]
+            }
+          ],
+          "members": [
+            "alessia.rottoli@etexgroup.com",
+            "alfonso.pinoansio@etexgroup.com",
+            "amber.hodges@etexgroup.com",
+            "anita.jorgensen@etexgroup.com",
+            "ann.selderslaghs@etexgroup.com",
+            "anna.huskowska@etexgroup.com",
+            "anne-claire.prouteau@etexgroup.com",
+            "anne.vestergaard-pedersen@etexgroup.com",
+            "benoit.carrier@etexgroup.com",
+            "bernhard.luedecke@etexgroup.com",
+            "bill.gregg@etexgroup.com",
+            "blossom.alva@etexgroup.com",
+            "bonnie.proctor@etexgroup.com",
+            "chad.meyer@etexgroup.com",
+            "charu.malhotra@etexgroup.com",
+            "chiara.selvaggi@etexgroup.com",
+            "chris.green@etexgroup.com",
+            "christophe.colas-noblecourt@etexgroup.com",
+            "claudiu.staicu@etexgroup.com",
+            "daniele.mattera@etexgroup.com",
+            "deborah.yorke@etexgroup.com",
+            "dionne.walsh@etexgroup.com",
+            "dipanti.ghosh@etexgroup.com",
+            "doris.dwyer@etexgroup.com",
+            "elena.parolini@etexgroup.com",
+            "elena.staina@etexgroup.com",
+            "ellen.makhlouf@etexgroup.com",
+            "erik.brems@etexgroup.com",
+            "etienne.brousse@etexgroup.com",
+            "ewa.burian@etexgroup.com",
+            "ewa.gidzinska@etexgroup.com",
+            "francois.leclercq@etexgroup.com",
+            "gabriela.langenberg@etexgroup.com",
+            "gervin.puchwein@etexgroup.com",
+            "halina.zathey@etexgroup.com",
+            "hana.kucerova@etexgroup.com",
+            "harald.schippers@etexgroup.com",
+            "hortensia.santos@etexgroup.com",
+            "ignacio.marcos@etexgroup.com",
+            "ilja.doroschenko@etexgroup.com",
+            "ingo.klein@etexgroup.com",
+            "iwona.lipinska@etexgroup.com",
+            "iwona.zaremba@etexgroup.com",
+            "jacek.kanatek@etexgroup.com",
+            "jesper.poulsen@etexgroup.com",
+            "joanna.pietrzak@etexgroup.com",
+            "john.govan@etexgroup.com",
+            "jolanthe.stuertzer@etexgroup.com",
+            "julian.vanachter@etexgroup.com",
+            "katarzyna.jargilo@etexgroup.com",
+            "kathrine.madsen@etexgroup.com",
+            "katleen.goossens@etexgroup.com",
+            "kim.melton@etexgroup.com",
+            "kostas.kazbaras@etexgroup.com",
+            "kris.dullaert@etexgroup.com",
+            "kristyna.dvorakova@etexgroup.com",
+            "kyle.waddell@etexgroup.com",
+            "ladislav.zajic@etexgroup.com",
+            "laila.lindhoj@etexgroup.com",
+            "laura.mende@etexgroup.com",
+            "lily.byrne@etexgroup.com",
+            "louise.bengtsson@etexgroup.com",
+            "lucas.qiu@etexgroup.com",
+            "luis.sierrazabala@etexgroup.com",
+            "magali.bastaens@etexgroup.com",
+            "marc.lieverz@etexgroup.com",
+            "mario.c.torres@etexgroup.com",
+            "mariusz.galocz@etexgroup.com",
+            "markus.beermann@etexgroup.com",
+            "marta.cereda@etexgroup.com",
+            "matthias.heinemann@etexgroup.com",
+            "michael.jansen@etexgroup.com",
+            "michaela.lorenzen@etexgroup.com",
+            "michal.pribyl@etexgroup.com",
+            "michiel.hoogmartens@etexgroup.com",
+            "mikkel.dalsgaard@etexgroup.com",
+            "monika.skotnicka@etexgroup.com",
+            "mustafaarda.bicakci@etexgroup.com",
+            "nadege.fallon@etexgroup.com",
+            "natalia.piwtorak@etexgroup.com",
+            "nathalie.guilliano@etexgroup.com",
+            "noel.vranckx@etexgroup.com",
+            "oliver.muth@etexgroup.com",
+            "paola.andersen@etexgroup.com",
+            "pascal.ruebsam@etexgroup.com",
+            "paulina.siedlinska@etexgroup.com",
+            "pavel.vacek@etexgroup.com",
+            "peter.kimo@etexgroup.com",
+            "petra.sasinova@etexgroup.com",
+            "philipp.usenbenz@etexgroup.com",
+            "pia.justesen@etexgroup.com",
+            "radka.jelinkova@etexgroup.com",
+            "rasmus.breinholt@etexgroup.com",
+            "rikke.prien@etexgroup.com",
+            "roal.limkilde@etexgroup.com",
+            "sabu.thomas@etexgroup.com",
+            "santiago.salvagno@etexgroup.com",
+            "sarah.drostel@etexgroup.com",
+            "sarah.malcus@etexgroup.com",
+            "shaimaa.obaid@etexgroup.com",
+            "shruti.dhar@etexgroup.com",
+            "simone.jahn@etexgroup.com",
+            "soren.bertel@etexgroup.com",
+            "stephen.birch@etexgroup.com",
+            "susie.gordon@etexgroup.com",
+            "tanguy.vanderborght@etexgroup.com",
+            "tarun.maheshwari@etexgroup.com",
+            "tim.vandenbussche@etexgroup.com",
+            "timmy.melotte@etexgroup.com",
+            "tina.knudsen@etexgroup.com",
+            "tina.thomsen@etexgroup.com",
+            "todd.simpson@etexgroup.com",
+            "trine.nielsen@etexgroup.com",
+            "valeriu.budeanu@etexgroup.com",
+            "wayne.barritt@etexgroup.com",
+            "weronika.jeziorowska@etexgroup.com",
+            "william.logan@etexgroup.com",
+            "william.pessina@etexgroup.com",
+            "wolfgang.potten@etexgroup.com",
+            "wouter.toonder@etexgroup.com",
+            "zornitsa.gergova@etexgroup.com"
+            "mustafaarda.bicakci@etexgroup.com"
+          ]
+        },
+        {
+          "tier": "WRITE",
+          "grants": [
+            {
+              "catalog": "automation",
+              "privileges": [
+                "USE_CATALOG"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "privileges": [
+                "USE_SCHEMA"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_dashboard_result_state",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_country_options_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_expiring_quotes_quotes_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_expiring_quotes_quotes_with_match",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_potential_matches_filtered_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_priority_options_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_quotations_detail_lookup_dbx_dim_order_reason_desc",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_quotations_detail_quotes_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_quotations_q_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_segment_kpis_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_segment_options_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_ds_top_quotes_segment_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "gold",
+              "table": "SC_BI_industry_sales_quotations_shared_converted",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_country_options_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_expiring_quotes_quotes_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_expiring_quotes_quotes_with_match",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_potential_matches_filtered_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_priority_options_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_quotations_detail_lookup_dbx_dim_order_reason_desc",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_quotations_detail_quotes_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_quotations_q_rows",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_segment_kpis_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_segment_options_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_ds_top_quotes_segment_result",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_calc_quotations_shared_converted",
+              "privileges": [
+                "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "silver",
+              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
+              "privileges": [
+                "SELECT"
+              ]
+            }
+          ],
+          "members": [
+            "alfonso.pinoansio@etexgroup.com",
+            "andras.szabo@etexgroup.com",
+            "andrew.anderson@etexgroup.com",
+            "anita.jorgensen@etexgroup.com",
+            "ann.selderslaghs@etexgroup.com",
+            "anne-claire.prouteau@etexgroup.com",
+            "anne.vestergaard-pedersen@etexgroup.com",
+            "bettina.rothboeck@etexgroup.com",
+            "bob.vandenbrande@etexgroup.com",
+            "chris.green@etexgroup.com",
+            "christopher.gorman@etexgroup.com",
+            "claudiu.staicu@etexgroup.com",
+            "daniele.mattera@etexgroup.com",
+            "david.hillier@etexgroup.com",
+            "diego.dasilvaferreira@etexgroup.com",
+            "erik.brems@etexgroup.com",
+            "etienne.brousse@etexgroup.com",
+            "evelyn.scharinger@etexgroup.com",
+            "federico.nidini@etexgroup.com",
+            "felix.salazar@etexgroup.com",
+            "francois.leclercq@etexgroup.com",
+            "gabriela.langenberg@etexgroup.com",
+            "gervin.puchwein@etexgroup.com",
+            "harald.schippers@etexgroup.com",
+            "hortensia.santos@etexgroup.com",
+            "ilja.doroschenko@etexgroup.com",
+            "ingo.klein@etexgroup.com",
+            "iwona.lipinska@etexgroup.com",
+            "jacek.kanatek@etexgroup.com",
+            "jan.kerstens@etexgroup.com",
+            "jesper.poulsen@etexgroup.com",
+            "jo.david@etexgroup.com",
+            "john.govan@etexgroup.com",
+            "jolanthe.stuertzer@etexgroup.com",
+            "julian.vanachter@etexgroup.com",
+            "kamil.darczuk@etexgroup.com",
+            "katleen.goossens@etexgroup.com",
+            "kris.dullaert@etexgroup.com",
+            "kristyna.dvorakova@etexgroup.com",
+            "kurt.avermate@etexgroup.com",
+            "ladislav.zajic@etexgroup.com",
+            "laura.mende@etexgroup.com",
+            "linda.bearpark@etexgroup.com",
+            "luis.sierrazabala@etexgroup.com",
+            "magali.bastaens@etexgroup.com",
+            "marc.lieverz@etexgroup.com",
+            "marco.castagnoli@etexgroup.com",
+            "mariusz.galocz@etexgroup.com",
+            "markus.beermann@etexgroup.com",
+            "matthias.heinemann@etexgroup.com",
+            "michaela.lorenzen@etexgroup.com",
+            "michal.pribyl@etexgroup.com",
+            "mustafaarda.bicakci@etexgroup.com",
+            "noel.vranckx@etexgroup.com",
+            "oleg.maier@etexgroup.com",
+            "oliver.muth@etexgroup.com",
+            "oliwia.oleskiewicz@etexgroup.com",
+            "paolo.vanzo@etexgroup.com",
+            "peter.kimo@etexgroup.com",
+            "philipp.usenbenz@etexgroup.com",
+            "raffaele.gorlezza@etexgroup.com",
+            "rasmus.breinholt@etexgroup.com",
+            "roberta.villa@etexgroup.com",
+            "ronny.boehm@etexgroup.com",
+            "sabu.thomas@etexgroup.com",
+            "santiago.salvagno@etexgroup.com",
+            "sarah.drostel@etexgroup.com",
+            "sarah.malcus@etexgroup.com",
+            "simone.jahn@etexgroup.com",
+            "soren.bertel@etexgroup.com",
+            "tanguy.vanderborght@etexgroup.com",
+            "tarun.maheshwari@etexgroup.com",
+            "tom.martens@etexgroup.com",
+            "trine.nielsen@etexgroup.com",
+            "valeriu.budeanu@etexgroup.com",
+            "wayne.barritt@etexgroup.com",
+            "william.pessina@etexgroup.com",
+            "wolfgang.potten@etexgroup.com",
+            "mustafaarda.bicakci@etexgroup.com"
+          ]
+        }
+      ]
+    },
+    {
       "data_product": "ds-air-monitoring-app",
       "warehouse": true,
       "consumer_groups": [
@@ -896,665 +1555,6 @@
             "matthew.harris@etexgroup.com",
             "koen.gullentops@etexgroup.com",
             "diwakar.jadhav@etexgroup.com"
-          ]
-        }
-      ]
-    },
-    {
-      "data_product": "industry-sales-dashboards",
-      "warehouse": false,
-      "consumer_groups": [
-        {
-          "tier": "READ",
-          "grants": [
-            {
-              "catalog": "automation",
-              "privileges": [
-                "USE_CATALOG"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "bronze",
-              "privileges": [
-                "USE_SCHEMA"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "privileges": [
-                "USE_SCHEMA"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "privileges": [
-                "USE_SCHEMA"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "bronze",
-              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_dashboard_result_state",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_open_orders_ds_all_open_orders_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_open_orders_ds_cancellations_detail_7d_filtered_rows",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_open_orders_ds_cm_daily_billing_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_open_orders_ds_current_month_by_team_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_open_orders_ds_daily_tracking_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_open_orders_ds_order_size_dist_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_open_orders_ds_overview_allocation_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_open_orders_ds_segment_focus_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_open_orders_ds_all_open_orders_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_open_orders_ds_cancellations_detail_7d_filtered_rows",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_open_orders_ds_cm_daily_billing_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_open_orders_ds_current_month_by_team_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_open_orders_ds_daily_tracking_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_open_orders_ds_order_size_dist_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_open_orders_ds_overview_allocation_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_open_orders_ds_segment_focus_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
-              "privileges": [
-                "SELECT"
-              ]
-            }
-          ],
-          "members": [
-            "alessia.rottoli@etexgroup.com",
-            "alfonso.pinoansio@etexgroup.com",
-            "amber.hodges@etexgroup.com",
-            "anita.jorgensen@etexgroup.com",
-            "ann.selderslaghs@etexgroup.com",
-            "anna.huskowska@etexgroup.com",
-            "anne-claire.prouteau@etexgroup.com",
-            "anne.vestergaard-pedersen@etexgroup.com",
-            "benoit.carrier@etexgroup.com",
-            "bernhard.luedecke@etexgroup.com",
-            "bill.gregg@etexgroup.com",
-            "blossom.alva@etexgroup.com",
-            "bonnie.proctor@etexgroup.com",
-            "chad.meyer@etexgroup.com",
-            "charu.malhotra@etexgroup.com",
-            "chiara.selvaggi@etexgroup.com",
-            "chris.green@etexgroup.com",
-            "christophe.colas-noblecourt@etexgroup.com",
-            "claudiu.staicu@etexgroup.com",
-            "daniele.mattera@etexgroup.com",
-            "deborah.yorke@etexgroup.com",
-            "dionne.walsh@etexgroup.com",
-            "dipanti.ghosh@etexgroup.com",
-            "doris.dwyer@etexgroup.com",
-            "elena.parolini@etexgroup.com",
-            "elena.staina@etexgroup.com",
-            "ellen.makhlouf@etexgroup.com",
-            "erik.brems@etexgroup.com",
-            "etienne.brousse@etexgroup.com",
-            "ewa.burian@etexgroup.com",
-            "ewa.gidzinska@etexgroup.com",
-            "francois.leclercq@etexgroup.com",
-            "gabriela.langenberg@etexgroup.com",
-            "gervin.puchwein@etexgroup.com",
-            "halina.zathey@etexgroup.com",
-            "hana.kucerova@etexgroup.com",
-            "harald.schippers@etexgroup.com",
-            "hortensia.santos@etexgroup.com",
-            "ignacio.marcos@etexgroup.com",
-            "ilja.doroschenko@etexgroup.com",
-            "ingo.klein@etexgroup.com",
-            "iwona.lipinska@etexgroup.com",
-            "iwona.zaremba@etexgroup.com",
-            "jacek.kanatek@etexgroup.com",
-            "jesper.poulsen@etexgroup.com",
-            "joanna.pietrzak@etexgroup.com",
-            "john.govan@etexgroup.com",
-            "jolanthe.stuertzer@etexgroup.com",
-            "julian.vanachter@etexgroup.com",
-            "katarzyna.jargilo@etexgroup.com",
-            "kathrine.madsen@etexgroup.com",
-            "katleen.goossens@etexgroup.com",
-            "kim.melton@etexgroup.com",
-            "kostas.kazbaras@etexgroup.com",
-            "kris.dullaert@etexgroup.com",
-            "kristyna.dvorakova@etexgroup.com",
-            "kyle.waddell@etexgroup.com",
-            "ladislav.zajic@etexgroup.com",
-            "laila.lindhoj@etexgroup.com",
-            "laura.mende@etexgroup.com",
-            "lily.byrne@etexgroup.com",
-            "louise.bengtsson@etexgroup.com",
-            "lucas.qiu@etexgroup.com",
-            "luis.sierrazabala@etexgroup.com",
-            "magali.bastaens@etexgroup.com",
-            "marc.lieverz@etexgroup.com",
-            "mario.c.torres@etexgroup.com",
-            "mariusz.galocz@etexgroup.com",
-            "markus.beermann@etexgroup.com",
-            "marta.cereda@etexgroup.com",
-            "matthias.heinemann@etexgroup.com",
-            "michael.jansen@etexgroup.com",
-            "michaela.lorenzen@etexgroup.com",
-            "michal.pribyl@etexgroup.com",
-            "michiel.hoogmartens@etexgroup.com",
-            "mikkel.dalsgaard@etexgroup.com",
-            "monika.skotnicka@etexgroup.com",
-            "mustafaarda.bicakci@etexgroup.com",
-            "nadege.fallon@etexgroup.com",
-            "natalia.piwtorak@etexgroup.com",
-            "nathalie.guilliano@etexgroup.com",
-            "noel.vranckx@etexgroup.com",
-            "oliver.muth@etexgroup.com",
-            "paola.andersen@etexgroup.com",
-            "pascal.ruebsam@etexgroup.com",
-            "paulina.siedlinska@etexgroup.com",
-            "pavel.vacek@etexgroup.com",
-            "peter.kimo@etexgroup.com",
-            "petra.sasinova@etexgroup.com",
-            "philipp.usenbenz@etexgroup.com",
-            "pia.justesen@etexgroup.com",
-            "radka.jelinkova@etexgroup.com",
-            "rasmus.breinholt@etexgroup.com",
-            "rikke.prien@etexgroup.com",
-            "roal.limkilde@etexgroup.com",
-            "sabu.thomas@etexgroup.com",
-            "santiago.salvagno@etexgroup.com",
-            "sarah.drostel@etexgroup.com",
-            "sarah.malcus@etexgroup.com",
-            "shaimaa.obaid@etexgroup.com",
-            "shruti.dhar@etexgroup.com",
-            "simone.jahn@etexgroup.com",
-            "soren.bertel@etexgroup.com",
-            "stephen.birch@etexgroup.com",
-            "susie.gordon@etexgroup.com",
-            "tanguy.vanderborght@etexgroup.com",
-            "tarun.maheshwari@etexgroup.com",
-            "tim.vandenbussche@etexgroup.com",
-            "timmy.melotte@etexgroup.com",
-            "tina.knudsen@etexgroup.com",
-            "tina.thomsen@etexgroup.com",
-            "todd.simpson@etexgroup.com",
-            "trine.nielsen@etexgroup.com",
-            "valeriu.budeanu@etexgroup.com",
-            "wayne.barritt@etexgroup.com",
-            "weronika.jeziorowska@etexgroup.com",
-            "william.logan@etexgroup.com",
-            "william.pessina@etexgroup.com",
-            "wolfgang.potten@etexgroup.com",
-            "wouter.toonder@etexgroup.com",
-            "zornitsa.gergova@etexgroup.com"
-            "mustafaarda.bicakci@etexgroup.com"
-          ]
-        },
-        {
-          "tier": "WRITE",
-          "grants": [
-            {
-              "catalog": "automation",
-              "privileges": [
-                "USE_CATALOG"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "bronze",
-              "privileges": [
-                "USE_SCHEMA"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "privileges": [
-                "USE_SCHEMA"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "privileges": [
-                "USE_SCHEMA"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "bronze",
-              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_dashboard_result_state",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_quotations_ds_country_options_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_quotations_ds_expiring_quotes_quotes_rows",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_quotations_ds_expiring_quotes_quotes_with_match",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_quotations_ds_potential_matches_filtered_rows",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_quotations_ds_priority_options_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_quotations_ds_quotations_detail_lookup_dbx_dim_order_reason_desc",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_quotations_ds_quotations_detail_quotes_rows",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_quotations_ds_quotations_q_rows",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_quotations_ds_segment_kpis_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_quotations_ds_segment_options_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_quotations_ds_top_quotes_segment_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "gold",
-              "table": "SC_BI_industry_sales_quotations_shared_converted",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_quotations_ds_country_options_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_quotations_ds_expiring_quotes_quotes_rows",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_quotations_ds_expiring_quotes_quotes_with_match",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_quotations_ds_potential_matches_filtered_rows",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_quotations_ds_priority_options_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_quotations_ds_quotations_detail_lookup_dbx_dim_order_reason_desc",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_quotations_ds_quotations_detail_quotes_rows",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_quotations_ds_quotations_q_rows",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_quotations_ds_segment_kpis_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_quotations_ds_segment_options_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_quotations_ds_top_quotes_segment_result",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_calc_quotations_shared_converted",
-              "privileges": [
-                "SELECT"
-              ]
-            },
-            {
-              "catalog": "automation",
-              "schema": "silver",
-              "table": "SC_BI_industry_sales_cs_team_sales_org_mapping",
-              "privileges": [
-                "SELECT"
-              ]
-            }
-          ],
-          "members": [
-            "alfonso.pinoansio@etexgroup.com",
-            "andras.szabo@etexgroup.com",
-            "andrew.anderson@etexgroup.com",
-            "anita.jorgensen@etexgroup.com",
-            "ann.selderslaghs@etexgroup.com",
-            "anne-claire.prouteau@etexgroup.com",
-            "anne.vestergaard-pedersen@etexgroup.com",
-            "bettina.rothboeck@etexgroup.com",
-            "bob.vandenbrande@etexgroup.com",
-            "chris.green@etexgroup.com",
-            "christopher.gorman@etexgroup.com",
-            "claudiu.staicu@etexgroup.com",
-            "daniele.mattera@etexgroup.com",
-            "david.hillier@etexgroup.com",
-            "diego.dasilvaferreira@etexgroup.com",
-            "erik.brems@etexgroup.com",
-            "etienne.brousse@etexgroup.com",
-            "evelyn.scharinger@etexgroup.com",
-            "federico.nidini@etexgroup.com",
-            "felix.salazar@etexgroup.com",
-            "francois.leclercq@etexgroup.com",
-            "gabriela.langenberg@etexgroup.com",
-            "gervin.puchwein@etexgroup.com",
-            "harald.schippers@etexgroup.com",
-            "hortensia.santos@etexgroup.com",
-            "ilja.doroschenko@etexgroup.com",
-            "ingo.klein@etexgroup.com",
-            "iwona.lipinska@etexgroup.com",
-            "jacek.kanatek@etexgroup.com",
-            "jan.kerstens@etexgroup.com",
-            "jesper.poulsen@etexgroup.com",
-            "jo.david@etexgroup.com",
-            "john.govan@etexgroup.com",
-            "jolanthe.stuertzer@etexgroup.com",
-            "julian.vanachter@etexgroup.com",
-            "kamil.darczuk@etexgroup.com",
-            "katleen.goossens@etexgroup.com",
-            "kris.dullaert@etexgroup.com",
-            "kristyna.dvorakova@etexgroup.com",
-            "kurt.avermate@etexgroup.com",
-            "ladislav.zajic@etexgroup.com",
-            "laura.mende@etexgroup.com",
-            "linda.bearpark@etexgroup.com",
-            "luis.sierrazabala@etexgroup.com",
-            "magali.bastaens@etexgroup.com",
-            "marc.lieverz@etexgroup.com",
-            "marco.castagnoli@etexgroup.com",
-            "mariusz.galocz@etexgroup.com",
-            "markus.beermann@etexgroup.com",
-            "matthias.heinemann@etexgroup.com",
-            "michaela.lorenzen@etexgroup.com",
-            "michal.pribyl@etexgroup.com",
-            "mustafaarda.bicakci@etexgroup.com",
-            "noel.vranckx@etexgroup.com",
-            "oleg.maier@etexgroup.com",
-            "oliver.muth@etexgroup.com",
-            "oliwia.oleskiewicz@etexgroup.com",
-            "paolo.vanzo@etexgroup.com",
-            "peter.kimo@etexgroup.com",
-            "philipp.usenbenz@etexgroup.com",
-            "raffaele.gorlezza@etexgroup.com",
-            "rasmus.breinholt@etexgroup.com",
-            "roberta.villa@etexgroup.com",
-            "ronny.boehm@etexgroup.com",
-            "sabu.thomas@etexgroup.com",
-            "santiago.salvagno@etexgroup.com",
-            "sarah.drostel@etexgroup.com",
-            "sarah.malcus@etexgroup.com",
-            "simone.jahn@etexgroup.com",
-            "soren.bertel@etexgroup.com",
-            "tanguy.vanderborght@etexgroup.com",
-            "tarun.maheshwari@etexgroup.com",
-            "tom.martens@etexgroup.com",
-            "trine.nielsen@etexgroup.com",
-            "valeriu.budeanu@etexgroup.com",
-            "wayne.barritt@etexgroup.com",
-            "william.pessina@etexgroup.com",
-            "wolfgang.potten@etexgroup.com",
-            "mustafaarda.bicakci@etexgroup.com"
           ]
         }
       ]
