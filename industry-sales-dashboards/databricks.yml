@@ -4,6 +4,7 @@ bundle:
 include:
   - resources/dashboards/open_orders.dashboard.yml
   - resources/dashboards/quotations.dashboard.yml
+  - resources/dashboards/readers.permissions.yml
   - resources/jobs/*.yml
 
 sync:
