@@ -32,6 +32,11 @@ WAREHOUSE_ID = dbutils.widgets.get("warehouse_id")
 AUTO_PROMOTE = dbutils.widgets.get("auto_promote") == "yes"
 S = f"{CATALOG}.silver"
 
+# The DEV dashboard and SQL templates are authored with this catalog.
+# Promotion replaces it with CATALOG for the target environment.
+# Change this ONCE here if the dev catalog ever moves.
+DEV_CATALOG = "automation_d"
+
 # Notebook is in src/ — go up once to get src/, up twice to get bundle root
 PIPELINE_FOLDER = os.path.dirname(
     dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
@@ -64,9 +69,18 @@ class _Lakeview:
         dn = d.get("display_name") or ""
         print(f"  [lv.get] id={dashboard_id}, display_name='{dn}', serialized_dashboard={len(sd)} chars (draft)")
 
-        # Fall back to published version if draft is empty/too small
-        if len(sd) < 100:
-            print(f"  [lv.get] Draft content too small ({len(sd)} chars) — trying published version...")
+        # Check if draft has real content (datasets + pages), not just a skeleton
+        _draft_ok = False
+        if sd and len(sd) >= 100:
+            try:
+                _p = json.loads(sd)
+                _draft_ok = bool(_p.get("datasets")) and bool(_p.get("pages"))
+            except Exception:
+                pass
+
+        if not _draft_ok:
+            _reason = "empty" if len(sd) < 100 else "no datasets/pages"
+            print(f"  [lv.get] Draft {_reason} ({len(sd)} chars) — trying published version...")
             try:
                 rp = _req.get(f"{_lv_api}/api/2.0/lakeview/dashboards/{dashboard_id}/published", headers=_lv_hdr)
                 rp.raise_for_status()
@@ -76,7 +90,7 @@ class _Lakeview:
                     sd = sd_pub
                     print(f"  [lv.get] Using published version: {len(sd)} chars")
                 else:
-                    print(f"  [lv.get] Published version also small ({len(sd_pub)} chars)")
+                    print(f"  [lv.get] Published version also empty ({len(sd_pub)} chars)")
             except Exception as e:
                 print(f"  [lv.get] Could not fetch published version: {e}")
 
@@ -431,10 +445,10 @@ main_ser_str = main_draft.serialized_dashboard
 # Patch catalog references to match the current environment.
 # The lvdash.json source file is seeded from DEV and has automation_d hardcoded
 # in every dataset's "catalog" field and SQL source strings.
-if CATALOG != "automation_d" and "automation_d" in main_ser_str:
-    main_ser_str = main_ser_str.replace('"automation_d"', f'"{CATALOG}"')
-    main_ser_str = main_ser_str.replace("automation_d.silver", f"{CATALOG}.silver")
-    print(f"  Catalog patched: automation_d \u2192 {CATALOG}")
+if CATALOG != DEV_CATALOG and DEV_CATALOG in main_ser_str:
+    main_ser_str = main_ser_str.replace(f'"{DEV_CATALOG}"', f'"{CATALOG}"')
+    main_ser_str = main_ser_str.replace(f"{DEV_CATALOG}.silver", f"{CATALOG}.silver")
+    print(f"  Catalog patched: {DEV_CATALOG} \u2192 {CATALOG}")
 
 v2_changes = 0
 for mv, actual in metric_view_names.items():
@@ -474,8 +488,98 @@ else:
 has_dev_changes = HAS_DEV and total_changes > 0
 final_ser_str = main_ser_str  # start with _v2-synced Main JSON
 
+# --- Check if Main has actual content (datasets + pages) ---
+_main_valid = False
+_did_auto_promote = False
+try:
+    _mc = json.loads(final_ser_str or "{}")
+    _main_valid = bool(_mc.get("datasets")) and bool(_mc.get("pages"))
+except Exception:
+    pass
+
+# --- Safety net: auto-promote from DEV if Main is empty ---
+#     This prevents a blank dashboard on first deploy or after draft corruption.
+#     Runs regardless of auto_promote setting — there is nothing to preserve.
+if not _main_valid and HAS_DEV:
+    _did_auto_promote = True
+    print("\u26a0\ufe0f  Main dashboard has no content (0 datasets or 0 pages).")
+    print("   Auto-promoting from DEV to prevent a blank dashboard...")
+    dev_draft = lv.get(DEV_DASHBOARD_ID)
+    final_ser_str = dev_draft.serialized_dashboard
+    if len(final_ser_str or "") < 100:
+        for _fallback_path in [LVDASH_PATH,
+                               f"/Workspace{PIPELINE_FOLDER}/dashboards/DEV -  agent_dashboard_phase_1.lvdash.json"]:
+            if os.path.exists(_fallback_path):
+                with open(_fallback_path, "r", encoding="utf-8") as _f:
+                    final_ser_str = _f.read()
+                break
+    if CATALOG != DEV_CATALOG and DEV_CATALOG in final_ser_str:
+        final_ser_str = final_ser_str.replace(f'"{DEV_CATALOG}"', f'"{CATALOG}"')
+        final_ser_str = final_ser_str.replace(f"{DEV_CATALOG}.silver", f"{CATALOG}.silver")
+    for mv, actual in metric_view_names.items():
+        if actual is None:
+            continue
+        orig_ref = f"{S}.{mv}"
+        v2_ref = f"{S}.{mv}_v2"
+        if actual.endswith("_v2"):
+            if orig_ref in final_ser_str and v2_ref not in final_ser_str:
+                final_ser_str = final_ser_str.replace(orig_ref, v2_ref)
+        else:
+            if v2_ref in final_ser_str:
+                final_ser_str = final_ser_str.replace(v2_ref, orig_ref)
+    print("   \u2713 DEV content loaded + _v2 synced (Main was empty)")
+
+# --- Fallback for ACC/PROD first deploy: no DEV dashboard available ---
+#     Load from lvdash.json template (committed from DEV promotion via Git).
+elif not _main_valid and not HAS_DEV:
+    _did_auto_promote = True
+    print("\u26a0\ufe0f  Main dashboard has no content and no DEV dashboard exists.")
+    print("   Loading from lvdash.json template (committed from DEV)...")
+    _loaded = False
+    if os.path.exists(LVDASH_PATH):
+        with open(LVDASH_PATH, "r", encoding="utf-8") as _f:
+            _tmpl = _f.read()
+        if len(_tmpl) > 500:
+            final_ser_str = _tmpl
+            _loaded = True
+    if not _loaded:
+        # Try volume template as last resort
+        _vol_tmpl = f"/Volumes/{CATALOG}/bronze/bronze_volume/Copilot_Dashboard_Data/_dashboard_template.json"
+        if os.path.exists(_vol_tmpl):
+            with open(_vol_tmpl, "r", encoding="utf-8") as _f:
+                _vt = json.loads(_f.read())
+            if _vt.get("serialized_dashboard") and len(_vt["serialized_dashboard"]) > 500:
+                final_ser_str = _vt["serialized_dashboard"]
+                _loaded = True
+    if _loaded:
+        # Ensure the template is the inner JSON (datasets+pages), not the outer wrapper
+        try:
+            _check = json.loads(final_ser_str)
+            if "serialized_dashboard" in _check:
+                final_ser_str = _check["serialized_dashboard"]
+        except Exception:
+            pass
+        if CATALOG != DEV_CATALOG and DEV_CATALOG in final_ser_str:
+            final_ser_str = final_ser_str.replace(f'"{DEV_CATALOG}"', f'"{CATALOG}"')
+            final_ser_str = final_ser_str.replace(f"{DEV_CATALOG}.silver", f"{CATALOG}.silver")
+            print(f"   Catalog patched: {DEV_CATALOG} \u2192 {CATALOG}")
+        for mv, actual in metric_view_names.items():
+            if actual is None:
+                continue
+            orig_ref = f"{S}.{mv}"
+            v2_ref = f"{S}.{mv}_v2"
+            if actual.endswith("_v2"):
+                if orig_ref in final_ser_str and v2_ref not in final_ser_str:
+                    final_ser_str = final_ser_str.replace(orig_ref, v2_ref)
+            else:
+                if v2_ref in final_ser_str:
+                    final_ser_str = final_ser_str.replace(v2_ref, orig_ref)
+        print("   \u2713 Template loaded + catalog patched + _v2 synced")
+    else:
+        print("   \u26a0\ufe0f  No template found. Promote DEV first, commit, then deploy to this workspace.")
+
 # --- Gate: if DEV has changes, decide whether to promote ---
-if has_dev_changes and not AUTO_PROMOTE:
+elif has_dev_changes and not AUTO_PROMOTE:
     print(f"\u2139\ufe0f  {total_changes} DEV change(s) detected but auto_promote=no.")
     print(f"   Set widget 'auto_promote' = 'yes' and re-run to include DEV changes.")
     print("\nDEV changes summary:")
@@ -506,10 +610,10 @@ elif has_dev_changes and AUTO_PROMOTE:
                     final_ser_str = _f.read()
 
     # Patch catalog references from DEV to current environment
-    if CATALOG != "automation_d" and "automation_d" in final_ser_str:
-        final_ser_str = final_ser_str.replace('"automation_d"', f'"{CATALOG}"')
-        final_ser_str = final_ser_str.replace("automation_d.silver", f"{CATALOG}.silver")
-        print(f"  Catalog patched: automation_d \u2192 {CATALOG}")
+    if CATALOG != DEV_CATALOG and DEV_CATALOG in final_ser_str:
+        final_ser_str = final_ser_str.replace(f'"{DEV_CATALOG}"', f'"{CATALOG}"')
+        final_ser_str = final_ser_str.replace(f"{DEV_CATALOG}.silver", f"{CATALOG}.silver")
+        print(f"  Catalog patched: {DEV_CATALOG} \u2192 {CATALOG}")
 
     # Apply _v2 metric view sync to the promoted DEV JSON
     for mv, actual in metric_view_names.items():
@@ -588,9 +692,11 @@ except Exception as e:
     print(f"  \u26a0\ufe0f  Could not update volume template: {e}")
 
 # --- Summary ---
-status = "PROMOTED" if (has_dev_changes and AUTO_PROMOTE) else "PUBLISHED"
+status = "PROMOTED" if (has_dev_changes and AUTO_PROMOTE) or _did_auto_promote else "PUBLISHED"
 print(f"\n\u2705 Done. Status: {status}")
-if has_dev_changes and AUTO_PROMOTE:
+if _did_auto_promote:
+    print(f"   Main was empty \u2014 auto-promoted from DEV + _v2 synced + published.")
+elif has_dev_changes and AUTO_PROMOTE:
     print(f"   {total_changes} DEV change(s) promoted + _v2 synced + published.")
 elif v2_changes > 0:
     print(f"   {v2_changes} _v2 reference(s) synced + published (no DEV promotion).")
