@@ -15,20 +15,20 @@ from sqlglot import exp, parse_one
 class OwnedTableNameTests(unittest.TestCase):
     def test_complete_active_inventory_and_permission_names_match(self):
         plans = json.loads((ROOT / "src/config/dashboard_results.json").read_text())["datasets"]
-        self.assertEqual(len(plans), 17)
-        self.assertEqual(sum(plan["mode"] == "final" for plan in plans), 12)
+        self.assertEqual(len(plans), 18)
+        self.assertEqual(sum(plan["mode"] == "final" for plan in plans), 13)
         self.assertEqual(sum(plan["mode"] == "filtered" for plan in plans), 5)
         published = list(unique_result_producers(plans))
         physical = [result_storage_name(name) for name in published]
-        self.assertEqual(len(set(published)), 20)
-        self.assertEqual(len(set(physical)), 20)
+        self.assertEqual(len(set(published)), 21)
+        self.assertEqual(len(set(physical)), 21)
         tables = {("silver", name) for name in physical}
         tables.add(("gold", RESULT_STATE_TABLE_NAME))
         tables.update((layer, MAPPING_TABLE_NAME) for layer in ("bronze", "silver", "gold"))
         views = {("gold", name) for name in published}
-        self.assertEqual(len(tables), 24)
-        self.assertEqual(len(views), 20)
-        self.assertEqual(len(tables | views), 44)
+        self.assertEqual(len(tables), 25)
+        self.assertEqual(len(views), 21)
+        self.assertEqual(len(tables | views), 46)
         for layer, name in tables | views:
             self.assertTrue(name.startswith(OWNED_TABLE_PREFIX))
         manifest = json.loads((ROOT.parent / "permissions/access.json").read_text())
@@ -36,7 +36,7 @@ class OwnedTableNameTests(unittest.TestCase):
         self.assertEqual(product["consumer_groups"], consumer_reader_groups(plans))
         grant_relations = {(grant["schema"], grant["table"]) for group in product["consumer_groups"] for grant in group["grants"] if "table" in grant}
         self.assertEqual(grant_relations, tables | views)
-        self.assertEqual(sum(len(group["grants"]) for group in product["consumer_groups"]), 56)
+        self.assertEqual(sum(len(group["grants"]) for group in product["consumer_groups"]), 58)
         for group in product["consumer_groups"]:
             self.assertTrue({"francois.leclercq@etexgroup.com", "noel.vranckx@etexgroup.com", "mustafaarda.bicakci@etexgroup.com"}.issubset(group["members"]))
 

@@ -17,6 +17,30 @@ from dataset_results import compile_dataset
 
 
 class DashboardPreservationTests(unittest.TestCase):
+    def test_relationship_alias_references_keep_their_dataset_and_source(self):
+        metadata = json.loads((ROOT / "source_dashboards/open_orders.metadata.json").read_text())
+        original = json.loads(metadata["serialized_dashboard"])
+        transformed = renderer.prepare_dashboard(original, "open_orders")
+        datasets = {dataset["name"] for dataset in transformed["datasets"]}
+        sources = {source["name"]: source["datasetName"] for graph in transformed["relationshipGraphs"] for source in graph["sources"]}
+        self.assertIn("ds_top_late_orders", datasets)
+        self.assertEqual(sources["Top_Late_Orders_CM__YTD"], "ds_top_late_orders")
+        self.assertNotIn("ds_cancellations_trend", datasets)
+        from unittest.mock import patch
+
+        with patch.dict(renderer.RETIRED_DATASETS, {"open_orders": {"ds_top_late_orders"}}):
+            with self.assertRaises(ValueError):
+                renderer.active_datasets(original, "open_orders")
+        for key in renderer.DASHBOARDS:
+            captured = json.loads((ROOT / "source_dashboards" / f"{key}.metadata.json").read_text())
+            source_dashboard = json.loads(captured["serialized_dashboard"])
+            active = {dataset["name"] for dataset in renderer.active_datasets(source_dashboard, key)}
+            pages = json.dumps(source_dashboard["pages"])
+            for graph in source_dashboard.get("relationshipGraphs", []):
+                for source in graph["sources"]:
+                    if source["name"] in pages:
+                        self.assertIn(source["datasetName"], active, source["name"])
+
     def test_all_native_pages_and_widgets_are_unchanged(self):
         for key in renderer.DASHBOARDS:
             with self.subTest(dashboard=key):
