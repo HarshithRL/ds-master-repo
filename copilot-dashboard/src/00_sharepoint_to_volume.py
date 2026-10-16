@@ -54,7 +54,7 @@ KV_SECRET_CLIENT_SECRET = "SHAREPOINT-CLIENT-SECRET"
 # ---------------------------------------------------------------------------
 SHAREPOINT_HOST = "etexgroup.sharepoint.com"
 SHAREPOINT_SITE_PATH = "/teams/etex-rpa"
-SHAREPOINT_FOLDER_PATH = "Data Science/PROJECTS/Copilot Dashboard/2 Stakeholder Inputs/Data/UAT"
+SHAREPOINT_FOLDER_PATH = "Data Science/PROJECTS/Copilot Dashboard/2 Stakeholder Inputs/Data"
 
 # ---------------------------------------------------------------------------
 # Volume target

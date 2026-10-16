@@ -7,7 +7,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT\n              g.total_agents,\n              g.total_makers,\n              g.created_last_30d,\n              c.prepaid_credits,\n              c.prepaid_cost_eur,\n              e.payg_credits,\n              e.payg_cost_eur\n            FROM (\n              SELECT\n                MEASURE(valid_agent_count) AS total_agents,\n                MEASURE(maker_count) AS total_makers,\n                MEASURE(created_last_30d) AS created_last_30d\n              FROM automation_d.silver.metric_agent_governance_v2\n            ) g\n            CROSS JOIN (\n              SELECT\n                MEASURE(total_consumption_credits) AS prepaid_credits,\n                ROUND(MEASURE(total_consumption_cost_eur), 2) AS prepaid_cost_eur\n              FROM automation_d.silver.metric_credit_consumption_v2\n            ) c\n            CROSS JOIN (\n              SELECT\n                MEASURE(pay_as_you_go_credits) AS payg_credits,\n                ROUND(MEASURE(pay_as_you_go_credits) * (SELECT MAX(credit_to_eur) FROM automation_d.silver.ref_credit_rate), 2) AS payg_cost_eur\n              FROM automation_d.silver.metric_environment_consumption_v2\n            ) e\n            ",
+        "source": "\n            SELECT\n              g.total_agents,\n              g.total_makers,\n              d.created_last_30d,\n              c.prepaid_credits,\n              c.prepaid_cost_eur,\n              e.payg_credits,\n              e.payg_cost_eur\n            FROM (\n              SELECT\n                MEASURE(valid_agent_count) AS total_agents,\n                MEASURE(maker_count) AS total_makers\n              FROM automation_d.silver.metric_agent_governance_v2\n            ) g\n            CROSS JOIN (\n              SELECT COUNT(DISTINCT g2.agent_key) AS created_last_30d\n              FROM automation_d.silver.vw_agent_governance g2\n              LEFT JOIN (SELECT Item_ID, MAX(Created_on) AS Created_on FROM automation_d.silver.agents_inventory GROUP BY Item_ID) ai2 ON g2.agent_id = ai2.Item_ID\n              WHERE g2.is_valid_agent\n                AND COALESCE(g2.created_on_date, DATE(TRY_TO_TIMESTAMP(ai2.Created_on, 'MM/dd/yy')), DATE(TRY_TO_TIMESTAMP(ai2.Created_on, 'dd/MM/yy')), DATE(TRY_TO_TIMESTAMP(ai2.Created_on, 'yyyy-MM-dd')), DATE(TRY_TO_TIMESTAMP(ai2.Created_on, 'MM/dd/yyyy')), DATE(TRY_TO_TIMESTAMP(ai2.Created_on, 'dd/MM/yyyy'))) > current_date() - 30\n                AND COALESCE(g2.created_on_date, DATE(TRY_TO_TIMESTAMP(ai2.Created_on, 'MM/dd/yy')), DATE(TRY_TO_TIMESTAMP(ai2.Created_on, 'dd/MM/yy')), DATE(TRY_TO_TIMESTAMP(ai2.Created_on, 'yyyy-MM-dd')), DATE(TRY_TO_TIMESTAMP(ai2.Created_on, 'MM/dd/yyyy')), DATE(TRY_TO_TIMESTAMP(ai2.Created_on, 'dd/MM/yyyy'))) <= current_date()\n            ) d\n            CROSS JOIN (\n              SELECT\n                MEASURE(total_consumption_credits) AS prepaid_credits,\n                ROUND(MEASURE(total_consumption_cost_eur), 2) AS prepaid_cost_eur\n              FROM automation_d.silver.metric_credit_consumption_v2\n            ) c\n            CROSS JOIN (\n              SELECT\n                MEASURE(pay_as_you_go_credits) AS payg_credits,\n                ROUND(MEASURE(pay_as_you_go_credits) * (SELECT MAX(credit_to_eur) FROM automation_d.silver.ref_credit_rate), 2) AS payg_cost_eur\n              FROM automation_d.silver.metric_environment_consumption_v2\n            ) e\n            ",
         "dimensions": [],
         "measures": [
           {
@@ -130,7 +130,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT\n              agent_key,\n              agent_name,\n              created_by,\n              environment_name,\n              model,\n              platform,\n              status,\n              authentication,\n              orchestration,\n              created_on_date,\n              created_on_eu,\n              is_no_auth\n            FROM automation_d.silver.vw_agent_governance\n            WHERE is_valid_agent\n              AND platform = 'Copilot Studio'\n              AND environment_name IS NOT NULL\n            ",
+        "source": "\n            SELECT\n              g.agent_key,\n              g.agent_name,\n              g.created_by,\n              g.environment_name,\n              g.model,\n              g.platform,\n              g.status,\n              g.authentication,\n              g.orchestration,\n              COALESCE(g.created_on_date, DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'MM/dd/yy')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'dd/MM/yy')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'yyyy-MM-dd')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'MM/dd/yyyy')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'dd/MM/yyyy'))) AS created_on_date,\n              COALESCE(g.created_on_eu, DATE_FORMAT(COALESCE(g.created_on_date, DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'MM/dd/yy')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'dd/MM/yy')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'yyyy-MM-dd')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'MM/dd/yyyy')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'dd/MM/yyyy'))), 'dd/MM/yyyy')) AS created_on_eu,\n              g.is_no_auth\n            FROM automation_d.silver.vw_agent_governance g\n            LEFT JOIN (SELECT Item_ID, MAX(Created_on) AS Created_on FROM automation_d.silver.agents_inventory GROUP BY Item_ID) ai ON g.agent_id = ai.Item_ID\n            WHERE g.is_valid_agent\n              AND g.platform = 'Copilot Studio'\n              AND g.environment_name IS NOT NULL\n            ",
         "dimensions": [
           {
             "name": "agent_name",
@@ -204,7 +204,7 @@
       "schema": "silver",
       "config": {
         "version": "1.1",
-        "source": "\n            SELECT\n              agent_key,\n              agent_name,\n              created_by,\n              environment_name,\n              model,\n              platform,\n              status,\n              orchestration,\n              created_on_date,\n              created_on_eu,\n              is_no_auth\n            FROM automation_d.silver.vw_agent_governance\n            WHERE is_valid_agent\n              AND platform = 'Agent Builder'\n            ",
+        "source": "\n            SELECT\n              g.agent_key,\n              g.agent_name,\n              g.created_by,\n              g.environment_name,\n              g.model,\n              g.platform,\n              g.status,\n              g.orchestration,\n              COALESCE(g.created_on_date, DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'MM/dd/yy')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'dd/MM/yy')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'yyyy-MM-dd')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'MM/dd/yyyy')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'dd/MM/yyyy'))) AS created_on_date,\n              COALESCE(g.created_on_eu, DATE_FORMAT(COALESCE(g.created_on_date, DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'MM/dd/yy')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'dd/MM/yy')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'yyyy-MM-dd')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'MM/dd/yyyy')), DATE(TRY_TO_TIMESTAMP(ai.Created_on, 'dd/MM/yyyy'))), 'dd/MM/yyyy')) AS created_on_eu,\n              g.is_no_auth\n            FROM automation_d.silver.vw_agent_governance g\n            LEFT JOIN (SELECT Item_ID, MAX(Created_on) AS Created_on FROM automation_d.silver.agents_inventory GROUP BY Item_ID) ai ON g.agent_id = ai.Item_ID\n            WHERE g.is_valid_agent\n              AND g.platform = 'Agent Builder'\n            ",
         "dimensions": [
           {
             "name": "agent_name",
@@ -1365,15 +1365,21 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "New Agents - Last 30 Days",
                 "showTitle": true,
                 "showDescription": true,
                 "contentAlignment": "center",
                 "headerAlignment": "center",
-                "description": "Valid agents, rolling 30d"
+                "title": {
+                  "value": "New Agents - Last 30 Days",
+                  "fields": []
+                },
+                "description": {
+                  "value": "Valid agents, rolling 30d",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -2409,15 +2415,21 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Created last 30 days",
                 "showTitle": true,
                 "showDescription": true,
                 "contentAlignment": "center",
                 "headerAlignment": "center",
-                "description": "(rolling 30d, dynamic)"
+                "title": {
+                  "value": "Created last 30 days",
+                  "fields": []
+                },
+                "description": {
+                  "value": "(rolling 30d, dynamic)",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
