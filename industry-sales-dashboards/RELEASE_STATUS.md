@@ -1,5 +1,15 @@
 # Release Status - 2026-10-13
 
+## Dashboard Consumer ACL Activation - 2026-10-16
+
+This supersedes the earlier reader-ACL deferral. The user confirmed group creation and catalog/schema/table grants; the supplied ACC gold mapping permissions screenshot shows SELECT for both Industry Sales consumer groups. That single-object evidence is not an independent audit of all members, all objects, warehouse use or PRD workspace assignment.
+
+- Add the existing resources/dashboards/readers.permissions.yml to the root bundle's explicit include list. For A/P, Open Orders gets AUTOMATION.INDUSTRYSALESDASHBOARDS.CONSUMER.READ with CAN_READ; Quotations gets AUTOMATION.INDUSTRYSALESDASHBOARDS.CONSUMER.WRITE with CAN_READ. Neither group gets dashboard edit/manage privileges. D/T and existing manager/editor/direct-user ACLs remain unchanged.
+- The existing generated ACL file is unchanged. No data SQL, job settings, reader membership, shared permissions/access.json, warehouse ACL or central consumer-access configuration changes. In particular, the user's manual manifest edits are not regenerated or overwritten.
+- All 80 local regression tests passed in 50.827 seconds, including nine focused dashboard-resource tests; deterministic generation checks passed. Native resolved D/T/P bundle validation confirms D/T have no Industry Sales consumer bindings and P has only the matching group per dashboard, retaining all five existing managers. The pre-existing P workspace-folder ACL warning remains unchanged. Source-level assertions verify the same A mapping; expired ACC authentication prevents native A validation.
+- Group presence in PRD must be confirmed before promoting there. This source configuration does not provision groups or confer warehouse CAN_USE, and native validation is not a successful dashboard deployment or viewer acceptance test.
+- Deliver DEV source only for user commit/CI promotion. No live ACC/PRD dashboard ACL application, deployment, job run/repair, group/grant change or Git commit/push is performed by the assistant.
+
 ## Smoke Cold-Start Budget - 2026-10-16
 
 This supersedes the earlier description of a 600-second execution-only smoke timeout. Only the smoke task-duration budget changes; smoke SQL, sampling, staging, source order and all production calculations remain unchanged.
