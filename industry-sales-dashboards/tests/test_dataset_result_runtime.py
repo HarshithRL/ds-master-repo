@@ -15,6 +15,43 @@ from dataset_results import compile_dataset, local_result
 
 
 class FilteredResultRuntimeTests(unittest.TestCase):
+    def test_native_top_orders_ranking_tail_preserves_both_widget_results(self):
+        from collections import Counter
+        from dataset_results import table_edits
+        from sqlglot import exp, parse_one
+
+        dashboard = json.loads(json.loads((ROOT / "source_dashboards/open_orders.metadata.json").read_text())["serialized_dashboard"])
+        source = "".join(next(dataset for dataset in dashboard["datasets"] if dataset["name"] == "ds_top_late_orders")["queryLines"])
+        query = parse_one(source, read="databricks")
+        definitions = query.args["with"].expressions
+        ranks = [definition.copy() for definition in definitions if definition.alias in ("ranked_cm", "ranked_ytd")]
+        self.assertEqual(len(ranks), 2)
+        query.set("with", exp.With(expressions=ranks))
+        replacements = {"synapse-prd.pbi.dbx_dim_customer": "fixture_top_customers", "synapse-prd.pbi.dbx_dim_material": "fixture_top_materials"}
+        statement = table_edits(query.sql(dialect="databricks"), replacements)
+        spark = SparkSession.builder.master("local[2]").appName("top-orders-native-ranking").config("spark.sql.shuffle.partitions", "2").getOrCreate()
+        spark.sparkContext.setLogLevel("ERROR")
+        try:
+            spark.sql("SELECT CONCAT(scope, CAST(sequence AS STRING)) AS `Sales Document Number`, 1 AS `Customer Key`, 2 AS `Material Key`, DATE '2026-10-01' AS delivery_date, 'Europe' AS cs_team, CAST(NULL AS STRING) AS delivery_block, CAST(NULL AS STRING) AS delivery_block_desc, CAST(1000-sequence AS DECIMAL(18,2)) AS open_value_eur, scope FROM VALUES ('CM'),('YTD') AS scopes(scope) CROSS JOIN (SELECT EXPLODE(SEQUENCE(1,15)) AS sequence)").createOrReplaceTempView("past_due")
+            spark.sql("SELECT * FROM VALUES (1,'Customer'),(1,'Customer') AS customers(`Customer Key`,`Customer & Text`)").createOrReplaceTempView("fixture_top_customers")
+            spark.sql("SELECT * FROM VALUES (3,'Other material') AS materials(`Material Key`,`Material Text`)").createOrReplaceTempView("fixture_top_materials")
+            expected = spark.sql(statement)
+            plan = compile_dataset("open_orders", "ds_top_late_orders", statement, {})
+            producer = plan["producers"][0]
+            self.assertEqual(plan["mode"], "final")
+            spark.sql(producer["sql"]).createOrReplaceTempView("fixture_top_result")
+            actual = spark.sql(plan["consumer_sql"].replace(local_result(producer["table"]), "fixture_top_result"))
+            self.assertEqual(expected.schema, actual.schema)
+            expected_rows = expected.collect()
+            actual_rows = actual.collect()
+            self.assertEqual(Counter(expected_rows), Counter(actual_rows))
+            self.assertEqual(actual_rows, sorted(actual_rows, key=lambda row: (row.period, -row.open_value_eur)))
+            self.assertEqual(sum(row.period == "Current Month" for row in actual_rows), 20)
+            self.assertEqual(sum(row.period == "YTD Prior" for row in actual_rows), 10)
+            self.assertTrue(all(row.material == "2" and row.delivery_blocked == "No" and row.delivery_block_reason == "-" for row in actual_rows))
+        finally:
+            spark.stop()
+
     def test_date_range_boundaries_are_not_frozen_as_an_all_dates_result(self):
         spark = SparkSession.builder.master("local[2]").appName("date-result-filter-equivalence").config("spark.sql.shuffle.partitions", "2").getOrCreate()
         spark.sparkContext.setLogLevel("ERROR")

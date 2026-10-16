@@ -28,7 +28,7 @@ class DashboardAccessTests(unittest.TestCase):
         plans = json.loads((ROOT / "src/config/dashboard_results.json").read_text())["datasets"]
         groups = consumer_reader_groups(plans)
         self.assertEqual([group["tier"] for group in groups], ["READ", "WRITE"])
-        self.assertEqual([len(group["grants"]) for group in groups], [24, 32])
+        self.assertEqual([len(group["grants"]) for group in groups], [26, 32])
         for key, group in zip(("open_orders", "quotations"), groups, strict=True):
             tables = {(grant["schema"], grant["table"]) for grant in group["grants"] if "table" in grant}
             self.assertEqual(tables, dashboard_relations(plans, key))
@@ -36,7 +36,7 @@ class DashboardAccessTests(unittest.TestCase):
             self.assertFalse(any(other in table for layer, table in tables))
             for grant in group["grants"]:
                 self.assertTrue(set(grant["privileges"]).issubset({"SELECT", "USE_CATALOG", "USE_SCHEMA"}))
-        self.assertEqual(len(dashboard_relations(plans, "open_orders") | dashboard_relations(plans, "quotations")), 44)
+        self.assertEqual(len(dashboard_relations(plans, "open_orders") | dashboard_relations(plans, "quotations")), 46)
 
 
 if __name__ == "__main__":

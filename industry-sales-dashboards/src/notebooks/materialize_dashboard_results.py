@@ -32,8 +32,8 @@ validate_environment(catalog, args.source_catalog, args.target, workspace_id)
 validate_table_name(args.mapping_table_name, args.target)
 suffix = "_dev" if args.target == "D" else ""
 plans = json.loads((config_path / "dashboard_results.json").read_text())["datasets"]
-if len(plans) != 17 or len({(plan["dashboard"], plan["dataset"]) for plan in plans}) != 17:
-    raise ValueError("A unique complete plan is required for all 17 active datasets")
+if len(plans) != 18 or len({(plan["dashboard"], plan["dataset"]) for plan in plans}) != 18:
+    raise ValueError("A unique complete plan is required for all 18 active datasets")
 plans = prioritize_cancellation(plans)
 state = f"{catalog}.gold.{RESULT_STATE_TABLE_NAME}{suffix}"
 batch = uuid4().hex
