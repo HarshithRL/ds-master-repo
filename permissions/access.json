@@ -1600,7 +1600,7 @@
     },
     {
       "data_product": "master-data-app",
-      "warehouse": false,
+      "warehouse": true,
       "consumer_groups": [
         {
           "tier": "READ",
@@ -1640,6 +1640,14 @@
               "table": "master_data_app_request_history",
               "privileges": [
                 "SELECT"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "volume": "bronze_volume",
+              "privileges": [
+                "READ_VOLUME"
               ]
             }
           ],
@@ -1711,6 +1719,15 @@
               "table": "master_data_app_request_history",
               "privileges": [
                 "MODIFY"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "volume": "bronze_volume",
+              "privileges": [
+                "READ_VOLUME",
+                "WRITE_VOLUME"
               ]
             }
           ],
