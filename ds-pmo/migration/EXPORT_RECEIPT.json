@@ -1,0 +1,52 @@
+{
+  "status": "EXPORTED_AND_DEV_VALIDATED",
+  "snapshot": "pmo_initial_20261019",
+  "source": "engineering_global_pmo_s.pmo",
+  "archive_path": "/Volumes/automation_d/bronze/bronze_volume/pmo_app/PMO_pmo_initial_20261019.zip",
+  "archive_bytes": 233294,
+  "archive_sha256": "184070e59e1e9b4524af2760fe3a1a53de6ed3ff8c02770245aaaede216bee51",
+  "manifest_sha256": "07ec01659fe5364a690a3b2e4bd55eac7d67d4d7faf8006d7515807842b65630",
+  "export_job_id_dev": "793156091123511",
+  "import_job_id_dev": "1059908141399691",
+  "successful_export_run_id": "505652025820818",
+  "export_task_run_id": "663675036157570",
+  "validate_task_run_id": "83666974119465",
+  "table_count": 18,
+  "total_rows": 4142,
+  "row_counts": {
+    "audit_logs": 1800,
+    "budget_lines": 50,
+    "budgets": 139,
+    "categories": 14,
+    "divisions": 5,
+    "factories": 167,
+    "gate_records": 559,
+    "milestones": 179,
+    "planned_actions": 1,
+    "project_assignments": 512,
+    "project_documents": 2,
+    "project_snapshots": 161,
+    "projects": 139,
+    "resources": 14,
+    "risks": 140,
+    "scope_changes": 73,
+    "scope_grants": 0,
+    "users": 187
+  },
+  "source_authorization": {
+    "active_users": 187,
+    "ADMIN": 5,
+    "MEMBER": 182
+  },
+  "independent_checks": {
+    "downloaded_zip_checksums_and_typed_rows": "PASS",
+    "all_18_counts_against_pinned_native_source_versions": "PASS",
+    "current_and_historical_missing_references": 0,
+    "native_import_target_preflight": "VALIDATED",
+    "migration_unit_tests": 20,
+    "existing_application_unit_tests": 119
+  },
+  "data_applied": false,
+  "acc_prd_modified": false,
+  "note": "Copy the exact ZIP into each target's own existing bronze_volume/pmo_app folder. Run validate, then an explicitly approved apply with this manifest hash. Export does not populate the app."
+}

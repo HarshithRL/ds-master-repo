@@ -1,0 +1,6 @@
+command: [node, scripts/start.mjs]
+env:
+  - name: EMAIL_NOTIFICATIONS_DISABLED
+    value: 'true'
+  - name: NEXT_TELEMETRY_DISABLED
+    value: '1'

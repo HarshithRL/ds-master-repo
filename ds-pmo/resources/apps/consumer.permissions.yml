@@ -1,0 +1,19 @@
+targets:
+  A:
+    resources:
+      apps:
+        pmo:
+          permissions:
+            - group_name: AUTOMATION.PMO.CONSUMER.READ
+              level: CAN_USE
+            - group_name: AUTOMATION.PMO.CONSUMER.WRITE
+              level: CAN_USE
+  P:
+    resources:
+      apps:
+        pmo:
+          permissions:
+            - group_name: AUTOMATION.PMO.CONSUMER.READ
+              level: CAN_USE
+            - group_name: AUTOMATION.PMO.CONSUMER.WRITE
+              level: CAN_USE

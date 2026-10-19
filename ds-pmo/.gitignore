@@ -1,0 +1,87 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/.next-old/
+/.next-build/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+Thumbs.db
+*.pem
+*.bak
+*.swp
+*.swo
+.backup-*/
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+
+# editors / IDEs
+.vscode/
+.idea/
+.cursor/
+.aider*
+
+# AI tooling (keep team config, ignore local overrides)
+.claude/settings.local.json
+
+# caches
+.eslintcache
+.turbo/
+
+# env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
+
+# Keep the example
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# prisma generated client
+/src/generated/
+
+# data / seed artifacts
+*.xlsx
+prisma/seed-log.txt
+prisma/seed-data.json
+prisma/parse-excel.py
+prisma/backups/
+
+# IT security docs and compliance tracker (never commit)
+/it-security/
+/compliance-tracker.html
+/compliance-tracker/
+
+# python
+__pycache__/
+*.pyc

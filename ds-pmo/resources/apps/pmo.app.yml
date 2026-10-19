@@ -1,0 +1,28 @@
+resources:
+  apps:
+    pmo:
+      name: ${var.app_name}
+      description: Etex PMO portfolio management
+      source_code_path: ../..
+      user_api_scopes:
+        - sql
+      lifecycle:
+        started: true
+      config:
+        command: [node, scripts/start.mjs]
+        env:
+          - name: DATABRICKS_CATALOG
+            value: ${var.catalog}
+          - name: DATABRICKS_SCHEMA
+            value: silver
+          - name: DATABRICKS_WAREHOUSE_HTTP_PATH
+            value: /sql/1.0/warehouses/${var.warehouse_id}
+          - name: EMAIL_NOTIFICATIONS_DISABLED
+            value: 'true'
+          - name: NEXT_TELEMETRY_DISABLED
+            value: '1'
+      permissions:
+        - user_name: mustafaarda.bicakci@etexgroup.com
+          level: CAN_MANAGE
+        - user_name: pierre.delaguiche@etexgroup.com
+          level: CAN_MANAGE

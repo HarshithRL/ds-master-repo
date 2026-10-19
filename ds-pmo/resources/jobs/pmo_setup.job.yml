@@ -1,0 +1,26 @@
+resources:
+  jobs:
+    pmo_setup:
+      name: PMO - Setup Tables
+      description: Create missing PMO Delta tables in the existing silver schema and bootstrap the initial admin without overwriting data.
+      max_concurrent_runs: 1
+      timeout_seconds: 1800
+      tags:
+        project: PMO
+        purpose: setup-tables
+      tasks:
+        - task_key: setup_tables
+          timeout_seconds: 1800
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../../sql/setup_tables.sql
+              source: WORKSPACE
+            parameters:
+              catalog: ${var.catalog}
+              initial_admin_email: ${var.initial_admin_email}
+      permissions:
+        - user_name: mustafaarda.bicakci@etexgroup.com
+          level: CAN_MANAGE
+        - user_name: pierre.delaguiche@etexgroup.com
+          level: CAN_MANAGE
