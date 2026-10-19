@@ -1,0 +1,118 @@
+resources:
+  jobs:
+    pmo_import:
+      name: PMO - One-Time Import From Volume
+      description: Validate or apply an approved PMO CSV snapshot from this environment's existing bronze_volume/pmo_app folder. No original-catalog access is used.
+      max_concurrent_runs: 1
+      timeout_seconds: 3600
+      tags:
+        project: PMO
+        purpose: one-time-migration
+      parameters:
+        - name: snapshot
+          default: pmo_initial_20261019
+        - name: mode
+          default: validate
+        - name: manifest_sha256
+          default: ''
+        - name: accept_user_authorization
+          default: 'false'
+      tasks:
+        - task_key: import_from_volume
+          job_cluster_key: migration_cluster
+          timeout_seconds: 3000
+          spark_python_task:
+            python_file: ../../migration/run.py
+            parameters:
+              - import
+              - --migration-root
+              - ${workspace.file_path}/migration
+              - --catalog
+              - ${var.catalog}
+              - --snapshot
+              - '{{job.parameters.snapshot}}'
+              - --mode
+              - '{{job.parameters.mode}}'
+              - --manifest-sha256
+              - '{{job.parameters.manifest_sha256}}'
+              - --accept-user-authorization
+              - '{{job.parameters.accept_user_authorization}}'
+              - --initial-admin-email
+              - ${var.initial_admin_email}
+      job_clusters:
+        - job_cluster_key: migration_cluster
+          new_cluster:
+            spark_version: 15.4.x-scala2.12
+            node_type_id: Standard_DS3_v2
+            num_workers: 1
+            data_security_mode: USER_ISOLATION
+            policy_id: ${var.migration_policy_id}
+            apply_policy_default_values: true
+      permissions:
+        - user_name: mustafaarda.bicakci@etexgroup.com
+          level: CAN_MANAGE
+        - user_name: pierre.delaguiche@etexgroup.com
+          level: CAN_MANAGE
+
+targets:
+  D:
+    resources:
+      jobs:
+        pmo_export:
+          name: PMO - One-Time Export To DEV Volume
+          description: Export the original PMO Delta tables as checksummed typed CSV files and a downloadable ZIP in automation_d.bronze.bronze_volume/pmo_app. Does not modify source or app tables.
+          max_concurrent_runs: 1
+          timeout_seconds: 3600
+          tags:
+            project: PMO
+            purpose: one-time-export
+          parameters:
+            - name: snapshot
+              default: pmo_initial_20261019
+          tasks:
+            - task_key: export_to_volume
+              job_cluster_key: migration_cluster
+              timeout_seconds: 3000
+              spark_python_task:
+                python_file: ../../migration/run.py
+                parameters:
+                  - export
+                  - --migration-root
+                  - ${workspace.file_path}/migration
+                  - --catalog
+                  - ${var.catalog}
+                  - --snapshot
+                  - '{{job.parameters.snapshot}}'
+            - task_key: validate_export
+              depends_on:
+                - task_key: export_to_volume
+              job_cluster_key: migration_cluster
+              timeout_seconds: 3000
+              spark_python_task:
+                python_file: ../../migration/run.py
+                parameters:
+                  - import
+                  - --migration-root
+                  - ${workspace.file_path}/migration
+                  - --catalog
+                  - ${var.catalog}
+                  - --snapshot
+                  - '{{job.parameters.snapshot}}'
+                  - --mode
+                  - validate
+                  - --initial-admin-email
+                  - ${var.initial_admin_email}
+          job_clusters:
+            - job_cluster_key: migration_cluster
+              new_cluster:
+                spark_version: 15.4.x-scala2.12
+                node_type_id: Standard_DS3_v2
+                num_workers: 1
+                data_security_mode: USER_ISOLATION
+                policy_id: ${var.migration_policy_id}
+                apply_policy_default_values: true
+          permissions:
+            - user_name: mustafaarda.bicakci@etexgroup.com
+              level: CAN_MANAGE
+            - user_name: pierre.delaguiche@etexgroup.com
+              level: CAN_MANAGE

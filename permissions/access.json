@@ -64,6 +64,64 @@
   ],
   "data_products": [
     {
+      "data_product": "pmo",
+      "warehouse": true,
+      "consumer_groups": [
+        {
+          "tier": "READ",
+          "members": ["mustafaarda.bicakci@etexgroup.com"],
+          "grants": [
+            {"catalog": "automation", "privileges": ["USE_CATALOG"]},
+            {"catalog": "automation", "schema": "silver", "privileges": ["USE_SCHEMA"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_users", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_divisions", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_factories", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_categories", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_resources", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_projects", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_project_assignments", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_scope_grants", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_budgets", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_budget_lines", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_gate_records", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_risks", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_milestones", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_planned_actions", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_scope_changes", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_project_documents", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_project_snapshots", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_audit_logs", "privileges": ["SELECT"]}
+          ]
+        },
+        {
+          "tier": "WRITE",
+          "members": ["mustafaarda.bicakci@etexgroup.com"],
+          "grants": [
+            {"catalog": "automation", "privileges": ["USE_CATALOG"]},
+            {"catalog": "automation", "schema": "silver", "privileges": ["USE_SCHEMA"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_users", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_divisions", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_factories", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_categories", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_resources", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_projects", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_project_assignments", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_scope_grants", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_budgets", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_budget_lines", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_gate_records", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_risks", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_milestones", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_planned_actions", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_scope_changes", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_project_documents", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_project_snapshots", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "PMO_audit_logs", "privileges": ["SELECT", "MODIFY"]}
+          ]
+        }
+      ]
+    },
+    {
       "data_product": "ds-ai-cost-breakdown",
       "warehouse": true,
       "consumer_groups": [

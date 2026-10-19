@@ -1,0 +1,87 @@
+bundle:
+  name: ds-pmo
+  engine: direct
+
+include:
+  - resources/apps/pmo.app.yml
+  - resources/jobs/pmo_setup.job.yml
+  - resources/jobs/pmo_migration.job.yml
+
+variables:
+  catalog:
+    description: Existing automation catalog
+  warehouse_id:
+    description: Existing automation SQL warehouse
+  migration_policy_id:
+    description: Existing job compute policy for the one-time migration
+  app_name:
+    default: ds-pmo
+  initial_admin_email:
+    default: mustafaarda.bicakci@etexgroup.com
+
+sync:
+  exclude:
+    - node_modules/**
+    - .next/**
+    - .env*
+    - .github/**
+    - pipelines/**
+    - tests/**
+    - '**/__tests__/**'
+    - '*.tsbuildinfo'
+
+targets:
+  D:
+    default: true
+    mode: development
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/Users/${workspace.current_user.userName}/ds-pmo/D
+    variables:
+      catalog: automation_d
+      warehouse_id: 69ada62b2fb9b9e2
+      migration_policy_id: 306312B9730019AB
+      app_name: ds-pmo-dev
+  T:
+    mode: production
+    workspace:
+      host: https://adb-7181820732839861.1.azuredatabricks.net
+      root_path: /Workspace/automation/ds-pmo/T
+    variables:
+      catalog: automation_d
+      warehouse_id: 69ada62b2fb9b9e2
+      migration_policy_id: 306312B9730019AB
+      app_name: ds-pmo-test
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+  A:
+    mode: production
+    workspace:
+      host: https://adb-4796304964978539.19.azuredatabricks.net
+      root_path: /Workspace/automation/ds-pmo/A
+    variables:
+      catalog: automation_a
+      warehouse_id: 0ef3e37fbbd5b772
+      migration_policy_id: 306312B973005677
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE
+  P:
+    mode: production
+    workspace:
+      host: https://adb-4844910598668398.18.azuredatabricks.net
+      root_path: /Workspace/automation/ds-pmo/P
+    variables:
+      catalog: automation_p
+      warehouse_id: f500d0d670ae024b
+      migration_policy_id: 306312B973005150
+    permissions:
+      - user_name: mustafaarda.bicakci@etexgroup.com
+        level: CAN_MANAGE
+      - user_name: pierre.delaguiche@etexgroup.com
+        level: CAN_MANAGE

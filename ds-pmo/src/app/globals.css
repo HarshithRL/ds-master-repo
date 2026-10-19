@@ -1,0 +1,1414 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   ETEX PMO — Design System
+   Brand:  coral-orange #E8713A  ·  charcoal #1A1A2E
+   Style:  tool-grade, dense, sharp corners, light chrome
+   ============================================================ */
+
+@theme {
+  /* Brand */
+  --color-etex-orange:       #E8713A;
+  --color-etex-orange-light: #F4A261;
+  --color-etex-orange-dark:  #C85A28;
+  --color-etex-orange-50:    #FFF5ED;
+  --color-etex-orange-100:   #FFE8D6;
+  --color-etex-charcoal:     #1A1A2E;
+  --color-etex-slate:        #16213E;
+  --color-etex-navy:         #0F3460;
+
+  /* Neutral scale — maps to Tailwind etex-gray-* */
+  --color-etex-gray-50:  #F8F9FA;
+  --color-etex-gray-100: #F1F3F5;
+  --color-etex-gray-200: #E9ECEF;
+  --color-etex-gray-300: #DEE2E6;
+  --color-etex-gray-400: #ADB5BD;
+  --color-etex-gray-500: #6C757D;
+  --color-etex-gray-600: #495057;
+  --color-etex-gray-700: #343A40;
+  --color-etex-gray-800: #212529;
+  --color-etex-gray-900: #121212;
+
+  /* Semantic */
+  --color-success:       #16A34A;
+  --color-success-light: #DCFCE7;
+  --color-warning:       #D97706;
+  --color-warning-light: #FEF3C7;
+  --color-danger:        #DC2626;
+  --color-danger-light:  #FEE2E2;
+  --color-info:          #2563EB;
+  --color-info-light:    #DBEAFE;
+
+  /* Radii — sharp by default, tool-grade feel */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+}
+
+/* ── CSS custom properties (used by shadcn primitives) ───────────── */
+:root {
+  --background:            #FFFFFF;
+  --foreground:            #111827;
+  --card:                  #FFFFFF;
+  --card-foreground:       #111827;
+  --primary:               #E8713A;
+  --primary-foreground:    #FFFFFF;
+  --secondary:             #F3F4F6;
+  --secondary-foreground:  #111827;
+  --muted:                 #F9FAFB;
+  --muted-foreground:      #6B7280;
+  --accent:                #FFF5ED;
+  --accent-foreground:     #C85A28;
+  --destructive:           #DC2626;
+  --destructive-foreground:#FFFFFF;
+  --border:                #E5E7EB;
+  --border-subtle:         #F1F3F5;
+  --input:                 #E5E7EB;
+  --ring:                  #E8713A;
+  --hover:                 #FFF8F3;
+  --elevated:              #F3F4F6;
+}
+
+.dark {
+  --background:            #1A1D23;
+  --foreground:            #E8EAED;
+  --card:                  #21252B;
+  --card-foreground:       #E8EAED;
+  --primary:               #E8713A;
+  --primary-foreground:    #FFFFFF;
+  --secondary:             #282C34;
+  --secondary-foreground:  #E8EAED;
+  --muted:                 #1E2128;
+  --muted-foreground:      #9DA5B4;
+  --accent:                #2E2620;
+  --accent-foreground:     #F4A261;
+  --destructive:           #EF4444;
+  --destructive-foreground:#FFFFFF;
+  --border:                #333842;
+  --border-subtle:         #2A2F38;
+  --input:                 #333842;
+  --ring:                  #E8713A;
+  --hover:                 #272B35;
+  --elevated:              #3D4350;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────── */
+* { border-color: var(--border); }
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* Inter where the browser provides it, then Segoe UI for Windows
+     (which is what most ETEX users will see), then system fallbacks. */
+  font-family: "Inter", "Inter var", "Segoe UI Variable", "Segoe UI", system-ui,
+    -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Improves rendering on Windows ClearType where Inter can look smudgy at
+     small sizes. `optimizeLegibility` keeps kerning, `geometricPrecision`
+     gives crisper sub-pixel placement for tabular UIs. */
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss01", "ss03"; /* Inter stylistic sets */
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Unified focus rings — same shape for keyboard nav across every primitive. */
+*:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+  border-radius: inherit;
+}
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline-offset: 2px;
+}
+
+/* Selection — brand-orange highlight, readable on both themes. */
+::selection { background: rgba(232, 113, 58, 0.25); color: inherit; }
+
+/* ── Hide number input spinners ──────────────────────────────────── */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ── Scrollbar — visible, tool-grade ─────────────────────────────── */
+/* `-webkit-appearance: none` is critical on macOS — without it, Chrome/Safari
+   use the system overlay scrollbar which auto-hides at rest. Setting it to
+   `none` AND giving the scrollbar a width forces Chrome to render the styled
+   non-overlay scrollbar (always visible). */
+::-webkit-scrollbar         { -webkit-appearance: none; width: 10px; height: 10px; }
+::-webkit-scrollbar-track   { background: rgba(0, 0, 0, 0.04); border-radius: 5px; }
+::-webkit-scrollbar-thumb   { background: #B8BEC7; border-radius: 5px; border: 2px solid transparent; background-clip: padding-box; min-height: 40px; }
+::-webkit-scrollbar-thumb:hover { background: #8A93A0; background-clip: padding-box; }
+::-webkit-scrollbar-corner  { background: transparent; }
+html { scrollbar-color: #B8BEC7 rgba(0, 0, 0, 0.04); scrollbar-width: auto; }
+
+.dark ::-webkit-scrollbar-track   { background: rgba(255, 255, 255, 0.04); }
+.dark ::-webkit-scrollbar-thumb   { background: #4B5260; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #6B7280; }
+.dark html { scrollbar-color: #4B5260 rgba(255, 255, 255, 0.04); }
+
+/* ── Shake animation (login error feedback) ─────────────────────── */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(5px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(2px); }
+}
+
+/* ── Smooth page entrance ────────────────────────────────────────── */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-page-enter {
+  animation: page-enter 0.3s ease-out both;
+}
+
+/* ── Skeleton shimmer ────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Utility classes ──────────────────────────────────────────────── */
+
+/* Dense table rows — tighter variant for data-heavy views */
+.table-dense td,
+.table-dense th {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* Sortable column header */
+.col-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.col-sortable:hover {
+  color: #1A1A2E;
+}
+.dark .col-sortable:hover { color: #E5E7EB; }
+
+/* Section header strip — orange accent bar */
+.section-header {
+  background: linear-gradient(135deg, #E8713A, #C85A28);
+  color: white;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Collapsible section card ─────────────────────────── */
+.section-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+}
+.section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #E8713A, #C85A28);
+  color: white;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  user-select: none;
+  border: none;
+  transition: filter 150ms ease;
+}
+.section-toggle:hover {
+  filter: brightness(1.06);
+}
+.section-chevron {
+  opacity: 0.7;
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1), opacity 150ms ease;
+}
+.section-toggle:hover .section-chevron { opacity: 1; }
+.section-chevron-open {
+  transform: rotate(180deg);
+}
+.section-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.section-body-closed {
+  grid-template-rows: 0fr;
+}
+.section-body-inner {
+  overflow: hidden;
+  padding: 0 16px;
+}
+.section-body:not(.section-body-closed) .section-body-inner {
+  padding: 16px;
+}
+
+/* Card wrapper — clean, with subtle elevation */
+.card-compact {
+  background: var(--card);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  transition: box-shadow 200ms ease;
+}
+.dark .card-compact {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Phase badge */
+.phase-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+/* Gate diamond */
+.gate-diamond {
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* KPI value — responsive sizing */
+.kpi-value {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+@media (min-width: 640px) {
+  .kpi-value { font-size: 26px; }
+}
+
+.kpi-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #6B7280;
+}
+@media (min-width: 640px) {
+  .kpi-label { font-size: 11px; }
+}
+.dark .kpi-label { color: #9CA3AF; }
+
+/* Status dot */
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Trend colours */
+.trend-up   { color: #16A34A; }
+.trend-down { color: #DC2626; }
+.trend-flat { color: #6B7280; }
+
+/* ── Unified form controls ───────────────────────────────────────── */
+/* All inputs, selects, textareas share the same visual language:
+   subtle bg, transparent border → hover reveals border → focus sharpens */
+
+.form-control {
+  height: 36px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--foreground);
+  transition: all 180ms ease;
+}
+
+.form-control::placeholder {
+  color: #ADB5BD;
+}
+.dark .form-control::placeholder {
+  color: #6B7280;
+}
+
+.form-control:hover:not(:disabled) {
+  border-color: var(--input);
+  background: var(--muted);
+}
+
+.form-control:focus,
+.form-control:focus-visible {
+  outline: none;
+  border-color: #E8713A;
+  background: var(--background);
+  box-shadow: 0 0 0 3px rgba(232, 113, 58, 0.08);
+}
+
+.form-control:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Read-only variant — matches form-control dimensions, no interaction */
+.form-control-readonly {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--foreground);
+}
+
+/* Textarea variant — taller, resizable */
+.form-control-textarea {
+  min-height: 80px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* Auto-grow textarea — compact, expands with content */
+.form-control-grow {
+  height: auto;
+  min-height: 36px;
+  line-height: 1.4;
+}
+
+/* Select trigger variant — with chevron space */
+.form-control-select {
+  cursor: pointer;
+  padding-right: 28px;
+}
+
+/* Rich achievements editor — bullet list styling */
+.rich-achievements-editor ul {
+  list-style: disc;
+  padding-left: 1.25em;
+  margin: 2px 0;
+}
+.rich-achievements-editor li {
+  margin-bottom: 1px;
+}
+
+/* ── Global scrollbar palette ────────────────────────────────────────
+   Branded, always-visible scrollbars across the whole app so older users
+   get an unmistakable cue that a surface is scrollable. Targets every
+   scrollable element by default; specific surfaces (the exec table)
+   override sizes/colors below if they need bolder treatment. */
+* {
+  scrollbar-width: auto;
+  scrollbar-color: #E8713A #F1F3F5;
+}
+*::-webkit-scrollbar           { width: 12px; height: 12px; -webkit-appearance: none; background: #F1F3F5; }
+*::-webkit-scrollbar-track     { background: #F1F3F5; }
+*::-webkit-scrollbar-thumb     { background: #E8713A; border-radius: 6px; border: 2px solid #F1F3F5; min-width: 48px; }
+*::-webkit-scrollbar-thumb:hover { background: #D45F26; }
+*::-webkit-scrollbar-thumb:active { background: #B8501F; }
+*::-webkit-scrollbar-corner    { background: #F1F3F5; }
+.dark *                        { scrollbar-color: #E8713A #21252B; }
+.dark *::-webkit-scrollbar     { background: #21252B; }
+.dark *::-webkit-scrollbar-track { background: #21252B; }
+.dark *::-webkit-scrollbar-thumb { background: #E8713A; border-color: #21252B; }
+.dark *::-webkit-scrollbar-thumb:hover { background: #F18A4D; }
+.dark *::-webkit-scrollbar-corner { background: #21252B; }
+
+/* ── Executive Portfolio Table ───────────────────────────────────── */
+
+.exec-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  /* The wrapper fills the remaining flex height of its parent (set via
+     `flex-1 min-h-0` in the component tree). Sticky <th>s remain pinned
+     relative to this scroll context. No height calc() — the layout adapts
+     when the filter bar or header wraps. */
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  background: #FFFFFF;
+  /* Both scrollbars are forced `scroll` (not `auto`) so macOS overlay
+     scrollbars stay permanently visible — older users get an unmistakable
+     cue that the table is scrollable in both directions. */
+  overflow-x: scroll !important;
+  overflow-y: scroll !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  /* Firefox — branded orange thumb so it's impossible to miss. */
+  scrollbar-width: auto;
+  scrollbar-color: #E8713A #F1F3F5;
+}
+
+/* Bold, branded horizontal scrollbar (WebKit). 14px tall, orange thumb. */
+.exec-table-wrapper::-webkit-scrollbar          { width: 14px; height: 14px; -webkit-appearance: none; background: #F1F3F5; }
+.exec-table-wrapper::-webkit-scrollbar-track    { background: #F1F3F5; border-radius: 0 0 6px 6px; box-shadow: inset 0 1px 0 #E5E7EB; }
+.exec-table-wrapper::-webkit-scrollbar-thumb    { background: #E8713A; border-radius: 7px; border: 3px solid #F1F3F5; min-width: 60px; }
+.exec-table-wrapper::-webkit-scrollbar-thumb:hover { background: #D45F26; }
+.exec-table-wrapper::-webkit-scrollbar-thumb:active { background: #B8501F; }
+.exec-table-wrapper::-webkit-scrollbar-corner   { background: #F1F3F5; }
+.dark .exec-table-wrapper                          { scrollbar-color: #E8713A #21252B; }
+.dark .exec-table-wrapper::-webkit-scrollbar       { background: #21252B; }
+.dark .exec-table-wrapper::-webkit-scrollbar-track { background: #21252B; box-shadow: inset 0 1px 0 #333842; }
+.dark .exec-table-wrapper::-webkit-scrollbar-thumb { background: #E8713A; border-color: #21252B; }
+.dark .exec-table-wrapper::-webkit-scrollbar-thumb:hover { background: #F18A4D; }
+.dark .exec-table-wrapper::-webkit-scrollbar-corner { background: #21252B; }
+
+/* Sticky column headers — applied per-<th>. Sticky on <thead> directly is
+   flaky across browsers (especially when child ths are also sticky), so we
+   stick each <th> instead. Row 1 ths stick at top: 0; row 2 sub-headers stick
+   at top: 36px (just below row 1's group headers). */
+.exec-table > thead > tr > th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.exec-table > thead > tr.pmt-subheader-row > th {
+  top: 36px;
+}
+
+.exec-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  table-layout: fixed;
+}
+
+/* ── Header styles ──────────────────────────────────── */
+
+.exec-group-header th {
+  background: #1A1A2E;
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 10px 10px;
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: normal;
+  text-align: left;
+  vertical-align: bottom;
+  line-height: 1.4;
+}
+
+.exec-group-header th:last-child {
+  border-right: none;
+}
+
+.exec-th-group {
+  text-align: center !important;
+  background: #1A1A2E !important;
+  border-bottom: none !important;
+  font-size: 10px !important;
+  letter-spacing: 0.06em;
+}
+
+.exec-th-group-risk {
+  background: #1A1A2E !important;
+}
+
+.exec-sub-header th {
+  background: #E8713A;
+  color: #FFFFFF;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 7px 6px;
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  white-space: normal;
+  text-align: center;
+  line-height: 1.35;
+}
+
+.exec-sub-header th:last-child {
+  border-right: none;
+}
+
+.exec-th {
+  cursor: default;
+}
+
+.exec-th-bar {
+  width: 5px !important;
+  min-width: 5px;
+  max-width: 5px;
+  padding: 0 !important;
+  background: #1A1A2E !important;
+  border: none !important;
+}
+
+.exec-th-sub {
+  /* inherits from .exec-sub-header th */
+}
+
+.exec-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  padding: 0;
+  white-space: normal;
+  line-height: inherit;
+  text-align: inherit;
+  transition: opacity 150ms;
+}
+.exec-sort-btn:hover {
+  opacity: 0.85;
+}
+
+/* ── Cell styles ────────────────────────────────────── */
+
+.exec-td {
+  padding: 10px 8px;
+  border: none;
+  border-bottom: 1px solid #F1F3F5;
+  font-size: 12px;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exec-td-bar {
+  width: 5px !important;
+  min-width: 5px;
+  max-width: 5px;
+  padding: 0 !important;
+  border: none !important;
+  border-bottom: none !important;
+  position: relative;
+}
+
+.exec-status-bar {
+  position: absolute;
+  top: 1px;
+  left: 0;
+  bottom: 1px;
+  width: 5px;
+  border-radius: 0 3px 3px 0;
+}
+
+.exec-td-name {
+  font-weight: 600;
+  color: #1A1A2E;
+  font-size: 13px;
+  /* Allow the title to wrap (override .exec-td's nowrap). */
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  vertical-align: middle;
+}
+
+.exec-project-link {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  line-clamp: 3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.35;
+  text-decoration: none;
+  transition: color 150ms;
+}
+.exec-row:hover .exec-project-link {
+  color: #E8713A;
+}
+
+.exec-project-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #6B7280;
+  letter-spacing: 0.01em;
+}
+.exec-project-flag {
+  border-radius: 1.5px;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+  height: auto;
+}
+.exec-project-location-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.exec-project-division {
+  color: #9CA3AF;
+  font-weight: 400;
+}
+
+.exec-td-phase {
+  padding: 10px 6px !important;
+}
+
+.exec-phase-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+
+/* ── Row styles ─────────────────────────────────────── */
+
+.exec-row {
+  transition: background-color 150ms ease;
+}
+.exec-row:hover {
+  background: #FFF8F3;
+}
+.exec-row:nth-child(even) {
+  background: #FAFBFC;
+}
+.exec-row:nth-child(even):hover {
+  background: #FFF8F3;
+}
+
+/* ── Summary rows ───────────────────────────────────── */
+
+.exec-summary-row {
+  border-top: none;
+  border-bottom: none;
+}
+
+.exec-summary-row td {
+  padding: 12px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.exec-summary-execution {
+  background: #ECFDF5;
+}
+/* `!important` overrides the sticky-first cell's white bg so the summary row
+   spans the full width with its tint, including the leftmost (sticky) cell. */
+.exec-summary-execution td {
+  background: #ECFDF5 !important;
+  border-bottom-color: #BBF7D0;
+}
+
+.exec-summary-development {
+  background: #FFF7ED;
+}
+.exec-summary-development td {
+  background: #FFF7ED !important;
+  border-bottom-color: #FDE68A;
+}
+
+/* ── Conditional cell backgrounds ───────────────────── */
+
+.exec-cell-green {
+  background-color: #D1FAE5 !important;
+  color: #065F46 !important;
+  font-weight: 600;
+}
+
+.exec-cell-green-light {
+  background-color: #ECFDF5 !important;
+  color: #065F46 !important;
+}
+
+.exec-cell-green-strong {
+  background-color: #A7F3D0 !important;
+  color: #064E3B !important;
+  font-weight: 600;
+}
+
+.exec-cell-yellow {
+  background-color: #FEF3C7 !important;
+  color: #92400E !important;
+  font-weight: 600;
+}
+
+.exec-cell-orange {
+  background-color: #FFEDD5 !important;
+  color: #9A3412 !important;
+  font-weight: 600;
+}
+
+.exec-cell-red {
+  background-color: #FEE2E2 !important;
+  color: #991B1B !important;
+  font-weight: 600;
+}
+
+/* ── Dark mode — section header & collapsible ─────────── */
+.dark .section-header {
+  background: linear-gradient(135deg, #C85A28, #A04420);
+}
+.dark .section-card {
+  background: var(--card);
+  border-color: var(--border);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+}
+.dark .section-toggle {
+  background: linear-gradient(135deg, #C85A28, #A04420);
+}
+
+/* ── Dark mode — executive table ──────────────────────── */
+.dark .exec-table-wrapper {
+  border-color: #333842;
+  background: #1E2128;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark .exec-group-header th {
+  background: #1C2030;
+  border-right-color: rgba(255, 255, 255, 0.06);
+}
+
+.dark .exec-sub-header th {
+  background: #C85A28;
+  border-right-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .exec-td {
+  border-bottom-color: #2A2F38;
+  color: #D1D5DB;
+}
+
+.dark .exec-td-name {
+  color: #F3F4F6;
+}
+
+.dark .exec-row:hover {
+  background: #272B35;
+}
+
+.dark .exec-row:nth-child(even) {
+  background: #1B1F26;
+}
+
+.dark .exec-row:nth-child(even):hover {
+  background: #272B35;
+}
+
+.dark .exec-summary-row td {
+  border-bottom-color: #333842;
+}
+
+.dark .exec-summary-execution {
+  background: #112214;
+}
+.dark .exec-summary-execution td {
+  background: #112214 !important;
+  border-bottom-color: #1A4028;
+}
+
+.dark .exec-summary-development {
+  background: #282014;
+}
+.dark .exec-summary-development td {
+  background: #282014 !important;
+  border-bottom-color: #8B4513;
+}
+
+.dark .exec-project-link {
+  color: #D1D5DB;
+}
+
+.dark .exec-row:hover .exec-project-link {
+  color: #F4A261;
+}
+
+.dark .exec-project-location {
+  color: #9CA3AF;
+}
+.dark .exec-project-division {
+  color: #6B7280;
+}
+.dark .exec-project-flag {
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.18);
+}
+
+/* ── Dark mode — conditional cells (muted for dark) ───── */
+.dark .exec-cell-green       { background-color: #064E3B !important; color: #A7F3D0 !important; }
+.dark .exec-cell-green-light { background-color: #052e16 !important; color: #D1FAE5 !important; }
+.dark .exec-cell-green-strong{ background-color: #065F46 !important; color: #6EE7B7 !important; }
+.dark .exec-cell-yellow      { background-color: #78350F !important; color: #FDE68A !important; }
+.dark .exec-cell-orange      { background-color: #7C2D12 !important; color: #FED7AA !important; }
+.dark .exec-cell-red         { background-color: #7F1D1D !important; color: #FECACA !important; }
+
+/* ── Project Master Table — unified header colour ────── */
+
+.pmt-header-row th,
+.pmt-subheader-row th {
+  background: #1A1A2E;
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 8px;
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1.35;
+}
+
+.pmt-header-row th:last-child,
+.pmt-subheader-row th:last-child {
+  border-right: none;
+}
+
+.pmt-subheader-row th {
+  font-size: 9px;
+  padding: 8px 6px;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 2px solid #E8713A;
+}
+
+.pmt-th {
+  cursor: default;
+}
+
+.pmt-th-sub {
+  cursor: default;
+}
+
+/* Vertical text for narrow column headers */
+.pmt-th-vertical {
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  white-space: nowrap !important;
+  padding: 8px 2px !important;
+  height: 80px;
+  vertical-align: middle !important;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+/* ── Section group headers — thick border + tint differentiation ── */
+
+.pmt-th-section-cost {
+  border-left: 3px solid rgba(255, 255, 255, 0.35) !important;
+}
+.pmt-th-section-schedule {
+  border-left: 3px solid rgba(255, 255, 255, 0.35) !important;
+}
+.pmt-th-section-risk {
+  border-left: 3px solid rgba(255, 255, 255, 0.35) !important;
+  background: #252544 !important;
+}
+
+/* Section-start separator on data & summary cells */
+.exec-td-section-start {
+  border-left: 3px solid #CBD5E1 !important;
+}
+
+.exec-summary-row .exec-td-section-start {
+  border-left: 3px solid #CBD5E1 !important;
+}
+
+.dark .pmt-th-section-risk {
+  background: #1E2244 !important;
+}
+
+.dark .exec-td-section-start {
+  border-left-color: #475569 !important;
+}
+
+/* ── Column header word-wrap ─────────────────────────────────── */
+
+.pmt-header-row th,
+.pmt-subheader-row th {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+.dark .pmt-header-row th,
+.dark .pmt-subheader-row th {
+  background: #1C2030;
+  border-right-color: rgba(255, 255, 255, 0.06);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.dark .pmt-subheader-row th {
+  border-bottom-color: #C85A28;
+}
+
+/* ── Phase cell — filled background ──────────────────── */
+
+.pmt-phase-cell {
+  padding: 4px 6px !important;
+}
+
+/* ── Dark mode — KPI value ────────────────────────────── */
+.dark .kpi-value { color: #E5E7EB; }
+
+/* ── Dark mode — trend colours ────────────────────────── */
+.dark .trend-up   { color: #4ADE80; }
+.dark .trend-down { color: #F87171; }
+.dark .trend-flat { color: #9CA3AF; }
+
+/* ── DataGrid — unified grid styling for detail tables ─────────── */
+
+.dg-wrapper {
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  background: #FFFFFF;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.dg-header {
+  display: grid;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #1A1A2E;
+}
+
+.dg-th {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.dg-row {
+  display: grid;
+  align-items: start;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid #F1F3F5;
+  transition: background-color 150ms ease;
+}
+
+.dg-row:last-child {
+  border-bottom: none;
+}
+
+.dg-row:hover {
+  background: #FFF8F3;
+}
+
+.dg-empty {
+  padding: 24px 12px;
+  font-size: 13px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+/* Dark mode */
+.dark .dg-wrapper {
+  border-color: #333842;
+  background: #1E2128;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark .dg-header {
+  background: #1C2030;
+}
+
+.dark .dg-th {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dark .dg-row {
+  border-bottom-color: #2A2F38;
+}
+
+.dark .dg-row:hover {
+  background: #272B35;
+}
+
+/* ── DataTable — modern SAP-flavored admin table ──────────────────
+   Used by /admin/{users,factories,categories,snapshots,audit}.
+   Tokens are theme-aware via CSS vars set in :root / .dark above. */
+
+.dt-wrapper {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 1px 3px rgba(0, 0, 0, 0.03);
+}
+.dark .dt-wrapper {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dt-toolbar {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--card) 0%, color-mix(in srgb, var(--muted) 40%, var(--card)) 100%);
+}
+
+.dt-scroll {
+  overflow: auto;
+  /* Smooth wheel scrolling on macOS trackpads */
+  -webkit-overflow-scrolling: touch;
+}
+
+.dt-thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.dt-thead tr {
+  background: #1A1F2E;
+}
+.dark .dt-thead tr {
+  background: #15192A;
+}
+
+.dt-th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+  white-space: nowrap;
+  border-bottom: 2px solid var(--color-etex-orange, #E8713A);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  transition: color 120ms ease;
+}
+.dt-thead tr > .dt-th:last-child { border-right: 0; }
+
+.dt-row {
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+.dt-row:nth-child(even) {
+  background: color-mix(in srgb, var(--muted) 18%, var(--card));
+}
+.dt-row:hover {
+  background: color-mix(in srgb, var(--color-etex-orange, #E8713A) 6%, var(--card));
+}
+.dt-row-expanded {
+  background: color-mix(in srgb, var(--color-etex-orange, #E8713A) 8%, var(--card)) !important;
+  box-shadow: inset 2px 0 0 var(--color-etex-orange, #E8713A);
+}
+.dt-row-detail {
+  background: color-mix(in srgb, var(--muted) 50%, var(--card));
+}
+
+.dt-td {
+  font-size: 12.5px;
+  color: var(--foreground);
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  vertical-align: middle;
+}
+tbody tr > .dt-td:last-child { border-right: 0; }
+tbody tr:last-child .dt-td   { border-bottom: 0; }
+/* The expanded detail spans all columns — no inner separators */
+.dt-row-detail .dt-td { border-right: 0; }
+
+.dt-tfoot tr {
+  background: color-mix(in srgb, var(--muted) 50%, var(--card));
+  font-weight: 600;
+}
+.dt-tfoot .dt-td {
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+}
+
+.dt-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 25%, var(--card));
+}
+
+/* ── Summary grid — gap-based grid used in budget/risk tabs ───── */
+.summary-grid {
+  display: grid;
+  gap: 1px;
+  background: #E5E7EB;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.dark .summary-grid {
+  background: #333842;
+}
+
+.summary-cell {
+  background: var(--card);
+  padding: 12px 16px;
+}
+
+/* ── Budget rows — clear visual separation between lines ─────── */
+.budget-row {
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Computed row — muted bg for read-only formula fields ───── */
+.computed-row {
+  background: var(--muted);
+}
+
+/* ── Dropdown panel — shared dropdown/popover surface ─────────── */
+.dropdown-surface {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.dark .dropdown-surface {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ── SVG ring track — for progress wheels ─────────────────────── */
+.ring-track { stroke: #F3F4F6; }
+.dark .ring-track { stroke: #333842; }
+
+/* ── One-Pager Print Styles ──────────────────────────────────────
+   A4 landscape, but content is allowed to flow across multiple pages —
+   forcing a single page for variable-length content (many risks, scope
+   changes, etc.) either clips or squeezes text unreadably. Only small,
+   naturally-atomic units (a table row, a KPI cell) avoid breaking mid-
+   element; large sections break freely between rows/cells instead. */
+@media print {
+  @page { size: A4 landscape; margin: 8mm; }
+
+  body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  /* Hide app chrome */
+  nav, header, [data-toploader] { display: none !important; }
+  .onepager-print-hidden { display: none !important; }
+
+  .onepager-root {
+    max-width: 100% !important;
+    font-size: 9px;
+  }
+
+  /* Never clip content horizontally — screen-only scroll wrappers and
+     min-widths must not survive into print. */
+  .onepager-root * {
+    overflow: visible !important;
+    min-width: 0 !important;
+  }
+
+  /* Keep only small atomic units intact across a page break. */
+  .onepager-root tr,
+  .onepager-root .summary-cell,
+  .onepager-root svg {
+    break-inside: avoid;
+  }
+
+  .onepager-root table {
+    break-inside: auto;
+  }
+
+  .onepager-root thead {
+    display: table-header-group;
+  }
+}
+
+/* ── Mobile utilities ──────────────────────────────────── */
+.safe-area-pb {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   ETEX brand polish — appended additions (toast, sticky col, scroll edges)
+   ────────────────────────────────────────────────────────────────────── */
+
+/* Sonner toast — match the ETEX brand. Sonner adds `.etex-toast` to every
+   toast via the Toaster `toastOptions.classNames.toast` config. */
+.etex-toast {
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--border) !important;
+  background: var(--card) !important;
+  color: var(--foreground) !important;
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.10), 0 1px 2px rgba(15, 23, 42, 0.06) !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+}
+.etex-toast [data-icon] svg { stroke-width: 2 !important; }
+.etex-toast [data-button] {
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  border-radius: var(--radius-sm) !important;
+}
+.dark .etex-toast { box-shadow: 0 6px 24px rgba(0,0,0,0.45), 0 1px 2px rgba(0,0,0,0.4) !important; }
+
+/* Sticky first column for very wide data tables (e.g. the projects table).
+   IMPORTANT: only the FIRST header row's first <th> and each data row's first
+   <td> are sticky. We must NOT match the sub-header row's first th (which is
+   BAC) — otherwise it gets stuck at left:0 with the dark-on-dark / white-on-
+   white combo making the label invisible. */
+.table-sticky-first > thead > tr:first-child > th:first-child {
+  position: sticky !important;
+  top: 0 !important;
+  left: 0 !important;
+  /* Higher than the thead's own sticky z-index (2) and the data row sticky
+     left cells (2), so the corner stays on top in all scroll combinations. */
+  z-index: 4 !important;
+  /* Explicit dark bg + white text so the sticky cell stays readable. */
+  background: #1A1A2E !important;
+  color: #FFFFFF !important;
+}
+.table-sticky-first > thead > tr:first-child > th:first-child .exec-sort-btn {
+  color: #FFFFFF !important;
+}
+.table-sticky-first > tbody > tr > td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 2 !important;
+  background: #FFFFFF;
+  box-shadow: 1px 0 0 var(--border-subtle);
+}
+.dark .table-sticky-first > tbody > tr > td:first-child {
+  background: #1E2128;
+}
+.dark .table-sticky-first > thead > tr:first-child > th:first-child {
+  background: #1A1A2E !important;
+}
+
+/* Soft fade on horizontally-scrollable tables — hints there's more content. */
+.scroll-fade-x {
+  background-image:
+    linear-gradient(to right, var(--background) 30%, rgba(255,255,255,0)),
+    linear-gradient(to right, rgba(255,255,255,0), var(--background) 70%);
+  background-position: left center, right center;
+  background-size: 28px 100%, 28px 100%;
+  background-repeat: no-repeat;
+  background-attachment: local, local, scroll, scroll;
+}
+
+/* Chart zoom slider — compact range control used inside dashboard widgets. */
+.chart-zoom-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 70px;
+  height: 14px;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  padding: 0;
+  margin: 0;
+}
+.chart-zoom-slider::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--border, #E5E7EB);
+}
+.chart-zoom-slider::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--border, #E5E7EB);
+}
+.chart-zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--color-etex-orange, #E8713A);
+  border: 1.5px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  margin-top: -4px;
+  transition: transform 120ms ease;
+}
+.chart-zoom-slider::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--color-etex-orange, #E8713A);
+  border: 1.5px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  transition: transform 120ms ease;
+}
+.chart-zoom-slider:hover::-webkit-slider-thumb,
+.chart-zoom-slider:focus-visible::-webkit-slider-thumb { transform: scale(1.18); }
+.chart-zoom-slider:hover::-moz-range-thumb,
+.chart-zoom-slider:focus-visible::-moz-range-thumb { transform: scale(1.18); }
+.chart-zoom-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-etex-orange, #E8713A) 30%, transparent);
+}
+.chart-zoom-slider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-etex-orange, #E8713A) 30%, transparent);
+}
+.dark .chart-zoom-slider::-webkit-slider-runnable-track,
+.dark .chart-zoom-slider::-moz-range-track { background: #333842; }
+.dark .chart-zoom-slider::-webkit-slider-thumb,
+.dark .chart-zoom-slider::-moz-range-thumb { border-color: #1E2028; }
+
+/* Reduced motion — respect the user's OS preference. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Print — match one-pager: hide chrome, force light theme on the page. */
+@media print {
+  body { background: white !important; color: black !important; }
+  .no-print { display: none !important; }
+}

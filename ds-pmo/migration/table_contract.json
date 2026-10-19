@@ -1,0 +1,1266 @@
+{
+  "version": 1,
+  "tables": {
+    "users": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "email",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "name",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "image",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "global_role",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "permissions",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "is_active",
+        "sql_type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "email_verified",
+        "sql_type": "timestamp",
+        "nullable": true
+      },
+      {
+        "name": "last_login_at",
+        "sql_type": "timestamp",
+        "nullable": true
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ],
+    "divisions": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "is_active",
+        "sql_type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ],
+    "factories": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "code",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "name",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "short_name",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "country",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "currency",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "division_id",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "is_active",
+        "sql_type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ],
+    "categories": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "code",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "is_active",
+        "sql_type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ],
+    "resources": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "category",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "title",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "description",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "href",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "format",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "sort_order",
+        "sql_type": "int",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ],
+    "projects": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "reference",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "name",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "description",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "objective",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "scope",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "scope_exclusions",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "status",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "tier",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "lifecycle_type",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "category_id",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "factory_id",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "wbs_codes",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "current_phase",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "current_gate",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "key_achievements",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "actual_start_date",
+        "sql_type": "timestamp",
+        "nullable": true
+      },
+      {
+        "name": "planned_completion_date",
+        "sql_type": "timestamp",
+        "nullable": true
+      },
+      {
+        "name": "expected_completion_date",
+        "sql_type": "timestamp",
+        "nullable": true
+      },
+      {
+        "name": "rids_open",
+        "sql_type": "int",
+        "nullable": true
+      },
+      {
+        "name": "red_flags_open",
+        "sql_type": "int",
+        "nullable": true
+      },
+      {
+        "name": "rag_progress",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_schedule",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_cost",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_risk",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_scope",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_resources",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_progress_label",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_schedule_label",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_cost_label",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_risk_label",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_scope_label",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_resources_label",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "total_float_excl_buffer",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "total_float_incl_buffer",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "resource_consumption_pct",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "total_cost",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "expected_value",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "roi",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "payback_years",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "risks_issues_count",
+        "sql_type": "int",
+        "nullable": true
+      },
+      {
+        "name": "risks_high_count",
+        "sql_type": "int",
+        "nullable": true
+      },
+      {
+        "name": "risks_moderate_count",
+        "sql_type": "int",
+        "nullable": true
+      },
+      {
+        "name": "risks_low_count",
+        "sql_type": "int",
+        "nullable": true
+      },
+      {
+        "name": "risks_identified_count",
+        "sql_type": "int",
+        "nullable": true
+      },
+      {
+        "name": "risks_quantified_count",
+        "sql_type": "int",
+        "nullable": true
+      },
+      {
+        "name": "total_cost_at_risk",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "total_time_impact",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "schedule_doc_url",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "cost_doc_url",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "riac_doc_url",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "is_active",
+        "sql_type": "boolean",
+        "nullable": false
+      },
+      {
+        "name": "flags",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "is_confidential",
+        "sql_type": "boolean",
+        "nullable": true
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "last_updated_by_id",
+        "sql_type": "string",
+        "nullable": true
+      }
+    ],
+    "project_assignments": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "project_id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "user_id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "role",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ],
+    "scope_grants": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "user_id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "division_id",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "factory_id",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ],
+    "budgets": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "project_id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "bac",
+        "sql_type": "double",
+        "nullable": false
+      },
+      {
+        "name": "actuals",
+        "sql_type": "double",
+        "nullable": false
+      },
+      {
+        "name": "committed",
+        "sql_type": "double",
+        "nullable": false
+      },
+      {
+        "name": "expected",
+        "sql_type": "double",
+        "nullable": false
+      },
+      {
+        "name": "risk_contingency_budgeted",
+        "sql_type": "double",
+        "nullable": false
+      },
+      {
+        "name": "risk_contingency_consumed",
+        "sql_type": "double",
+        "nullable": false
+      },
+      {
+        "name": "mgmt_contingency_budgeted",
+        "sql_type": "double",
+        "nullable": false
+      },
+      {
+        "name": "mgmt_contingency_consumed",
+        "sql_type": "double",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ],
+    "budget_lines": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "budget_id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "type",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "year",
+        "sql_type": "int",
+        "nullable": false
+      },
+      {
+        "name": "amount",
+        "sql_type": "double",
+        "nullable": false
+      }
+    ],
+    "gate_records": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "project_id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "gate",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "status",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "planned_date",
+        "sql_type": "timestamp",
+        "nullable": true
+      },
+      {
+        "name": "completed_date",
+        "sql_type": "timestamp",
+        "nullable": true
+      },
+      {
+        "name": "notes",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "updated_by_id",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ],
+    "risks": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "project_id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "risk_number",
+        "sql_type": "int",
+        "nullable": true
+      },
+      {
+        "name": "type",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "risk_statement",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "if_clause",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "due_to_clause",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "then_clause",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "impact",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "category",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "probability",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "cost_impact",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "time_impact",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "weight",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "counter_measures",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "response_strategy",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "completion_date",
+        "sql_type": "timestamp",
+        "nullable": true
+      },
+      {
+        "name": "owner_name",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "status",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "comments",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ],
+    "milestones": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "project_id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "target_date",
+        "sql_type": "timestamp",
+        "nullable": true
+      },
+      {
+        "name": "expected_date",
+        "sql_type": "timestamp",
+        "nullable": true
+      },
+      {
+        "name": "remarks",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "sort_order",
+        "sql_type": "int",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ],
+    "planned_actions": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "project_id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "action",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "owner_label",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "by_date",
+        "sql_type": "timestamp",
+        "nullable": true
+      },
+      {
+        "name": "status",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "notes",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "sort_order",
+        "sql_type": "int",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ],
+    "scope_changes": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "project_id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "submitted_date",
+        "sql_type": "timestamp",
+        "nullable": true
+      },
+      {
+        "name": "description",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "impact_cost",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "impact_schedule",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "impact_cost_value",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "impact_schedule_value",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "status",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ],
+    "project_documents": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "project_id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "url",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "sort_order",
+        "sql_type": "int",
+        "nullable": false
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "updated_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ],
+    "project_snapshots": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "project_id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "project_reference",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "project_name",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "period_label",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "notes",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "created_by_id",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      },
+      {
+        "name": "current_phase",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "progress",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "current_b_a_c",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "eac",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "actual_cost",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "committed",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "risk_contingency_budgeted",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "risk_contingency_consumed",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "mgmt_contingency_budgeted",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "mgmt_contingency_consumed",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "variance_at_completion",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "schedule_buffer",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "rag_progress",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_schedule",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_cost",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_risk",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_scope",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_resources",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_progress_label",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_schedule_label",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_cost_label",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_risk_label",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_scope_label",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rag_resources_label",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "rids_open",
+        "sql_type": "int",
+        "nullable": true
+      },
+      {
+        "name": "red_flags_open",
+        "sql_type": "int",
+        "nullable": true
+      },
+      {
+        "name": "total_float_excl_buffer",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "total_float_incl_buffer",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "resource_consumption_pct",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "open_risk_count",
+        "sql_type": "int",
+        "nullable": true
+      },
+      {
+        "name": "open_issue_count",
+        "sql_type": "int",
+        "nullable": true
+      },
+      {
+        "name": "total_cost_at_risk",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "total_time_impact",
+        "sql_type": "double",
+        "nullable": true
+      },
+      {
+        "name": "planned_completion_date",
+        "sql_type": "timestamp",
+        "nullable": true
+      },
+      {
+        "name": "expected_completion_date",
+        "sql_type": "timestamp",
+        "nullable": true
+      }
+    ],
+    "audit_logs": [
+      {
+        "name": "id",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "user_id",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "project_id",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "action",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "entity",
+        "sql_type": "string",
+        "nullable": false
+      },
+      {
+        "name": "entity_id",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "changes",
+        "sql_type": "string",
+        "nullable": true
+      },
+      {
+        "name": "created_at",
+        "sql_type": "timestamp",
+        "nullable": false
+      }
+    ]
+  }
+}
