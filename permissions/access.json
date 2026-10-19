@@ -1577,7 +1577,7 @@
     },
     {
       "data_product": "master-data-app",
-      "warehouse": false,
+      "warehouse": true,
       "consumer_groups": [
         {
           "tier": "READ",
