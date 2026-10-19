@@ -1618,6 +1618,14 @@
               "privileges": [
                 "SELECT"
               ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "volume": "bronze_volume",
+              "privileges": [
+                "READ_VOLUME"
+              ]
             }
           ],
           "members": [
@@ -1688,6 +1696,15 @@
               "table": "master_data_app_request_history",
               "privileges": [
                 "MODIFY"
+              ]
+            },
+            {
+              "catalog": "automation",
+              "schema": "bronze",
+              "volume": "bronze_volume",
+              "privileges": [
+                "READ_VOLUME",
+                "WRITE_VOLUME"
               ]
             }
           ],
