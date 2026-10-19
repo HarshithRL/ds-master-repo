@@ -69,7 +69,7 @@ targets:
     variables:
       catalog: automation_a
       policy_id: 306312B973005677
-      warehouse_id: 0ef3e37fbbd5b772
+      warehouse_id: d0aa411377ac7611
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
@@ -82,6 +82,8 @@ targets:
           description: Customer master data request app (acceptance)
           source_code_path: src
           permissions:
+            - user_name: anastasija.lebedeva@etexgroup.com
+              level: CAN_MANAGE
             - group_name: AUTOMATION.MASTERDATAAPP.CONSUMER.WRITE
               level: CAN_USE
             - group_name: AUTOMATION.MASTERDATAAPP.CONSUMER.READ
@@ -102,7 +104,7 @@ targets:
     variables:
       catalog: automation_p
       policy_id: 306312B973005150
-      warehouse_id: f500d0d670ae024b
+      warehouse_id: 71c2830f1b638f65
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
@@ -115,6 +117,8 @@ targets:
           description: Customer master data request app (production)
           source_code_path: src
           permissions:
+            - user_name: anastasija.lebedeva@etexgroup.com
+              level: CAN_MANAGE
             - group_name: AUTOMATION.MASTERDATAAPP.CONSUMER.WRITE
               level: CAN_USE
             - group_name: AUTOMATION.MASTERDATAAPP.CONSUMER.READ
