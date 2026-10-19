@@ -256,10 +256,13 @@ def load_snapshot(base: Path, snapshot: str, contract: dict[str, list[Column]]) 
             contents = {entry.filename: archive.read(entry) for entry in entries}
     else:
         folder = base / name
-        if {path.name for path in folder.iterdir()} != expected_files:
-            raise ValueError("Snapshot folder must contain exactly the manifest and 18 CSV files")
-        if any((folder / file).is_symlink() for file in expected_files):
-            raise ValueError("Snapshot files cannot be symlinks")
+        if not folder.exists():
+            folder = base
+        receipt_files = {f"_PMO_initial_migration_{catalog}.json" for catalog in ("automation_d", "automation_a", "automation_p")} if folder == base else set()
+        if not folder.is_dir() or {path.name for path in folder.iterdir()} - receipt_files != expected_files:
+            raise ValueError("Snapshot must contain manifest.json and all 18 PMO CSV files, in its subfolder or directly in pmo_app")
+        if any((folder / file).is_symlink() or not (folder / file).is_file() for file in expected_files):
+            raise ValueError("Snapshot entries must be regular files, not symlinks or directories")
         if any((folder / file).stat().st_size > MAX_FILE_BYTES for file in expected_files) or sum((folder / file).stat().st_size for file in expected_files) > MAX_PACKAGE_BYTES:
             raise ValueError("Snapshot exceeds the migration size limit")
         contents = {file: (folder / file).read_bytes() for file in expected_files}

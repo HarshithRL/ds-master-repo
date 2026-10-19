@@ -32,6 +32,8 @@ The D target explicitly includes both the app and setup job. ACC/PRD promotion u
 
 The bundle also explicitly includes a DEV-only export job and a D/T/A/P volume import job. The export captures all 18 original tables as checksummed, lossless CSV files and a single portable ZIP in `/Volumes/automation_d/bronze/bronze_volume/pmo_app/`. Copy that ZIP to the corresponding existing volume folder in ACC/PRD, promote the code through the existing pipeline, then run import validation before an explicitly approved apply. Nothing runs automatically on deployment. See [migration/README.md](migration/README.md) for the exact paths, job parameters, source authorization approval and rerun rules.
 
+Extracted uploads directly in `pmo_app/` are also supported: place the original `manifest.json` and all 18 `PMO_*.csv` files together in that folder. ZIP and named snapshot subfolder uploads remain supported. The importer validates the same manifest hash and complete dataset for every layout.
+
 Migration tests: `python -m unittest discover -s tests -p test_migration.py -v`. The standard-library tests cover file integrity, NULL/date/JSON roundtrips, relationship checks, bootstrap safety, read-only validation and insert-only import orchestration.
 
 Do not treat a local Node server as a secure substitute for the Databricks Apps identity proxy. Browser acceptance requires Entra login and SQL consent. The production guide documents the distinction between application-level project permissions and direct SQL privileges, and why consumer group ACL activation is deferred until groups exist.

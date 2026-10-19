@@ -52,7 +52,18 @@ Download the ZIP from the DEV volume. Upload that exact ZIP, without renaming, i
 | A | `/Volumes/automation_a/bronze/bronze_volume/pmo_app/` |
 | P | `/Volumes/automation_p/bronze/bronze_volume/pmo_app/` |
 
-The import job prefers `PMO_<snapshot>.zip`. Alternatively copy the entire `<snapshot>` folder with manifest and all 18 CSVs unchanged. Upload only one consistent package form; a ZIP takes precedence if both exist. A/P never read the original source catalog or DEV volume. They read their own catalog's volume only.
+The import job supports all three layouts, in this priority order: `PMO_<snapshot>.zip`, the `<snapshot>` subfolder, or files directly in `pmo_app`. The direct layout matches an upload of the extracted files through Catalog Explorer:
+
+```text
+/Volumes/automation_a/bronze/bronze_volume/pmo_app/manifest.json
+/Volumes/automation_a/bronze/bronze_volume/pmo_app/PMO_users.csv
+/Volumes/automation_a/bronze/bronze_volume/pmo_app/PMO_projects.csv
+... all other PMO CSV files
+```
+
+Use the same layout under `automation_p` for production. All 18 CSV files AND the original `manifest.json` must be present together; CSV files alone are insufficient. No renaming, moving into a subfolder or ZIP re-upload is required for this direct layout. The `snapshot` parameter stays `pmo_initial_20261019` and must match the manifest even when there is no snapshot subfolder. All checksums, types, counts, relationships and approval checks remain mandatory.
+
+Upload only one consistent package form where possible. A ZIP takes precedence over a subfolder, and a subfolder takes precedence over direct files. An invalid higher-priority package is rejected rather than silently falling back to a different copy. Direct files may coexist with the job's own `_PMO_initial_migration_<catalog>.json` receipt for safe reruns; other unexpected entries are rejected. A/P never read the original source catalog or DEV volume. They read their own catalog's volume only.
 
 ## Promote And Import
 

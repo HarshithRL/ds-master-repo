@@ -26,7 +26,7 @@ sys.modules["transfer"] = transfer
 RUN_SPEC.loader.exec_module(runner)
 
 
-def package_fixture(base: Path, name: str = "validation"):
+def package_fixture(base: Path, name: str = "validation", flat: bool = False):
     contract = transfer.load_contract(CONTRACT_PATH)
     records = {table: [] for table in transfer.TABLES}
     user = {}
@@ -36,8 +36,9 @@ def package_fixture(base: Path, name: str = "validation"):
         }[column.sql_type]
     user.update(id="source-admin", email="admin@etexgroup.com", global_role="ADMIN", permissions="[]")
     records["users"].append(user)
-    folder = base / name
-    folder.mkdir()
+    folder = base if flat else base / name
+    if not flat:
+        folder.mkdir()
     entries = []
     for table in transfer.TABLES:
         columns = [transfer.Column("current_bac" if column.name == "current_b_a_c" else column.name,
@@ -52,6 +53,60 @@ def package_fixture(base: Path, name: str = "validation"):
 
 
 class TransferTests(unittest.TestCase):
+    def test_flat_volume_layout_reads_the_same_snapshot_without_moving_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            folder, contract, records, manifest = package_fixture(base, flat=True)
+            original_files = {path.name for path in base.iterdir()}
+            actual_manifest, actual, fingerprint = transfer.load_snapshot(base, "validation", contract)
+            self.assertEqual(actual_manifest, manifest)
+            self.assertEqual(actual, records)
+            self.assertEqual(fingerprint, hashlib.sha256((folder / "manifest.json").read_bytes()).hexdigest())
+            self.assertEqual({path.name for path in base.iterdir()}, original_files)
+
+    def test_flat_layout_can_be_read_again_with_the_import_receipt_present(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            _, contract, records, _ = package_fixture(base, flat=True)
+            (base / "_PMO_initial_migration_automation_p.json").write_text('{"status":"COMPLETE"}')
+            self.assertEqual(transfer.load_snapshot(base, "validation", contract)[1], records)
+
+    def test_flat_layout_still_rejects_missing_manifest_csv_tampering_and_unknown_files(self):
+        for mutation in ["manifest", "missing_csv", "changed_csv", "extra_csv", "snapshot_name", "directory", "symlink"]:
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as directory:
+                base = Path(directory)
+                _, contract, _, _ = package_fixture(base, flat=True)
+                if mutation == "manifest":
+                    (base / "manifest.json").unlink()
+                elif mutation == "missing_csv":
+                    (base / "PMO_users.csv").unlink()
+                elif mutation == "changed_csv":
+                    path = base / "PMO_users.csv"
+                    path.write_bytes(path.read_bytes() + b"changed")
+                elif mutation == "extra_csv":
+                    (base / "PMO_unexpected.csv").write_text("extra")
+                elif mutation == "directory":
+                    (base / "PMO_users.csv").unlink()
+                    (base / "PMO_users.csv").mkdir()
+                elif mutation == "symlink":
+                    (base / "PMO_users.csv").unlink()
+                    (base / "PMO_users.csv").symlink_to(base / "PMO_projects.csv")
+                with self.assertRaises(ValueError):
+                    transfer.load_snapshot(base, "different_snapshot" if mutation == "snapshot_name" else "validation", contract)
+
+    def test_existing_invalid_zip_or_snapshot_subfolder_cannot_fall_back_to_flat_files(self):
+        for layout in ["zip", "subfolder"]:
+            with tempfile.TemporaryDirectory() as directory:
+                base = Path(directory)
+                _, contract, _, _ = package_fixture(base, flat=True)
+                if layout == "zip":
+                    with zipfile.ZipFile(base / "PMO_validation.zip", "w") as archive:
+                        archive.writestr("manifest.json", "{}")
+                else:
+                    (base / "validation").mkdir()
+                with self.assertRaises(ValueError):
+                    transfer.load_snapshot(base, "validation", contract)
+
     def test_extraction_is_dev_only_before_any_source_query(self):
         spark = MagicMock()
         for catalog in ["automation_a", "automation_p"]:
