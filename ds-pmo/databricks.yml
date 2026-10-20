@@ -4,6 +4,7 @@ bundle:
 
 include:
   - resources/apps/pmo.app.yml
+  - resources/apps/consumer.permissions.yml
   - resources/jobs/pmo_setup.job.yml
   - resources/jobs/pmo_migration.job.yml
 
@@ -64,7 +65,7 @@ targets:
       root_path: /Workspace/automation/ds-pmo/A
     variables:
       catalog: automation_a
-      warehouse_id: 0ef3e37fbbd5b772
+      warehouse_id: ab42869e34018a6e
       migration_policy_id: 306312B973005677
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
@@ -78,7 +79,7 @@ targets:
       root_path: /Workspace/automation/ds-pmo/P
     variables:
       catalog: automation_p
-      warehouse_id: f500d0d670ae024b
+      warehouse_id: 4d5f9389063a8264
       migration_policy_id: 306312B973005150
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
