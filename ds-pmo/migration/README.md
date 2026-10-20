@@ -80,6 +80,19 @@ In the target workspace, open the job and choose **Run Now With Different Parame
 
 Always validate first. All CSV checksums, row counts, schemas, ID uniqueness, current child relationships and user permissions are checked before target mutation. Missing historical audit/snapshot/editor references are counted and preserved, not silently removed. Actual source role counts are in the export receipt; importing users does not grant account/workspace/app/warehouse access or change the central consumer manifest.
 
+A green job is not proof that data was imported. With the default `mode=validate`, the final report says `status: VALIDATED`, performs no table writes and leaves an empty Projects page empty. `PMO - Setup Tables` also creates no business records. The approved apply run must end with `status: IMPORTED`, and its `_PMO_initial_migration_<catalog>.json` receipt must say `COMPLETE`. If the UI still reports zero, first inspect the actual import run parameters/output and independently query the corresponding `automation_a.silver.PMO_projects` or `automation_p.silver.PMO_projects` row count. A screenshot of a green run alone cannot distinguish validation from apply or confirm the catalog/row population.
+
+For the already exported package, the owner-approved apply parameters are:
+
+```yaml
+snapshot: pmo_initial_20261019
+mode: apply
+manifest_sha256: 07ec01659fe5364a690a3b2e4bd55eac7d67d4d7faf8006d7515807842b65630
+accept_user_authorization: 'true'
+```
+
+The separate central consumer-access guardrail failure for `data_product: pmo` is fixed in source by using the real bundle folder `ds-pmo`. It does not by itself execute an import. Import jobs run as their configured job identity, so consumer-group volume grants do not replace the job service principal's own volume privileges.
+
 Apply requires explicit approval of the manifest hash AND source user authorization. The snapshot contains existing ADMIN/MEMBER assignments and active flags. Do not apply if those users/roles are not approved in the target. It requires that the configured initial admin remains an active ADMIN in the package.
 
 The import creates only missing `PMO_*` Delta tables in the existing `silver` schema. Existing tables may receive only the reviewed compatibility changes: nullable `users.email_verified` and source-compatible nullable user permissions/project JSON/confidentiality columns. No catalog, schema, volume or grants are created. Original NULL confidentiality flags remain NULL, matching the existing application's interpretation; no values are invented.

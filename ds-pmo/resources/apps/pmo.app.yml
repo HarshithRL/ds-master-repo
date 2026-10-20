@@ -26,3 +26,17 @@ resources:
           level: CAN_MANAGE
         - user_name: pierre.delaguiche@etexgroup.com
           level: CAN_MANAGE
+        - user_name: arne.rotty@etexgroup.com
+          level: CAN_USE
+        - user_name: luc.vautmans@etexgroup.com
+          level: CAN_USE
+        - user_name: hugo.reis@etexgroup.com
+          level: CAN_USE
+        - user_name: alberto.olmos@etexgroup.com
+          level: CAN_USE
+        - user_name: patricio.vega@etexgroup.com
+          level: CAN_USE
+        - user_name: kerem.yenideniz@etexgroup.com
+          level: CAN_USE
+        - user_name: yusakayra.saltan@etexgroup.com
+          level: CAN_USE

@@ -64,15 +64,26 @@
   ],
   "data_products": [
     {
-      "data_product": "pmo",
+      "data_product": "ds-pmo",
       "warehouse": true,
       "consumer_groups": [
         {
           "tier": "READ",
-          "members": ["mustafaarda.bicakci@etexgroup.com"],
+          "members": [
+            "mustafaarda.bicakci@etexgroup.com",
+            "arne.rotty@etexgroup.com",
+            "luc.vautmans@etexgroup.com",
+            "hugo.reis@etexgroup.com",
+            "alberto.olmos@etexgroup.com",
+            "patricio.vega@etexgroup.com",
+            "kerem.yenideniz@etexgroup.com",
+            "yusakayra.saltan@etexgroup.com"
+          ],
           "grants": [
             {"catalog": "automation", "privileges": ["USE_CATALOG"]},
             {"catalog": "automation", "schema": "silver", "privileges": ["USE_SCHEMA"]},
+            {"catalog": "automation", "schema": "bronze", "privileges": ["USE_SCHEMA"]},
+            {"catalog": "automation", "schema": "bronze", "volume": "bronze_volume", "privileges": ["READ_VOLUME"]},
             {"catalog": "automation", "schema": "silver", "table": "PMO_users", "privileges": ["SELECT"]},
             {"catalog": "automation", "schema": "silver", "table": "PMO_divisions", "privileges": ["SELECT"]},
             {"catalog": "automation", "schema": "silver", "table": "PMO_factories", "privileges": ["SELECT"]},
@@ -95,10 +106,21 @@
         },
         {
           "tier": "WRITE",
-          "members": ["mustafaarda.bicakci@etexgroup.com"],
+          "members": [
+            "mustafaarda.bicakci@etexgroup.com",
+            "arne.rotty@etexgroup.com",
+            "luc.vautmans@etexgroup.com",
+            "hugo.reis@etexgroup.com",
+            "alberto.olmos@etexgroup.com",
+            "patricio.vega@etexgroup.com",
+            "kerem.yenideniz@etexgroup.com",
+            "yusakayra.saltan@etexgroup.com"
+          ],
           "grants": [
             {"catalog": "automation", "privileges": ["USE_CATALOG"]},
             {"catalog": "automation", "schema": "silver", "privileges": ["USE_SCHEMA"]},
+            {"catalog": "automation", "schema": "bronze", "privileges": ["USE_SCHEMA"]},
+            {"catalog": "automation", "schema": "bronze", "volume": "bronze_volume", "privileges": ["READ_VOLUME", "WRITE_VOLUME"]},
             {"catalog": "automation", "schema": "silver", "table": "PMO_users", "privileges": ["SELECT", "MODIFY"]},
             {"catalog": "automation", "schema": "silver", "table": "PMO_divisions", "privileges": ["SELECT", "MODIFY"]},
             {"catalog": "automation", "schema": "silver", "table": "PMO_factories", "privileges": ["SELECT", "MODIFY"]},
