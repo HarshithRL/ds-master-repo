@@ -1,19 +1,22 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/databricks/cli/v1.9.0/bundle/schema/jsonschema.json
 targets:
   A:
     resources:
       apps:
         pmo:
+          name: ${var.app_name}
           permissions:
-            - group_name: AUTOMATION.PMO.CONSUMER.READ
+            - group_name: AUTOMATION.DSPMO.CONSUMER.READ
               level: CAN_USE
-            - group_name: AUTOMATION.PMO.CONSUMER.WRITE
+            - group_name: AUTOMATION.DSPMO.CONSUMER.WRITE
               level: CAN_USE
   P:
     resources:
       apps:
         pmo:
+          name: ${var.app_name}
           permissions:
-            - group_name: AUTOMATION.PMO.CONSUMER.READ
+            - group_name: AUTOMATION.DSPMO.CONSUMER.READ
               level: CAN_USE
-            - group_name: AUTOMATION.PMO.CONSUMER.WRITE
+            - group_name: AUTOMATION.DSPMO.CONSUMER.WRITE
               level: CAN_USE
