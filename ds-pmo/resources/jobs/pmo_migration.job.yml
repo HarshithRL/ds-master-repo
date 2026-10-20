@@ -2,7 +2,7 @@ resources:
   jobs:
     pmo_import:
       name: PMO - One-Time Import From Volume
-      description: Validate or apply an approved PMO CSV snapshot from this environment's existing bronze_volume/pmo_app folder. No original-catalog access is used.
+      description: Run now imports the approved pmo_initial_20261019 snapshot from this environment's bronze_volume/pmo_app, including source user roles. All integrity and target-conflict checks run before writes. No original-catalog access is used.
       max_concurrent_runs: 1
       timeout_seconds: 3600
       tags:
@@ -12,11 +12,11 @@ resources:
         - name: snapshot
           default: pmo_initial_20261019
         - name: mode
-          default: validate
+          default: apply
         - name: manifest_sha256
-          default: ''
+          default: 07ec01659fe5364a690a3b2e4bd55eac7d67d4d7faf8006d7515807842b65630
         - name: accept_user_authorization
-          default: 'false'
+          default: 'true'
       tasks:
         - task_key: import_from_volume
           job_cluster_key: migration_cluster
