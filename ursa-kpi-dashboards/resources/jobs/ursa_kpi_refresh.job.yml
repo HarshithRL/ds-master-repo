@@ -1,0 +1,102 @@
+resources:
+  jobs:
+    ursa_kpi_refresh:
+      name: ursa-kpi-dashboards-refresh-${bundle.target}
+      max_concurrent_runs: 1
+      timeout_seconds: 7200
+      schedule:
+        quartz_cron_expression: 0 30 6 * * ?
+        timezone_id: Europe/Brussels
+        pause_status: ${var.refresh_pause_status}
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: source_catalog
+          default: ${var.source_catalog}
+        - name: target
+          default: ${bundle.target}
+        - name: config_path
+          default: ${workspace.file_path}/src/config
+      tasks:
+        - task_key: preflight_sources
+          spark_python_task:
+            python_file: ../../src/notebooks/refresh_ursa_kpi.py
+            parameters:
+              - --catalog
+              - "{{job.parameters.catalog}}"
+              - --source-catalog
+              - "{{job.parameters.source_catalog}}"
+              - --target
+              - "{{job.parameters.target}}"
+              - --config-path
+              - "{{job.parameters.config_path}}"
+              - --mode
+              - preflight
+          libraries:
+            - pypi:
+                package: sqlglot==27.20.0
+          job_cluster_key: ursa_kpi_cluster
+          timeout_seconds: 1200
+          max_retries: 0
+        - task_key: materialize_results
+          depends_on:
+            - task_key: preflight_sources
+          spark_python_task:
+            python_file: ../../src/notebooks/refresh_ursa_kpi.py
+            parameters:
+              - --catalog
+              - "{{job.parameters.catalog}}"
+              - --source-catalog
+              - "{{job.parameters.source_catalog}}"
+              - --target
+              - "{{job.parameters.target}}"
+              - --config-path
+              - "{{job.parameters.config_path}}"
+              - --mode
+              - materialize
+          libraries:
+            - pypi:
+                package: sqlglot==27.20.0
+          job_cluster_key: ursa_kpi_cluster
+          timeout_seconds: 5400
+          max_retries: 0
+        - task_key: verify_dashboard_results
+          depends_on:
+            - task_key: materialize_results
+          spark_python_task:
+            python_file: ../../src/notebooks/refresh_ursa_kpi.py
+            parameters:
+              - --catalog
+              - "{{job.parameters.catalog}}"
+              - --source-catalog
+              - "{{job.parameters.source_catalog}}"
+              - --target
+              - "{{job.parameters.target}}"
+              - --config-path
+              - "{{job.parameters.config_path}}"
+              - --mode
+              - verify
+          libraries:
+            - pypi:
+                package: sqlglot==27.20.0
+          job_cluster_key: ursa_kpi_cluster
+          timeout_seconds: 1200
+          max_retries: 0
+      job_clusters:
+        - job_cluster_key: ursa_kpi_cluster
+          new_cluster:
+            spark_version: 16.4.x-scala2.12
+            node_type_id: Standard_DS3_v2
+            policy_id: ${var.policy_id}
+            data_security_mode: USER_ISOLATION
+            runtime_engine: PHOTON
+            enable_elastic_disk: true
+            azure_attributes:
+              first_on_demand: 1
+              availability: SPOT_WITH_FALLBACK_AZURE
+              spot_bid_max_price: 100
+            autoscale:
+              min_workers: 1
+              max_workers: 2
+      queue:
+        enabled: true
