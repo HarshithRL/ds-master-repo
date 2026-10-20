@@ -67,22 +67,11 @@ Upload only one consistent package form where possible. A ZIP takes precedence o
 
 ## Promote And Import
 
-Promote the project source through the established Azure DevOps pipeline. The bundle explicitly includes `resources/jobs/pmo_migration.job.yml`; shared pipeline files do not change. `PMO - One-Time Import From Volume` is available in D/T/A/P, with no schedule or automatic data load.
+Promote the project source through the established Azure DevOps pipeline. The bundle explicitly includes `resources/jobs/pmo_migration.job.yml`; shared pipeline files do not change. `PMO - One-Time Import From Volume` is available in D/T/A/P, with no schedule or deploy-triggered data load.
 
-In the target workspace, open the job and choose **Run Now With Different Parameters**:
+At the owner's request on 2026-10-20, the job defaults now include the approval for this exact exported snapshot. After the updated job is deployed in the target workspace, click ordinary **Run now**. No manual parameter edits are required. Start a NEW run: repairing an earlier validation run can retain that run's old parameters.
 
-| Parameter | First Run | Approved Import |
-| --- | --- | --- |
-| `snapshot` | `pmo_initial_20261019` | same |
-| `mode` | `validate` | `apply` |
-| `manifest_sha256` | exported manifest hash, recommended | exported manifest hash, required |
-| `accept_user_authorization` | `false` | `true`, only after reviewing source roles |
-
-Always validate first. All CSV checksums, row counts, schemas, ID uniqueness, current child relationships and user permissions are checked before target mutation. Missing historical audit/snapshot/editor references are counted and preserved, not silently removed. Actual source role counts are in the export receipt; importing users does not grant account/workspace/app/warehouse access or change the central consumer manifest.
-
-A green job is not proof that data was imported. With the default `mode=validate`, the final report says `status: VALIDATED`, performs no table writes and leaves an empty Projects page empty. `PMO - Setup Tables` also creates no business records. The approved apply run must end with `status: IMPORTED`, and its `_PMO_initial_migration_<catalog>.json` receipt must say `COMPLETE`. If the UI still reports zero, first inspect the actual import run parameters/output and independently query the corresponding `automation_a.silver.PMO_projects` or `automation_p.silver.PMO_projects` row count. A screenshot of a green run alone cannot distinguish validation from apply or confirm the catalog/row population.
-
-For the already exported package, the owner-approved apply parameters are:
+The committed job defaults are:
 
 ```yaml
 snapshot: pmo_initial_20261019
@@ -91,9 +80,15 @@ manifest_sha256: 07ec01659fe5364a690a3b2e4bd55eac7d67d4d7faf8006d7515807842b6563
 accept_user_authorization: 'true'
 ```
 
+This default approves importing the snapshot's 187 active users, including its five existing ADMIN roles. It is pinned to this manifest hash, not a blanket approval of other snapshots. For a different snapshot, review its authorization and update the job defaults through DEV/CI again. Do not remove hash/authorization checks or disable preflight to make an incompatible package load.
+
+Apply still performs all CSV checksums, row counts, schemas, ID uniqueness, current child relationships, user-permission checks and target-conflict preflight before mutation. Missing historical audit/snapshot/editor references are counted and preserved, not silently removed. Actual source role counts are in the export receipt; importing users does not grant account/workspace/app/warehouse access or change the central consumer manifest.
+
+A green job is not proof that data was imported. Earlier runs used the old `mode=validate` defaults; an explicit validation run still says `status: VALIDATED`, performs no table writes and leaves an empty Projects page empty. `PMO - Setup Tables` also creates no business records. The new normal Run now must end with `status: IMPORTED`, and its `_PMO_initial_migration_<catalog>.json` receipt must say `COMPLETE`. If the UI still reports zero, inspect the actual new run parameters/output and independently query the corresponding `automation_a.silver.PMO_projects` or `automation_p.silver.PMO_projects` row count. A screenshot of a green run alone cannot confirm the catalog/row population.
+
 The separate central consumer-access guardrail failure for `data_product: pmo` is fixed in source by using the real bundle folder `ds-pmo`. It does not by itself execute an import. Import jobs run as their configured job identity, so consumer-group volume grants do not replace the job service principal's own volume privileges.
 
-Apply requires explicit approval of the manifest hash AND source user authorization. The snapshot contains existing ADMIN/MEMBER assignments and active flags. Do not apply if those users/roles are not approved in the target. It requires that the configured initial admin remains an active ADMIN in the package.
+Apply requires the approved manifest hash AND source user authorization, now supplied by the owner-approved job defaults above. The snapshot contains existing ADMIN/MEMBER assignments and active flags. It requires that the configured initial admin remains an active ADMIN in the package.
 
 The import creates only missing `PMO_*` Delta tables in the existing `silver` schema. Existing tables may receive only the reviewed compatibility changes: nullable `users.email_verified` and source-compatible nullable user permissions/project JSON/confidentiality columns. No catalog, schema, volume or grants are created. Original NULL confidentiality flags remain NULL, matching the existing application's interpretation; no values are invented.
 
@@ -119,4 +114,4 @@ npm run schema:check
 databricks bundle validate --target D --profile DEFAULT
 ```
 
-The local codec and orchestration suite requires only the Python standard library. Spark functions are exercised in the actual Databricks job, not emulated by local package versions. The default import is read-only; apply requires manual owner approval.
+The local codec and orchestration suite requires only the Python standard library. Spark functions are exercised in the actual Databricks job, not emulated by local package versions. `ruby tests/test_deployment_config.rb` verifies the approved Run now defaults against EXPORT_RECEIPT.json, target catalog binding and the absence of schedules. The import job defaults to applying only the pinned, owner-approved snapshot; the separate DEV export validator remains read-only. Deployment alone does not execute either job.

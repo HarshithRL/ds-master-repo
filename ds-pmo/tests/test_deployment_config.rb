@@ -1,5 +1,6 @@
 require 'minitest/autorun'
 require 'yaml'
+require 'json'
 
 class DeploymentConfigTest < Minitest::Test
   ROOT = File.expand_path('..', __dir__)
@@ -61,5 +62,31 @@ class DeploymentConfigTest < Minitest::Test
     setup_job = YAML.load_file(File.join(ROOT, 'resources/jobs/pmo_setup.job.yml'))
     task = setup_job.fetch('resources').fetch('jobs').fetch('pmo_setup').fetch('tasks').first
     assert_equal '${var.warehouse_id}', task.fetch('sql_task').fetch('warehouse_id')
+  end
+
+  def test_run_now_applies_only_the_owner_approved_snapshot_without_manual_parameters
+    jobs = YAML.load_file(File.join(ROOT, 'resources/jobs/pmo_migration.job.yml'))
+    job = jobs.fetch('resources').fetch('jobs').fetch('pmo_import')
+    receipt = JSON.parse(File.read(File.join(ROOT, 'migration/EXPORT_RECEIPT.json')))
+    parameters = job.fetch('parameters').to_h { |entry| [entry.fetch('name'), entry.fetch('default')] }
+    assert_equal({
+      'snapshot' => receipt.fetch('snapshot'),
+      'mode' => 'apply',
+      'manifest_sha256' => receipt.fetch('manifest_sha256'),
+      'accept_user_authorization' => 'true'
+    }, parameters)
+    assert_match(/\A[0-9a-f]{64}\z/, parameters.fetch('manifest_sha256'))
+    assert_equal 1, job.fetch('max_concurrent_runs')
+    %w[schedule trigger triggers continuous].each { |key| refute job.key?(key) }
+    task_parameters = job.fetch('tasks').first.fetch('spark_python_task').fetch('parameters')
+    %w[snapshot mode manifest_sha256 accept_user_authorization].each do |name|
+      assert_includes task_parameters, "{{job.parameters.#{name}}}"
+    end
+    assert_includes task_parameters, '${var.catalog}'
+    export_job = jobs.fetch('targets').fetch('D').fetch('resources').fetch('jobs').fetch('pmo_export')
+    validation = export_job.fetch('tasks').find { |task| task.fetch('task_key') == 'validate_export' }
+    validation_parameters = validation.fetch('spark_python_task').fetch('parameters')
+    assert_equal 'validate', validation_parameters[validation_parameters.index('--mode') + 1]
+    refute_includes validation_parameters, 'apply'
   end
 end
