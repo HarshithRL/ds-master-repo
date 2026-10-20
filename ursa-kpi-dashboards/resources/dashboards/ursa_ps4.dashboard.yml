@@ -1,0 +1,3493 @@
+resources:
+  dashboards:
+    ursa_ps4_daily_kpi_tracker:
+      display_name: URSA PS4 Daily KPI Tracker
+      warehouse_id: ${var.warehouse_id}
+      embed_credentials: false
+      serialized_dashboard: |
+        {
+          "datasets": [
+            {
+              "name": "ursa_kpi_data",
+              "displayName": "URSA KPI Daily Data",
+              "queryLines": [
+                "SELECT * FROM `${var.catalog}`.gold.`URSA_KPI_result_ursa_kpi_data${var.result_suffix}`\n",
+                "ORDER BY sort_order, company_code, report_date\n"
+              ]
+            },
+            {
+              "name": "test_invoiced_value",
+              "displayName": "Test - Total Invoiced Value (VBRK)",
+              "queryLines": [
+                "SELECT * FROM `${var.catalog}`.gold.`URSA_KPI_result_test_invoiced_value${var.result_suffix}`\n",
+                "ORDER BY `Company Code`, `Billing Date`\n"
+              ]
+            },
+            {
+              "name": "hypercare_mock",
+              "displayName": "Hypercare Daily KPI Matrix (Mock)",
+              "queryLines": [
+                "SELECT * FROM `${var.catalog}`.gold.`URSA_KPI_result_hypercare_mock${var.result_suffix}`\n",
+                "ORDER BY country_name, sort_order, snapshot_date\n"
+              ]
+            },
+            {
+              "name": "hc_baseline",
+              "displayName": "Hypercare Baselines (Oct-Dec 2025 Avg)",
+              "queryLines": [
+                "SELECT * FROM `${var.catalog}`.gold.`URSA_KPI_result_hc_baseline${var.result_suffix}`\n"
+              ]
+            },
+            {
+              "name": "hc_actuals_vs_baseline",
+              "displayName": "Actuals vs Baseline (Heatmap)",
+              "queryLines": [
+                "SELECT * FROM `${var.catalog}`.gold.`URSA_KPI_result_hc_actuals_vs_baseline${var.result_suffix}`\n",
+                "ORDER BY country_name, sort_order, col_order\n"
+              ]
+            },
+            {
+              "name": "hc_matrix_formatted",
+              "displayName": "Hypercare Matrix (Formatted Cells)",
+              "queryLines": [
+                "SELECT * FROM `${var.catalog}`.gold.`URSA_KPI_result_hc_matrix_formatted${var.result_suffix}`\n",
+                "ORDER BY country_name, sort_order, snapshot_date\n"
+              ]
+            },
+            {
+              "name": "o2c_live_matrix",
+              "displayName": "O2C Live Matrix (synapse-prd.pbi)",
+              "queryLines": [
+                "SELECT * FROM `${var.catalog}`.gold.`URSA_KPI_result_o2c_live_matrix${var.result_suffix}`\n",
+                "ORDER BY kpi_stream, kpi_name, country_name, plant_label, snapshot_date\n"
+              ]
+            }
+          ],
+          "pages": [
+            {
+              "name": "a66962f7",
+              "displayName": "Overview",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "overview_pivot",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ursa_kpi_data",
+                          "fields": [
+                            {
+                              "name": "category",
+                              "expression": "`category`"
+                            },
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "report_date",
+                              "expression": "`report_date`"
+                            },
+                            {
+                              "name": "sum(daily_value)",
+                              "expression": "SUM(`daily_value`)"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "category",
+                                  "kpi_name"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "report_date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`category`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`report_date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": {
+                          "value": "KPI Overview by Area",
+                          "fields": []
+                        }
+                      },
+                      "version": 4,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": {
+                          "fields": [
+                            {
+                              "fieldName": "category",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "kpi_name",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "columns": {
+                          "fields": [
+                            {
+                              "fieldName": "report_date",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "cells": {
+                          "fields": [
+                            {
+                              "fieldName": "sum(daily_value)",
+                              "cellType": "text"
+                            }
+                          ],
+                          "displayAs": "rows"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 2,
+                    "width": 12,
+                    "height": 12
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "title",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## URSA PS4 Daily KPI Tracker\n",
+                        "Overview across all areas \u2014 filter by company code and date range using the sidebar"
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 2
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "order_to_cash",
+              "displayName": "Order to Cash",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "pivot",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ursa_kpi_data",
+                          "fields": [
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "company_code",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "name": "report_date",
+                              "expression": "`report_date`"
+                            },
+                            {
+                              "name": "sum(daily_value)",
+                              "expression": "SUM(`daily_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`category` IN ('Order to Cash')"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "kpi_name",
+                                  "company_code"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "report_date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`report_date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Order to Cash \u2014 Daily Values"
+                      },
+                      "version": 3,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": [
+                          {
+                            "fieldName": "kpi_name"
+                          },
+                          {
+                            "fieldName": "company_code"
+                          }
+                        ],
+                        "columns": [
+                          {
+                            "fieldName": "report_date"
+                          }
+                        ],
+                        "cell": {
+                          "type": "single-cell",
+                          "fieldName": "sum(daily_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 1,
+                    "width": 12,
+                    "height": 13
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "title",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Order to Cash\n",
+                        "Daily KPI tracking for sales order creation and delivery processes"
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 1
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "procurement_to_pay",
+              "displayName": "Procure to Pay",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "pivot",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ursa_kpi_data",
+                          "fields": [
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "company_code",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "name": "report_date",
+                              "expression": "`report_date`"
+                            },
+                            {
+                              "name": "sum(daily_value)",
+                              "expression": "SUM(`daily_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`category` IN ('Procure to Pay')"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "kpi_name",
+                                  "company_code"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "report_date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`report_date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Procure to Pay \u2014 Daily Values"
+                      },
+                      "version": 4,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": {
+                          "fields": [
+                            {
+                              "fieldName": "kpi_name",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "company_code",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "columns": {
+                          "fields": [
+                            {
+                              "fieldName": "report_date",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "cells": {
+                          "fields": [
+                            {
+                              "fieldName": "sum(daily_value)",
+                              "cellType": "text"
+                            }
+                          ],
+                          "displayAs": "rows"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 1,
+                    "width": 12,
+                    "height": 13
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "title",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Procure to Pay\n",
+                        "Daily KPI tracking for POs, invoices, approvals, and vendor payments"
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 1
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "warehouse",
+              "displayName": "Warehouse",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "pivot",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ursa_kpi_data",
+                          "fields": [
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "company_code",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "name": "report_date",
+                              "expression": "`report_date`"
+                            },
+                            {
+                              "name": "sum(daily_value)",
+                              "expression": "SUM(`daily_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`category` IN ('Warehouse')"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "kpi_name",
+                                  "company_code"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "report_date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`report_date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Warehouse \u2014 Daily Values"
+                      },
+                      "version": 3,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": [
+                          {
+                            "fieldName": "kpi_name"
+                          },
+                          {
+                            "fieldName": "company_code"
+                          }
+                        ],
+                        "columns": [
+                          {
+                            "fieldName": "report_date"
+                          }
+                        ],
+                        "cell": {
+                          "type": "single-cell",
+                          "fieldName": "sum(daily_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 1,
+                    "width": 12,
+                    "height": 13
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "title",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Warehouse\n",
+                        "Daily KPI tracking for picking, putaway, and transfer tasks"
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 1
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "logistics",
+              "displayName": "Logistics",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "pivot",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ursa_kpi_data",
+                          "fields": [
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "company_code",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "name": "report_date",
+                              "expression": "`report_date`"
+                            },
+                            {
+                              "name": "sum(daily_value)",
+                              "expression": "SUM(`daily_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`category` IN ('Logistics')"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "kpi_name",
+                                  "company_code"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "report_date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`report_date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Logistics \u2014 Daily Values"
+                      },
+                      "version": 3,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": [
+                          {
+                            "fieldName": "kpi_name"
+                          },
+                          {
+                            "fieldName": "company_code"
+                          }
+                        ],
+                        "columns": [
+                          {
+                            "fieldName": "report_date"
+                          }
+                        ],
+                        "cell": {
+                          "type": "single-cell",
+                          "fieldName": "sum(daily_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 1,
+                    "width": 12,
+                    "height": 13
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "title",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Logistics\n",
+                        "Daily KPI tracking for goods receipts, shipments, and deliveries"
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 1
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "finance_control",
+              "displayName": "Finance & Control",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "pivot",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ursa_kpi_data",
+                          "fields": [
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "company_code",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "name": "report_date",
+                              "expression": "`report_date`"
+                            },
+                            {
+                              "name": "sum(daily_value)",
+                              "expression": "SUM(`daily_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`category` IN ('Finance and Control')"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "kpi_name",
+                                  "company_code"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "report_date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`report_date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Finance and Control \u2014 Daily Values"
+                      },
+                      "version": 3,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": [
+                          {
+                            "fieldName": "kpi_name"
+                          },
+                          {
+                            "fieldName": "company_code"
+                          }
+                        ],
+                        "columns": [
+                          {
+                            "fieldName": "report_date"
+                          }
+                        ],
+                        "cell": {
+                          "type": "single-cell",
+                          "fieldName": "sum(daily_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 1,
+                    "width": 12,
+                    "height": 13
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "title",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Finance and Control\n",
+                        "Daily KPI tracking for journal entries, payments, and reconciliation"
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 1
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "master_data",
+              "displayName": "Master Data",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "pivot",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ursa_kpi_data",
+                          "fields": [
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "company_code",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "name": "report_date",
+                              "expression": "`report_date`"
+                            },
+                            {
+                              "name": "sum(daily_value)",
+                              "expression": "SUM(`daily_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`category` IN ('Master Data')"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "kpi_name",
+                                  "company_code"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "report_date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`report_date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Master Data \u2014 Daily Values"
+                      },
+                      "version": 3,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": [
+                          {
+                            "fieldName": "kpi_name"
+                          },
+                          {
+                            "fieldName": "company_code"
+                          }
+                        ],
+                        "columns": [
+                          {
+                            "fieldName": "report_date"
+                          }
+                        ],
+                        "cell": {
+                          "type": "single-cell",
+                          "fieldName": "sum(daily_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 1,
+                    "width": 12,
+                    "height": 13
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "title",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Master Data\n",
+                        "Daily KPI tracking for material, customer, and vendor master changes"
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 1
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "global_filters",
+              "displayName": "Global Filters",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "company_filter",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c64d3694126a902453921a524fb4_company_code",
+                        "query": {
+                          "datasetName": "ursa_kpi_data",
+                          "fields": [
+                            {
+                              "name": "company_code",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "name": "company_code_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            },
+                            {
+                              "name": "count(company_code)",
+                              "expression": "COUNT(`company_code`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "scale": {
+                        "type": "categorical",
+                        "sort": {
+                          "by": "measure-reversed",
+                          "measure": {
+                            "fieldName": "count(company_code)",
+                            "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c64d3694126a902453921a524fb4_company_code"
+                          }
+                        }
+                      },
+                      "frame": {
+                        "showTitle": true,
+                        "title": {
+                          "value": "Company Code",
+                          "fields": []
+                        }
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "company_code",
+                            "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c64d3694126a902453921a524fb4_company_code"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 3,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "date_filter",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c64d3694126a902453921a524fb4_report_date",
+                        "query": {
+                          "datasetName": "ursa_kpi_data",
+                          "fields": [
+                            {
+                              "name": "report_date",
+                              "expression": "`report_date`"
+                            },
+                            {
+                              "name": "report_date_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Report Date"
+                      },
+                      "widgetType": "filter-date-range-picker",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "report_date",
+                            "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c64d3694126a902453921a524fb4_report_date"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 3,
+                    "y": 0,
+                    "width": 3,
+                    "height": 1
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "production_planning",
+              "displayName": "Production Planning",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "title",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Production Planning & Manufacturing Execution\n",
+                        "Daily KPI tracking for production orders, confirmations, and backlog"
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "pivot",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ursa_kpi_data",
+                          "fields": [
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "company_code",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "name": "report_date",
+                              "expression": "`report_date`"
+                            },
+                            {
+                              "name": "sum(daily_value)",
+                              "expression": "SUM(`daily_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`category` IN ('Production Planning')"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "kpi_name",
+                                  "company_code"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "report_date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`report_date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Production Planning \u2014 Daily Values"
+                      },
+                      "version": 3,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": [
+                          {
+                            "fieldName": "kpi_name"
+                          },
+                          {
+                            "fieldName": "company_code"
+                          }
+                        ],
+                        "columns": [
+                          {
+                            "fieldName": "report_date"
+                          }
+                        ],
+                        "cell": {
+                          "type": "single-cell",
+                          "fieldName": "sum(daily_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 1,
+                    "width": 12,
+                    "height": 13
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "roles_auth",
+              "displayName": "Roles and Authorizations",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "title",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Roles and Authorizations\n",
+                        "Daily KPI tracking for defects and bug resolution"
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "pivot",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "ursa_kpi_data",
+                          "fields": [
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "company_code",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "name": "report_date",
+                              "expression": "`report_date`"
+                            },
+                            {
+                              "name": "sum(daily_value)",
+                              "expression": "SUM(`daily_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`category` IN ('Roles and Authorizations')"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "kpi_name",
+                                  "company_code"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "report_date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`company_code`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`report_date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Roles and Authorizations \u2014 Daily Values"
+                      },
+                      "version": 3,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": [
+                          {
+                            "fieldName": "kpi_name"
+                          },
+                          {
+                            "fieldName": "company_code"
+                          }
+                        ],
+                        "columns": [
+                          {
+                            "fieldName": "report_date"
+                          }
+                        ],
+                        "cell": {
+                          "type": "single-cell",
+                          "fieldName": "sum(daily_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 1,
+                    "width": 12,
+                    "height": 13
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "test_dashboard",
+              "displayName": "Test Dashboard",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "title",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Test Dashboard \u2014 Total Invoiced Value (EUR)\n",
+                        "Data source: VBRK/VBRP billing documents | Company codes: 6700, 6740, 6760 | Past 10 days"
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "detail_table",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "test_invoiced_value",
+                          "fields": [
+                            {
+                              "name": "Company Code",
+                              "expression": "`Company Code`"
+                            },
+                            {
+                              "name": "Billing Date",
+                              "expression": "`Billing Date`"
+                            },
+                            {
+                              "name": "Document Currency",
+                              "expression": "`Document Currency`"
+                            },
+                            {
+                              "name": "num_invoices",
+                              "expression": "`num_invoices`"
+                            },
+                            {
+                              "name": "net_value_doc_currency",
+                              "expression": "`net_value_doc_currency`"
+                            },
+                            {
+                              "name": "total_invoiced_value_eur",
+                              "expression": "`total_invoiced_value_eur`"
+                            }
+                          ],
+                          "disaggregated": true
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Daily Detail"
+                      },
+                      "version": 2,
+                      "widgetType": "table",
+                      "encodings": {
+                        "columns": [
+                          {
+                            "fieldName": "Company Code"
+                          },
+                          {
+                            "fieldName": "Billing Date"
+                          },
+                          {
+                            "fieldName": "Document Currency"
+                          },
+                          {
+                            "fieldName": "num_invoices"
+                          },
+                          {
+                            "fieldName": "net_value_doc_currency"
+                          },
+                          {
+                            "fieldName": "total_invoiced_value_eur"
+                          }
+                        ]
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 1,
+                    "width": 12,
+                    "height": 8
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "pivot_summary",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "test_invoiced_value",
+                          "fields": [
+                            {
+                              "name": "Company Code",
+                              "expression": "`Company Code`"
+                            },
+                            {
+                              "name": "Billing Date",
+                              "expression": "`Billing Date`"
+                            },
+                            {
+                              "name": "sum(total_invoiced_value_eur)",
+                              "expression": "SUM(`total_invoiced_value_eur`)"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "Company Code"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "Billing Date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`Company Code`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`Billing Date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Summary Pivot"
+                      },
+                      "version": 3,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": [
+                          {
+                            "fieldName": "Company Code"
+                          }
+                        ],
+                        "columns": [
+                          {
+                            "fieldName": "Billing Date"
+                          }
+                        ],
+                        "cell": {
+                          "type": "single-cell",
+                          "fieldName": "sum(total_invoiced_value_eur)",
+                          "cellType": "text"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 9,
+                    "width": 12,
+                    "height": 6
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "test_view_draft",
+              "displayName": "Test View Draft",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "title",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Hypercare & Ramp-Up Daily Operations Dashboard\n",
+                        "Nov 2 \u2013 Nov 8, 2026 | Mock data \u2014 filter by country and plant using controls below"
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_invoiced",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "sum(actual_value)",
+                              "expression": "SUM(`actual_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`kpi_name` IN ('Total Invoiced Value (EUR)')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Total Invoiced Value (EUR)"
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(actual_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 2,
+                    "width": 3,
+                    "height": 3
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "country_filter",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_country_name",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "country_name",
+                              "expression": "`country_name`"
+                            },
+                            {
+                              "name": "country_name_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Country"
+                      },
+                      "widgetType": "filter-single-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "country_name",
+                            "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_country_name"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 1,
+                    "width": 3,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_orders",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "sum(actual_value)",
+                              "expression": "SUM(`actual_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`kpi_name` IN ('# Sales Orders Created')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Sales Orders Created"
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(actual_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 3,
+                    "y": 2,
+                    "width": 3,
+                    "height": 3
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "plant_filter",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_plant_label",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "plant_label",
+                              "expression": "`plant_label`"
+                            },
+                            {
+                              "name": "plant_label_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Plant"
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "plant_label",
+                            "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_plant_label"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 3,
+                    "y": 1,
+                    "width": 3,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_confirmations",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "sum(actual_value)",
+                              "expression": "SUM(`actual_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`kpi_name` IN ('Daily Confirmations')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Production Confirmations"
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(actual_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 6,
+                    "y": 2,
+                    "width": 3,
+                    "height": 3
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "priority_filter",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_priority",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "priority",
+                              "expression": "`priority`"
+                            },
+                            {
+                              "name": "priority_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Priority"
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "priority",
+                            "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_priority"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 6,
+                    "y": 1,
+                    "width": 3,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "counter_bottlenecks",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "sum(actual_value)",
+                              "expression": "SUM(`actual_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`kpi_name` IN ('Overdue Invoices', 'Invoices in AP/VIM (not paid)', 'Defect Burn-Down (Created vs Closed)')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Active Bottlenecks"
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(actual_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 9,
+                    "y": 2,
+                    "width": 3,
+                    "height": 3
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "rag_filter",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_rag_status",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "rag_status",
+                              "expression": "`rag_status`"
+                            },
+                            {
+                              "name": "rag_status_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "showTitle": true,
+                        "title": "RAG Status"
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "rag_status",
+                            "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_rag_status"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 9,
+                    "y": 1,
+                    "width": 3,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "main_matrix",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hc_matrix_formatted",
+                          "fields": [
+                            {
+                              "name": "kpi_stream",
+                              "expression": "`kpi_stream`"
+                            },
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "country_name",
+                              "expression": "`country_name`"
+                            },
+                            {
+                              "name": "plant_label",
+                              "expression": "`plant_label`"
+                            },
+                            {
+                              "name": "baseline",
+                              "expression": "`baseline`"
+                            },
+                            {
+                              "name": "snapshot_date",
+                              "expression": "`snapshot_date`"
+                            },
+                            {
+                              "name": "first(formatted_cell)",
+                              "expression": "FIRST(`formatted_cell`)"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "kpi_stream",
+                                  "kpi_name",
+                                  "country_name",
+                                  "plant_label",
+                                  "baseline"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "snapshot_date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_stream`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`country_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`plant_label`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`baseline`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`snapshot_date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": {
+                          "value": "Daily KPI Tracking Matrix \u2014 Actuals vs Baseline",
+                          "fields": []
+                        }
+                      },
+                      "version": 4,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": {
+                          "fields": [
+                            {
+                              "fieldName": "kpi_stream",
+                              "headerWidth": 100,
+                              "displayName": "Category",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "kpi_name",
+                              "headerWidth": 100,
+                              "displayName": "KPI",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "country_name",
+                              "displayName": "Country",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "plant_label",
+                              "displayName": "Plant",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "baseline",
+                              "displayName": "2025 Av.",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "columns": {
+                          "fields": [
+                            {
+                              "fieldName": "snapshot_date",
+                              "format": {
+                                "type": "date",
+                                "date": "locale-number-month-full-year",
+                                "leadingZeros": true
+                              },
+                              "displayName": "Date",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "cells": {
+                          "fields": [
+                            {
+                              "fieldName": "first(formatted_cell)",
+                              "cellType": "text",
+                              "style": {
+                                "type": "basic",
+                                "rules": [
+                                  {
+                                    "condition": {
+                                      "operand": {
+                                        "type": "data-value",
+                                        "value": "\u25b2"
+                                      },
+                                      "operator": "contains"
+                                    },
+                                    "backgroundColor": "#00A972"
+                                  },
+                                  {
+                                    "condition": {
+                                      "operand": {
+                                        "type": "data-value",
+                                        "value": "\u25bc"
+                                      },
+                                      "operator": "contains"
+                                    },
+                                    "backgroundColor": "#E92D2D"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "displayAs": "rows"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 5,
+                    "width": 12,
+                    "height": 16
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "expected_matrix",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "kpi_stream",
+                              "expression": "`kpi_stream`"
+                            },
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "snapshot_date",
+                              "expression": "`snapshot_date`"
+                            },
+                            {
+                              "name": "sum(expected_value)",
+                              "expression": "SUM(`expected_value`)"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "kpi_stream",
+                                  "kpi_name"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "snapshot_date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_stream`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`snapshot_date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": {
+                          "value": "Baseline Expected (Target) by Date",
+                          "fields": []
+                        }
+                      },
+                      "version": 4,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": {
+                          "fields": [
+                            {
+                              "fieldName": "kpi_stream",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "kpi_name",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "columns": {
+                          "fields": [
+                            {
+                              "fieldName": "snapshot_date",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "cells": {
+                          "fields": [
+                            {
+                              "fieldName": "sum(expected_value)",
+                              "cellType": "text",
+                              "style": {
+                                "type": "basic",
+                                "rules": [
+                                  {
+                                    "condition": {
+                                      "operator": ">="
+                                    },
+                                    "backgroundColor": "#00A972"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "displayAs": "rows"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 21,
+                    "width": 12,
+                    "height": 16
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "rag_table",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "country_name",
+                              "expression": "`country_name`"
+                            },
+                            {
+                              "name": "plant_label",
+                              "expression": "`plant_label`"
+                            },
+                            {
+                              "name": "kpi_stream",
+                              "expression": "`kpi_stream`"
+                            },
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "priority",
+                              "expression": "`priority`"
+                            },
+                            {
+                              "name": "expected_value",
+                              "expression": "`expected_value`"
+                            },
+                            {
+                              "name": "actual_value",
+                              "expression": "`actual_value`"
+                            },
+                            {
+                              "name": "variance",
+                              "expression": "`variance`"
+                            },
+                            {
+                              "name": "variance_pct",
+                              "expression": "`variance_pct`"
+                            },
+                            {
+                              "name": "rag_status",
+                              "expression": "`rag_status`"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`snapshot_date` IN ('2026-11-08')"
+                            }
+                          ],
+                          "disaggregated": true
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "RAG Status Detail \u2014 Latest Day Plant Breakdown"
+                      },
+                      "version": 2,
+                      "widgetType": "table",
+                      "encodings": {
+                        "columns": [
+                          {
+                            "fieldName": "country_name"
+                          },
+                          {
+                            "fieldName": "plant_label"
+                          },
+                          {
+                            "fieldName": "kpi_stream"
+                          },
+                          {
+                            "fieldName": "kpi_name"
+                          },
+                          {
+                            "fieldName": "priority"
+                          },
+                          {
+                            "fieldName": "expected_value"
+                          },
+                          {
+                            "fieldName": "actual_value"
+                          },
+                          {
+                            "fieldName": "variance"
+                          },
+                          {
+                            "fieldName": "variance_pct"
+                          },
+                          {
+                            "fieldName": "rag_status"
+                          }
+                        ]
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 37,
+                    "width": 12,
+                    "height": 10
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "test_view_draft_2",
+              "displayName": "Test View Draft 2",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "title",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Hypercare KPI Heatmap \u2014 Actuals vs Baseline\n",
+                        "Comparing live daily actuals against Oct\u2013Dec 2025 3-month averages | **Green** = at or above baseline \u00b7 **Red** = below baseline\n",
+                        "\n",
+                        "Scope: URSA Germany (1321 Delitzsch) \u00b7 URSA Poland (2181 Dabrowa)"
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 2
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "baseline_table",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hc_baseline",
+                          "fields": [
+                            {
+                              "name": "country_name",
+                              "expression": "`country_name`"
+                            },
+                            {
+                              "name": "plant_label",
+                              "expression": "`plant_label`"
+                            },
+                            {
+                              "name": "kpi_stream",
+                              "expression": "`kpi_stream`"
+                            },
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "baseline_value",
+                              "expression": "`baseline_value`"
+                            }
+                          ],
+                          "disaggregated": true
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Editable Baselines (Oct-Dec 2025 Avg)"
+                      },
+                      "version": 2,
+                      "widgetType": "table",
+                      "encodings": {
+                        "columns": [
+                          {
+                            "fieldName": "country_name"
+                          },
+                          {
+                            "fieldName": "plant_label"
+                          },
+                          {
+                            "fieldName": "kpi_stream"
+                          },
+                          {
+                            "fieldName": "kpi_name"
+                          },
+                          {
+                            "fieldName": "baseline_value"
+                          }
+                        ]
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 2,
+                    "width": 12,
+                    "height": 10
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "a7eeb6e9",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "kpi_stream",
+                              "expression": "`kpi_stream`"
+                            },
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "country_name",
+                              "expression": "`country_name`"
+                            },
+                            {
+                              "name": "plant_label",
+                              "expression": "`plant_label`"
+                            },
+                            {
+                              "name": "snapshot_date",
+                              "expression": "`snapshot_date`"
+                            },
+                            {
+                              "name": "sum(actual_value)",
+                              "expression": "SUM(`actual_value`)"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "kpi_stream",
+                                  "kpi_name",
+                                  "country_name",
+                                  "plant_label"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "snapshot_date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_stream`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`country_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`plant_label`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`snapshot_date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true
+                      },
+                      "version": 4,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": {
+                          "fields": [
+                            {
+                              "fieldName": "kpi_stream",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "kpi_name",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "country_name",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "plant_label",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "columns": {
+                          "fields": [
+                            {
+                              "fieldName": "snapshot_date",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "cells": {
+                          "fields": [
+                            {
+                              "fieldName": "sum(actual_value)",
+                              "cellType": "text",
+                              "style": {
+                                "type": "basic",
+                                "rules": [
+                                  {
+                                    "condition": {
+                                      "operator": ">="
+                                    },
+                                    "backgroundColor": "#00A972"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "displayAs": "rows"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 12,
+                    "width": 12,
+                    "height": 16
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            },
+            {
+              "name": "8d08593c",
+              "displayName": "Test View Draft 2",
+              "layout": [
+                {
+                  "widget": {
+                    "name": "80b29ee6",
+                    "multilineTextboxSpec": {
+                      "lines": [
+                        "## Hypercare & Ramp-Up Daily Operations Dashboard\n",
+                        "Nov 2 \u2013 Nov 8, 2026 | Mock data \u2014 filter by country and plant using controls below"
+                      ]
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 16,
+                    "width": 12,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "b2782ec5",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "sum(actual_value)",
+                              "expression": "SUM(`actual_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`kpi_name` IN ('Total Invoiced Value (EUR)')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Total Invoiced Value (EUR)"
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(actual_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 18,
+                    "width": 3,
+                    "height": 3
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "01973ac4",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_country_name",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "country_name",
+                              "expression": "`country_name`"
+                            },
+                            {
+                              "name": "country_name_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "showTitle": true,
+                        "title": {
+                          "value": "Country",
+                          "fields": []
+                        }
+                      },
+                      "widgetType": "filter-single-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "country_name",
+                            "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_country_name"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 17,
+                    "width": 3,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "3a602906",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "sum(actual_value)",
+                              "expression": "SUM(`actual_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`kpi_name` IN ('# Sales Orders Created')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Sales Orders Created"
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(actual_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 3,
+                    "y": 18,
+                    "width": 3,
+                    "height": 3
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "ccc14d1e",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_plant_label",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "plant_label",
+                              "expression": "`plant_label`"
+                            },
+                            {
+                              "name": "plant_label_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Plant"
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "plant_label",
+                            "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_plant_label"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 3,
+                    "y": 17,
+                    "width": 3,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "ab3ac0ea",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "sum(actual_value)",
+                              "expression": "SUM(`actual_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`kpi_name` IN ('Daily Confirmations')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Production Confirmations"
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(actual_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 6,
+                    "y": 18,
+                    "width": 3,
+                    "height": 3
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "7a4b4108",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_priority",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "priority",
+                              "expression": "`priority`"
+                            },
+                            {
+                              "name": "priority_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Priority"
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "priority",
+                            "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_priority"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 6,
+                    "y": 17,
+                    "width": 3,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "d3499691",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "sum(actual_value)",
+                              "expression": "SUM(`actual_value`)"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`kpi_name` IN ('Overdue Invoices', 'Invoices in AP/VIM (not paid)', 'Defect Burn-Down (Created vs Closed)')"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "Active Bottlenecks"
+                      },
+                      "version": 2,
+                      "widgetType": "counter",
+                      "encodings": {
+                        "value": {
+                          "fieldName": "sum(actual_value)"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 9,
+                    "y": 18,
+                    "width": 3,
+                    "height": 3
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "38505310",
+                    "queries": [
+                      {
+                        "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_rag_status",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "rag_status",
+                              "expression": "`rag_status`"
+                            },
+                            {
+                              "name": "rag_status_associativity",
+                              "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                            }
+                          ],
+                          "disaggregated": false
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "version": 2,
+                      "frame": {
+                        "showTitle": true,
+                        "title": "RAG Status"
+                      },
+                      "widgetType": "filter-multi-select",
+                      "encodings": {
+                        "fields": [
+                          {
+                            "fieldName": "rag_status",
+                            "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_rag_status"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 9,
+                    "y": 17,
+                    "width": 3,
+                    "height": 1
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "2e61095a",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "o2c_live_matrix",
+                          "fields": [
+                            {
+                              "name": "kpi_stream",
+                              "expression": "`kpi_stream`"
+                            },
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "country_name",
+                              "expression": "`country_name`"
+                            },
+                            {
+                              "name": "plant_label",
+                              "expression": "`plant_label`"
+                            },
+                            {
+                              "name": "baseline",
+                              "expression": "`baseline`"
+                            },
+                            {
+                              "name": "snapshot_date",
+                              "expression": "`snapshot_date`"
+                            },
+                            {
+                              "name": "first(formatted_cell)",
+                              "expression": "FIRST(`formatted_cell`)"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "kpi_stream",
+                                  "kpi_name",
+                                  "country_name",
+                                  "plant_label",
+                                  "baseline"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "snapshot_date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_stream`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`country_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`plant_label`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`baseline`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`snapshot_date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": {
+                          "value": "Daily KPI Tracking Matrix \u2014 Actuals vs Baseline",
+                          "fields": []
+                        }
+                      },
+                      "version": 4,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": {
+                          "fields": [
+                            {
+                              "fieldName": "kpi_stream",
+                              "headerWidth": 100,
+                              "displayName": "Category",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "kpi_name",
+                              "headerWidth": 100,
+                              "displayName": "KPI",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "country_name",
+                              "displayName": "Country",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "plant_label",
+                              "displayName": "Plant",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "baseline",
+                              "displayName": "2025 Av.",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "columns": {
+                          "fields": [
+                            {
+                              "fieldName": "snapshot_date",
+                              "format": {
+                                "type": "date",
+                                "date": "locale-number-month-full-year",
+                                "leadingZeros": true
+                              },
+                              "displayName": "Date",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "cells": {
+                          "fields": [
+                            {
+                              "fieldName": "first(formatted_cell)",
+                              "cellType": "text",
+                              "style": {
+                                "type": "basic",
+                                "rules": [
+                                  {
+                                    "condition": {
+                                      "operand": {
+                                        "type": "data-value",
+                                        "value": "\u25b2"
+                                      },
+                                      "operator": "contains"
+                                    },
+                                    "backgroundColor": "#00A972"
+                                  },
+                                  {
+                                    "condition": {
+                                      "operand": {
+                                        "type": "data-value",
+                                        "value": "\u25bc"
+                                      },
+                                      "operator": "contains"
+                                    },
+                                    "backgroundColor": "#E92D2D"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "displayAs": "rows"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 12,
+                    "height": 16
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "3f3a9955",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "kpi_stream",
+                              "expression": "`kpi_stream`"
+                            },
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "snapshot_date",
+                              "expression": "`snapshot_date`"
+                            },
+                            {
+                              "name": "sum(expected_value)",
+                              "expression": "SUM(`expected_value`)"
+                            }
+                          ],
+                          "cubeGroupingSets": {
+                            "sets": [
+                              {
+                                "fieldNames": [
+                                  "kpi_stream",
+                                  "kpi_name"
+                                ]
+                              },
+                              {
+                                "fieldNames": [
+                                  "snapshot_date"
+                                ]
+                              }
+                            ]
+                          },
+                          "disaggregated": false,
+                          "orders": [
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_stream`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "direction": "ASC",
+                              "expression": "`snapshot_date`"
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": {
+                          "value": "Baseline Expected (Target) by Date",
+                          "fields": []
+                        }
+                      },
+                      "version": 4,
+                      "widgetType": "pivot",
+                      "encodings": {
+                        "rows": {
+                          "fields": [
+                            {
+                              "fieldName": "kpi_stream",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            },
+                            {
+                              "fieldName": "kpi_name",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "columns": {
+                          "fields": [
+                            {
+                              "fieldName": "snapshot_date",
+                              "scale": {
+                                "type": "categorical"
+                              }
+                            }
+                          ]
+                        },
+                        "cells": {
+                          "fields": [
+                            {
+                              "fieldName": "sum(expected_value)",
+                              "cellType": "text",
+                              "style": {
+                                "type": "basic",
+                                "rules": [
+                                  {
+                                    "condition": {
+                                      "operator": ">="
+                                    },
+                                    "backgroundColor": "#00A972"
+                                  }
+                                ]
+                              }
+                            }
+                          ],
+                          "displayAs": "rows"
+                        }
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 21,
+                    "width": 12,
+                    "height": 16
+                  }
+                },
+                {
+                  "widget": {
+                    "name": "0a0b76fc",
+                    "queries": [
+                      {
+                        "name": "main_query",
+                        "query": {
+                          "datasetName": "hypercare_mock",
+                          "fields": [
+                            {
+                              "name": "country_name",
+                              "expression": "`country_name`"
+                            },
+                            {
+                              "name": "plant_label",
+                              "expression": "`plant_label`"
+                            },
+                            {
+                              "name": "kpi_stream",
+                              "expression": "`kpi_stream`"
+                            },
+                            {
+                              "name": "kpi_name",
+                              "expression": "`kpi_name`"
+                            },
+                            {
+                              "name": "priority",
+                              "expression": "`priority`"
+                            },
+                            {
+                              "name": "expected_value",
+                              "expression": "`expected_value`"
+                            },
+                            {
+                              "name": "actual_value",
+                              "expression": "`actual_value`"
+                            },
+                            {
+                              "name": "variance",
+                              "expression": "`variance`"
+                            },
+                            {
+                              "name": "variance_pct",
+                              "expression": "`variance_pct`"
+                            },
+                            {
+                              "name": "rag_status",
+                              "expression": "`rag_status`"
+                            }
+                          ],
+                          "filters": [
+                            {
+                              "expression": "`snapshot_date` IN ('2026-11-08')"
+                            }
+                          ],
+                          "disaggregated": true
+                        }
+                      }
+                    ],
+                    "spec": {
+                      "frame": {
+                        "showTitle": true,
+                        "title": "RAG Status Detail \u2014 Latest Day Plant Breakdown"
+                      },
+                      "version": 2,
+                      "widgetType": "table",
+                      "encodings": {
+                        "columns": [
+                          {
+                            "fieldName": "country_name"
+                          },
+                          {
+                            "fieldName": "plant_label"
+                          },
+                          {
+                            "fieldName": "kpi_stream"
+                          },
+                          {
+                            "fieldName": "kpi_name"
+                          },
+                          {
+                            "fieldName": "priority"
+                          },
+                          {
+                            "fieldName": "expected_value"
+                          },
+                          {
+                            "fieldName": "actual_value"
+                          },
+                          {
+                            "fieldName": "variance"
+                          },
+                          {
+                            "fieldName": "variance_pct"
+                          },
+                          {
+                            "fieldName": "rag_status"
+                          }
+                        ]
+                      },
+                      "data": {
+                        "queryName": "main_query"
+                      }
+                    }
+                  },
+                  "position": {
+                    "x": 0,
+                    "y": 37,
+                    "width": 12,
+                    "height": 10
+                  }
+                }
+              ],
+              "pageType": "PAGE_TYPE_CANVAS",
+              "layoutVersion": "GRID_V1"
+            }
+          ],
+          "uiSettings": {
+            "theme": {
+              "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+            },
+            "applyModeEnabled": false
+          }
+        }

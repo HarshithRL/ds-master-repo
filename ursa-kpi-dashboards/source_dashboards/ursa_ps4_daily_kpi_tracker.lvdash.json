@@ -1,0 +1,5337 @@
+{
+  "datasets": [
+    {
+      "name": "ursa_kpi_data",
+      "displayName": "URSA KPI Daily Data",
+      "queryLines": [
+        "WITH kpis AS (\n",
+        "  SELECT\n",
+        "    *\n",
+        "  FROM\n",
+        "    VALUES\n",
+        "      (1, 'Order to Cash', '# of Sales Orders Not Entered (Backlog)'),\n",
+        "      (2, 'Order to Cash', '# of Sales Orders Created'),\n",
+        "      (3, 'Order to Cash', 'Open Sales Order Items Missing Outbound Delivery'),\n",
+        "      (4, 'Order to Cash', 'Open Sales Order Items with Outbound but Missing Shipment'),\n",
+        "      (5, 'Order to Cash', 'Open Sales Order Items with Delivery Block'),\n",
+        "      (6, 'Order to Cash', 'Open Sales Order Items with Billing Block'),\n",
+        "      (7, 'Order to Cash', 'Customer Invoices to be Sent'),\n",
+        "      (8, 'Order to Cash', '# of Customer Invoices Issued'),\n",
+        "      (9, 'Order to Cash', 'Total Invoiced Value (EUR)'),\n",
+        "      (10, 'Procure to Pay', '# of POs Created'),\n",
+        "      (11, 'Procure to Pay', '# of POs Pending Approval'),\n",
+        "      (12, 'Procure to Pay', 'Invoices in AP Processing in VIM (not paid)'),\n",
+        "      (13, 'Procure to Pay', 'Invoice Approvals Missing'),\n",
+        "      (14, 'Procure to Pay', 'Invoices without GR'),\n",
+        "      (15, 'Procure to Pay', 'Overdue Invoices'),\n",
+        "      (16, 'Procure to Pay', 'Vendor Invoices Received'),\n",
+        "      (17, 'Production Planning', 'Planned Production Orders Not Converted'),\n",
+        "      (18, 'Production Planning', 'Production Order Backlog (Overdue Not Scheduled)'),\n",
+        "      (19, 'Production Planning', 'Daily Production Order Confirmations'),\n",
+        "      (20, 'Production Planning', 'Production Orders Not Closed with Passed Finish Date'),\n",
+        "      (21, 'Warehouse', '# of Picking Warehouse Tasks'),\n",
+        "      (22, 'Warehouse', '# of Putaway Warehouse Tasks'),\n",
+        "      (23, 'Logistics', '# of Goods Receipts'),\n",
+        "      (24, 'Logistics', '# of Shipments Completed'),\n",
+        "      (25, 'Finance and Control', '# of Journal Entries Posted'),\n",
+        "      (26, 'Finance and Control', '# of Payment Transactions'),\n",
+        "      (27, 'Master Data', 'Materials Not Created'),\n",
+        "      (28, 'Master Data', 'MTO/MTS Consistency Check: Incorrect Materials'),\n",
+        "      (29, 'Roles and Authorizations', '# of Defects Created vs Bugs Closed') AS t(\n",
+        "      sort_order, category, kpi_name\n",
+        "    )\n",
+        "),\n",
+        "company_codes AS (\n",
+        "  SELECT\n",
+        "    *\n",
+        "  FROM\n",
+        "    VALUES\n",
+        "      ('1180', 'URSA (INSMAT) Holdings GmbH', '1183 - Ursa Holding XI DE'),\n",
+        "      ('1320', 'URSA Deutschland GmbH', '1321 - Ursa DE, 1323 - Ursa DE IC'),\n",
+        "      ('1340', 'URSA Salgotarjan Zrt', '1341 - Ursa Hungaria, 1343 - Ursa Hungaria IC'),\n",
+        "      ('1360', 'URSA Dammsysteme Austria GmbH', '1361 - Ursa Austria, 1363 - Ursa Austria IC'),\n",
+        "      ('2180', 'URSA Polska Sp. z o.o.', '2181 - Ursa Poland, 2183 - Ursa Poland IC'),\n",
+        "      ('2220', 'URSA BALTIC OU', 'N/A'),\n",
+        "      ('2360', 'URSA Romania S.R.L.', '2361 - URSA Romania, 2363 - URSA Romania IC'),\n",
+        "      ('2420', 'URSA SK S.R.O.', '2421 - Ursa Slovakia, 2423 - Ursa Slovakia IC'),\n",
+        "      ('2440', 'URSA CZ S.R.O.', '2441 - Ursa CZ, 2443 - Ursa CZ IC'),\n",
+        "      ('2560', 'URSA EFI Ukraine', 'N/A'),\n",
+        "      ('2620', 'URSA Zagreb D.O.O.', '2621 - Ursa Croatia, 2623 - Ursa Croatia IC'),\n",
+        "      ('2640', 'URSA Beograd d.o.o.', '2641 - Ursa Serbia, 2643 - Ursa Serbia IC'),\n",
+        "      ('2660', 'URSA Slovenija d.o.o.', '2661 - Ursa Slovenia, 2663 - Ursa Slovenia IC'),\n",
+        "      ('7100', 'URSA Benelux B.V.', '7101 - Ursa Benelux, 7103 - Ursa Benelux IC'),\n",
+        "      ('7480', 'Uralita Holding B.V.', '7483 - Ursa Holding Urlt NL'),\n",
+        "      ('7740', 'URSA Italia S.r.l.', '7741 - Ursa Italy, 7743 - Ursa Italy IC'),\n",
+        "      ('8120', 'URSA UK Ltd', 'N/A'),\n",
+        "      ('8140', 'Etex UK Insulation', '8141 - Insulation UK, 8143 - Insulation UK IC'),\n",
+        "      ('8160', 'Etex UK Insulation (Holdings)', '8163 - Ursa Holding Sgls UK'),\n",
+        "      ('9120', 'URSA Insulation S.A.', '9123 - Ursa Holding Spain'),\n",
+        "      ('9140', 'URSA Iberica Aislantes S.A.', '9141 - Ursa Iberica, 9143 - Ursa Iberica IC'),\n",
+        "      ('9320', 'URSA France S.A.S.', '9321 - Ursa France, 9323 - Ursa France IC'),\n",
+        "      ('9340', 'URSA INSMAT France S.A.S.', '9343 - Ursa Holding Imat FR') AS t(\n",
+        "      company_code, company_name, sales_organizations\n",
+        "    )\n",
+        "),\n",
+        "dates AS (\n",
+        "  SELECT\n",
+        "    explode(sequence(date '2026-10-12', date '2026-10-18', interval 1 day)) as report_date\n",
+        ")\n",
+        "SELECT\n",
+        "  k.sort_order,\n",
+        "  k.category,\n",
+        "  k.kpi_name,\n",
+        "  cc.company_code,\n",
+        "  cc.company_name,\n",
+        "  cc.sales_organizations,\n",
+        "  d.report_date,\n",
+        "  CAST(\n",
+        "    ABS(HASH(k.kpi_name, cc.company_code, CAST(d.report_date AS STRING))) % 500 AS INT\n",
+        "  ) as daily_value\n",
+        "FROM\n",
+        "  kpis k CROSS JOIN company_codes cc CROSS JOIN dates d\n",
+        "ORDER BY\n",
+        "  k.sort_order,\n",
+        "  cc.company_code,\n",
+        "  d.report_date"
+      ]
+    },
+    {
+      "name": "test_invoiced_value",
+      "displayName": "Test - Total Invoiced Value (VBRK)",
+      "queryLines": [
+        "SELECT\n",
+        "  h.`Company Code`,\n",
+        "  h.`Billing Date`,\n",
+        "  h.`Document Currency`,\n",
+        "  h.`Statistics Currency`,\n",
+        "  COUNT(DISTINCT li.`Billing Document Number`) as num_invoices,\n",
+        "  SUM(li.`Net Value`) as net_value_doc_currency,\n",
+        "  SUM(li.`NET Value in Statistical Currency`) as net_value_stat_currency,\n",
+        "  SUM(\n",
+        "    CASE\n",
+        "      WHEN h.`Document Currency` = 'EUR' THEN li.`Net Value`\n",
+        "      WHEN h.`Statistics Currency` = 'EUR' THEN li.`NET Value in Statistical Currency`\n",
+        "      ELSE li.`Net Value` * COALESCE(h.`Exchange Rate Accntg`, 1)\n",
+        "    END\n",
+        "  ) as total_invoiced_value_eur\n",
+        "FROM\n",
+        "  `synapse-prd`.pbi.dbx_billing_document_header h\n",
+        "    JOIN `synapse-prd`.pbi.dbx_fact_billing_document_line_item li\n",
+        "      ON h.`Billing Document Header Key` = li.`Billing Document Header Key`\n",
+        "WHERE\n",
+        "  h.`Company Code` IN ('6700', '6740', '6760')\n",
+        "  AND h.`Billing Date` >= date_sub(current_date(), 10)\n",
+        "  AND COALESCE(li.`Cancelled Indicator Flag`, '') != 'X'\n",
+        "  AND COALESCE(li.`Cancelled Data Record Indicator Flag`, '') != 'X'\n",
+        "GROUP BY\n",
+        "  h.`Company Code`,\n",
+        "  h.`Billing Date`,\n",
+        "  h.`Document Currency`,\n",
+        "  h.`Statistics Currency`\n",
+        "ORDER BY\n",
+        "  h.`Company Code`,\n",
+        "  h.`Billing Date`"
+      ]
+    },
+    {
+      "name": "hypercare_mock",
+      "displayName": "Hypercare Daily KPI Matrix (Mock)",
+      "queryLines": [
+        "WITH enterprise AS (\n",
+        "  SELECT\n",
+        "    *\n",
+        "  FROM\n",
+        "    VALUES\n",
+        "      ('URSA Germany', '1320', '1321', 'Delitzsch (Prod)'),\n",
+        "      ('URSA Germany', '1320', '1322', 'Queis (Prod)'),\n",
+        "      ('URSA Germany', '1320', '1323', 'Leipzig (HQ)'),\n",
+        "      ('URSA Poland', '2180', '2181', 'Dabrowa (Prod)'),\n",
+        "      ('URSA Hungary', '1340', '1341', 'Salgotarjan (HQ)'),\n",
+        "      ('URSA Slovenia', '2660', '2661', 'Novo Mesto (Prod)'),\n",
+        "      ('URSA Benelux', '7100', '7101', 'Desselgem (Prod)'),\n",
+        "      ('URSA Romania', '2360', '2361', 'Bucharest'),\n",
+        "      ('URSA Slovakia', '2420', '2421', 'Nitra'),\n",
+        "      ('URSA Czechia', '2440', '2441', 'Prague') AS t(\n",
+        "      country_name, company_code, plant_id, plant_name\n",
+        "    )\n",
+        "),\n",
+        "kpis AS (\n",
+        "  SELECT\n",
+        "    *\n",
+        "  FROM\n",
+        "    VALUES\n",
+        "      (1, 'Order to Cash', '# Sales Orders Created', 'P1', 45),\n",
+        "      (2, 'Order to Cash', 'Open Items Missing Outbound Delivery', 'P1', 8),\n",
+        "      (3, 'Order to Cash', 'Open Items Missing Shipment (PGI)', 'P1', 5),\n",
+        "      (4, 'Order to Cash', 'Open Items with Delivery Block', 'P2', 3),\n",
+        "      (5, 'Order to Cash', 'Open Items with Billing Block', 'P2', 2),\n",
+        "      (6, 'Order to Cash', 'Customer Invoices to be Sent', 'P2', 12),\n",
+        "      (7, 'Order to Cash', '# Customer Invoices Issued', 'P1', 40),\n",
+        "      (8, 'Order to Cash', 'Total Invoiced Value (EUR)', 'P1', 150000),\n",
+        "      (9, 'Procure to Pay', '# POs Created', 'P1', 25),\n",
+        "      (10, 'Procure to Pay', '# POs Pending Approval', 'P1', 5),\n",
+        "      (11, 'Procure to Pay', 'Invoices in AP/VIM (not paid)', 'P1', 15),\n",
+        "      (12, 'Procure to Pay', 'Overdue Invoices', 'P1', 3),\n",
+        "      (13, 'Procure to Pay', 'Invoice Approvals Missing', 'P2', 4),\n",
+        "      (14, 'Procure to Pay', 'Invoices without GR', 'P2', 6),\n",
+        "      (15, 'Production Planning', 'Planned Orders Not Converted', 'P1', 8),\n",
+        "      (16, 'Production Planning', 'Order Backlog (Overdue)', 'P1', 4),\n",
+        "      (17, 'Production Planning', 'Daily Confirmations', 'P1', 30),\n",
+        "      (18, 'Production Planning', 'Orders Not Closed (Passed Finish)', 'P1', 5),\n",
+        "      (19, 'Warehouse and Logistics', '# Picking Tasks', 'P1', 60),\n",
+        "      (20, 'Warehouse and Logistics', '# Putaway Tasks', 'P1', 45),\n",
+        "      (21, 'Warehouse and Logistics', '# Goods Receipts', 'P1', 35),\n",
+        "      (22, 'Warehouse and Logistics', '# Shipments Completed', 'P1', 20),\n",
+        "      (23, 'Finance and Governance', '# Journal Entries Posted', 'P1', 200),\n",
+        "      (24, 'Finance and Governance', '# Payment Transactions', 'P1', 50),\n",
+        "      (25, 'Finance and Governance', 'Materials Not Created', 'Ask', 10),\n",
+        "      (26, 'Finance and Governance', 'Defect Burn-Down (Created vs Closed)', 'P1', 5) AS t(\n",
+        "      sort_order, kpi_stream, kpi_name, priority, baseline_target\n",
+        "    )\n",
+        "),\n",
+        "dates AS (\n",
+        "  SELECT\n",
+        "    explode(sequence(date '2026-11-02', date '2026-11-08', interval 1 day)) as snapshot_date\n",
+        "),\n",
+        "raw_data AS (\n",
+        "  SELECT\n",
+        "    e.country_name,\n",
+        "    e.company_code,\n",
+        "    e.plant_id,\n",
+        "    CONCAT(e.plant_id, ' ', e.plant_name) as plant_label,\n",
+        "    k.sort_order,\n",
+        "    k.kpi_stream,\n",
+        "    k.kpi_name,\n",
+        "    k.priority,\n",
+        "    d.snapshot_date,\n",
+        "    CAST(k.baseline_target AS DOUBLE) as expected_value,\n",
+        "    CAST(\n",
+        "      GREATEST(\n",
+        "        0,\n",
+        "        k.baseline_target\n",
+        "          + (\n",
+        "            ABS(HASH(k.kpi_name, e.plant_id, CAST(d.snapshot_date AS STRING)))\n",
+        "              % GREATEST(CAST(k.baseline_target * 0.5 AS INT), 1)\n",
+        "          )\n",
+        "          - CAST(k.baseline_target * 0.25 AS INT)\n",
+        "      ) AS DOUBLE\n",
+        "    ) as actual_value\n",
+        "  FROM\n",
+        "    enterprise e CROSS JOIN kpis k CROSS JOIN dates d\n",
+        ")\n",
+        "SELECT\n",
+        "  country_name,\n",
+        "  company_code,\n",
+        "  plant_id,\n",
+        "  plant_label,\n",
+        "  sort_order,\n",
+        "  kpi_stream,\n",
+        "  kpi_name,\n",
+        "  priority,\n",
+        "  snapshot_date,\n",
+        "  expected_value,\n",
+        "  actual_value,\n",
+        "  ROUND(actual_value - expected_value, 2) AS variance,\n",
+        "  ROUND(\n",
+        "    CASE\n",
+        "      WHEN expected_value = 0 THEN 0\n",
+        "      ELSE (actual_value - expected_value) / expected_value * 100\n",
+        "    END,\n",
+        "    1\n",
+        "  ) AS variance_pct,\n",
+        "  CASE\n",
+        "    WHEN actual_value >= expected_value THEN 'Green'\n",
+        "    WHEN actual_value >= expected_value * 0.8 THEN 'Amber'\n",
+        "    ELSE 'Red'\n",
+        "  END AS rag_status\n",
+        "FROM\n",
+        "  raw_data\n",
+        "ORDER BY\n",
+        "  country_name,\n",
+        "  sort_order,\n",
+        "  snapshot_date"
+      ]
+    },
+    {
+      "name": "hc_baseline",
+      "displayName": "Hypercare Baselines (Oct-Dec 2025 Avg)",
+      "queryLines": [
+        "-- Manually editable baselines: one row per KPI × country × plant\n",
+        "-- Values represent the 3-month average from Oct–Dec 2025\n",
+        "-- Edit the baseline_value column to update targets\n",
+        "SELECT\n",
+        "  *\n",
+        "FROM\n",
+        "  VALUES\n",
+        "    -- === URSA Germany · 1321 Delitzsch (Prod) ===\n",
+        "    -- Order to Cash\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      '# Sales Orders Created',\n",
+        "      50.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      'Open Items Missing Outbound Delivery',\n",
+        "      10.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      'Open Items Missing Shipment (PGI)',\n",
+        "      6.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      'Open Items with Delivery Block',\n",
+        "      4.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      'Open Items with Billing Block',\n",
+        "      3.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      'Customer Invoices to be Sent',\n",
+        "      14.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      '# Customer Invoices Issued',\n",
+        "      44.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      'Total Invoiced Value (EUR)',\n",
+        "      165000.0\n",
+        "    ),\n",
+        "    -- Procure to Pay\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Procure to Pay',\n",
+        "      '# POs Created',\n",
+        "      28.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Procure to Pay',\n",
+        "      '# POs Pending Approval',\n",
+        "      6.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Procure to Pay',\n",
+        "      'Invoices in AP/VIM (not paid)',\n",
+        "      17.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Procure to Pay',\n",
+        "      'Overdue Invoices',\n",
+        "      4.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Procure to Pay',\n",
+        "      'Invoice Approvals Missing',\n",
+        "      5.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Procure to Pay',\n",
+        "      'Invoices without GR',\n",
+        "      7.0\n",
+        "    ),\n",
+        "    -- Production Planning\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Production Planning',\n",
+        "      'Planned Orders Not Converted',\n",
+        "      9.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Production Planning',\n",
+        "      'Order Backlog (Overdue)',\n",
+        "      5.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Production Planning',\n",
+        "      'Daily Confirmations',\n",
+        "      33.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Production Planning',\n",
+        "      'Orders Not Closed (Passed Finish)',\n",
+        "      6.0\n",
+        "    ),\n",
+        "    -- Warehouse and Logistics\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Warehouse and Logistics',\n",
+        "      '# Picking Tasks',\n",
+        "      65.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Warehouse and Logistics',\n",
+        "      '# Putaway Tasks',\n",
+        "      50.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Warehouse and Logistics',\n",
+        "      '# Goods Receipts',\n",
+        "      38.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Warehouse and Logistics',\n",
+        "      '# Shipments Completed',\n",
+        "      22.0\n",
+        "    ),\n",
+        "    -- Finance and Governance\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Finance and Governance',\n",
+        "      '# Journal Entries Posted',\n",
+        "      220.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Finance and Governance',\n",
+        "      '# Payment Transactions',\n",
+        "      55.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Finance and Governance',\n",
+        "      'Materials Not Created',\n",
+        "      12.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Germany',\n",
+        "      '1320',\n",
+        "      '1321',\n",
+        "      '1321 Delitzsch (Prod)',\n",
+        "      'Finance and Governance',\n",
+        "      'Defect Burn-Down (Created vs Closed)',\n",
+        "      6.0\n",
+        "    ),\n",
+        "    -- === URSA Poland · 2181 Dabrowa (Prod) ===\n",
+        "    -- Order to Cash\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      '# Sales Orders Created',\n",
+        "      40.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      'Open Items Missing Outbound Delivery',\n",
+        "      7.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      'Open Items Missing Shipment (PGI)',\n",
+        "      4.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      'Open Items with Delivery Block',\n",
+        "      2.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      'Open Items with Billing Block',\n",
+        "      2.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      'Customer Invoices to be Sent',\n",
+        "      10.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      '# Customer Invoices Issued',\n",
+        "      36.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Order to Cash',\n",
+        "      'Total Invoiced Value (EUR)',\n",
+        "      130000.0\n",
+        "    ),\n",
+        "    -- Procure to Pay\n",
+        "    ('URSA Poland', '2180', '2181', '2181 Dabrowa (Prod)', 'Procure to Pay', '# POs Created', 22.0),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Procure to Pay',\n",
+        "      '# POs Pending Approval',\n",
+        "      4.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Procure to Pay',\n",
+        "      'Invoices in AP/VIM (not paid)',\n",
+        "      13.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Procure to Pay',\n",
+        "      'Overdue Invoices',\n",
+        "      2.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Procure to Pay',\n",
+        "      'Invoice Approvals Missing',\n",
+        "      3.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Procure to Pay',\n",
+        "      'Invoices without GR',\n",
+        "      5.0\n",
+        "    ),\n",
+        "    -- Production Planning\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Production Planning',\n",
+        "      'Planned Orders Not Converted',\n",
+        "      7.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Production Planning',\n",
+        "      'Order Backlog (Overdue)',\n",
+        "      3.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Production Planning',\n",
+        "      'Daily Confirmations',\n",
+        "      27.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Production Planning',\n",
+        "      'Orders Not Closed (Passed Finish)',\n",
+        "      4.0\n",
+        "    ),\n",
+        "    -- Warehouse and Logistics\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Warehouse and Logistics',\n",
+        "      '# Picking Tasks',\n",
+        "      55.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Warehouse and Logistics',\n",
+        "      '# Putaway Tasks',\n",
+        "      40.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Warehouse and Logistics',\n",
+        "      '# Goods Receipts',\n",
+        "      30.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Warehouse and Logistics',\n",
+        "      '# Shipments Completed',\n",
+        "      18.0\n",
+        "    ),\n",
+        "    -- Finance and Governance\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Finance and Governance',\n",
+        "      '# Journal Entries Posted',\n",
+        "      180.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Finance and Governance',\n",
+        "      '# Payment Transactions',\n",
+        "      45.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Finance and Governance',\n",
+        "      'Materials Not Created',\n",
+        "      8.0\n",
+        "    ),\n",
+        "    (\n",
+        "      'URSA Poland',\n",
+        "      '2180',\n",
+        "      '2181',\n",
+        "      '2181 Dabrowa (Prod)',\n",
+        "      'Finance and Governance',\n",
+        "      'Defect Burn-Down (Created vs Closed)',\n",
+        "      4.0\n",
+        "    ) AS t(country_name, company_code, plant_id, plant_label, kpi_stream, kpi_name, baseline_value)"
+      ]
+    },
+    {
+      "name": "hc_actuals_vs_baseline",
+      "displayName": "Actuals vs Baseline (Heatmap)",
+      "queryLines": [
+        "WITH baselines AS (\n",
+        "  SELECT\n",
+        "    *\n",
+        "  FROM\n",
+        "    VALUES\n",
+        "      ('URSA Germany', '1321 Delitzsch (Prod)', 'Order to Cash', '# Sales Orders Created', 50.0, 1),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Order to Cash',\n",
+        "        'Open Items Missing Outbound Delivery',\n",
+        "        10.0,\n",
+        "        2\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Order to Cash',\n",
+        "        'Open Items Missing Shipment (PGI)',\n",
+        "        6.0,\n",
+        "        3\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Order to Cash',\n",
+        "        'Open Items with Delivery Block',\n",
+        "        4.0,\n",
+        "        4\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Order to Cash',\n",
+        "        'Open Items with Billing Block',\n",
+        "        3.0,\n",
+        "        5\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Order to Cash',\n",
+        "        'Customer Invoices to be Sent',\n",
+        "        14.0,\n",
+        "        6\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Order to Cash',\n",
+        "        '# Customer Invoices Issued',\n",
+        "        44.0,\n",
+        "        7\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Order to Cash',\n",
+        "        'Total Invoiced Value (EUR)',\n",
+        "        165000.0,\n",
+        "        8\n",
+        "      ),\n",
+        "      ('URSA Germany', '1321 Delitzsch (Prod)', 'Procure to Pay', '# POs Created', 28.0, 9),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Procure to Pay',\n",
+        "        '# POs Pending Approval',\n",
+        "        6.0,\n",
+        "        10\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Procure to Pay',\n",
+        "        'Invoices in AP/VIM (not paid)',\n",
+        "        17.0,\n",
+        "        11\n",
+        "      ),\n",
+        "      ('URSA Germany', '1321 Delitzsch (Prod)', 'Procure to Pay', 'Overdue Invoices', 4.0, 12),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Procure to Pay',\n",
+        "        'Invoice Approvals Missing',\n",
+        "        5.0,\n",
+        "        13\n",
+        "      ),\n",
+        "      ('URSA Germany', '1321 Delitzsch (Prod)', 'Procure to Pay', 'Invoices without GR', 7.0, 14),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Production Planning',\n",
+        "        'Planned Orders Not Converted',\n",
+        "        9.0,\n",
+        "        15\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Production Planning',\n",
+        "        'Order Backlog (Overdue)',\n",
+        "        5.0,\n",
+        "        16\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Production Planning',\n",
+        "        'Daily Confirmations',\n",
+        "        33.0,\n",
+        "        17\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Production Planning',\n",
+        "        'Orders Not Closed (Passed Finish)',\n",
+        "        6.0,\n",
+        "        18\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Warehouse and Logistics',\n",
+        "        '# Picking Tasks',\n",
+        "        65.0,\n",
+        "        19\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Warehouse and Logistics',\n",
+        "        '# Putaway Tasks',\n",
+        "        50.0,\n",
+        "        20\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Warehouse and Logistics',\n",
+        "        '# Goods Receipts',\n",
+        "        38.0,\n",
+        "        21\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Warehouse and Logistics',\n",
+        "        '# Shipments Completed',\n",
+        "        22.0,\n",
+        "        22\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Finance and Governance',\n",
+        "        '# Journal Entries Posted',\n",
+        "        220.0,\n",
+        "        23\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Finance and Governance',\n",
+        "        '# Payment Transactions',\n",
+        "        55.0,\n",
+        "        24\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Finance and Governance',\n",
+        "        'Materials Not Created',\n",
+        "        12.0,\n",
+        "        25\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Germany',\n",
+        "        '1321 Delitzsch (Prod)',\n",
+        "        'Finance and Governance',\n",
+        "        'Defect Burn-Down (Created vs Closed)',\n",
+        "        6.0,\n",
+        "        26\n",
+        "      ),\n",
+        "      ('URSA Poland', '2181 Dabrowa (Prod)', 'Order to Cash', '# Sales Orders Created', 40.0, 1),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Order to Cash',\n",
+        "        'Open Items Missing Outbound Delivery',\n",
+        "        7.0,\n",
+        "        2\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Order to Cash',\n",
+        "        'Open Items Missing Shipment (PGI)',\n",
+        "        4.0,\n",
+        "        3\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Order to Cash',\n",
+        "        'Open Items with Delivery Block',\n",
+        "        2.0,\n",
+        "        4\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Order to Cash',\n",
+        "        'Open Items with Billing Block',\n",
+        "        2.0,\n",
+        "        5\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Order to Cash',\n",
+        "        'Customer Invoices to be Sent',\n",
+        "        10.0,\n",
+        "        6\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Order to Cash',\n",
+        "        '# Customer Invoices Issued',\n",
+        "        36.0,\n",
+        "        7\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Order to Cash',\n",
+        "        'Total Invoiced Value (EUR)',\n",
+        "        130000.0,\n",
+        "        8\n",
+        "      ),\n",
+        "      ('URSA Poland', '2181 Dabrowa (Prod)', 'Procure to Pay', '# POs Created', 22.0, 9),\n",
+        "      ('URSA Poland', '2181 Dabrowa (Prod)', 'Procure to Pay', '# POs Pending Approval', 4.0, 10),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Procure to Pay',\n",
+        "        'Invoices in AP/VIM (not paid)',\n",
+        "        13.0,\n",
+        "        11\n",
+        "      ),\n",
+        "      ('URSA Poland', '2181 Dabrowa (Prod)', 'Procure to Pay', 'Overdue Invoices', 2.0, 12),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Procure to Pay',\n",
+        "        'Invoice Approvals Missing',\n",
+        "        3.0,\n",
+        "        13\n",
+        "      ),\n",
+        "      ('URSA Poland', '2181 Dabrowa (Prod)', 'Procure to Pay', 'Invoices without GR', 5.0, 14),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Production Planning',\n",
+        "        'Planned Orders Not Converted',\n",
+        "        7.0,\n",
+        "        15\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Production Planning',\n",
+        "        'Order Backlog (Overdue)',\n",
+        "        3.0,\n",
+        "        16\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Production Planning',\n",
+        "        'Daily Confirmations',\n",
+        "        27.0,\n",
+        "        17\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Production Planning',\n",
+        "        'Orders Not Closed (Passed Finish)',\n",
+        "        4.0,\n",
+        "        18\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Warehouse and Logistics',\n",
+        "        '# Picking Tasks',\n",
+        "        55.0,\n",
+        "        19\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Warehouse and Logistics',\n",
+        "        '# Putaway Tasks',\n",
+        "        40.0,\n",
+        "        20\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Warehouse and Logistics',\n",
+        "        '# Goods Receipts',\n",
+        "        30.0,\n",
+        "        21\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Warehouse and Logistics',\n",
+        "        '# Shipments Completed',\n",
+        "        18.0,\n",
+        "        22\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Finance and Governance',\n",
+        "        '# Journal Entries Posted',\n",
+        "        180.0,\n",
+        "        23\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Finance and Governance',\n",
+        "        '# Payment Transactions',\n",
+        "        45.0,\n",
+        "        24\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Finance and Governance',\n",
+        "        'Materials Not Created',\n",
+        "        8.0,\n",
+        "        25\n",
+        "      ),\n",
+        "      (\n",
+        "        'URSA Poland',\n",
+        "        '2181 Dabrowa (Prod)',\n",
+        "        'Finance and Governance',\n",
+        "        'Defect Burn-Down (Created vs Closed)',\n",
+        "        4.0,\n",
+        "        26\n",
+        "      ) AS t(country_name, plant_label, kpi_stream, kpi_name, baseline_value, sort_order)\n",
+        "),\n",
+        "enterprise AS (\n",
+        "  SELECT\n",
+        "    *\n",
+        "  FROM\n",
+        "    VALUES\n",
+        "      ('URSA Germany', '1320', '1321', 'Delitzsch (Prod)'),\n",
+        "      ('URSA Poland', '2180', '2181', 'Dabrowa (Prod)') AS t(\n",
+        "      country_name, company_code, plant_id, plant_name\n",
+        "    )\n",
+        "),\n",
+        "kpis AS (\n",
+        "  SELECT\n",
+        "    *\n",
+        "  FROM\n",
+        "    VALUES\n",
+        "      (1, 'Order to Cash', '# Sales Orders Created', 45),\n",
+        "      (2, 'Order to Cash', 'Open Items Missing Outbound Delivery', 8),\n",
+        "      (3, 'Order to Cash', 'Open Items Missing Shipment (PGI)', 5),\n",
+        "      (4, 'Order to Cash', 'Open Items with Delivery Block', 3),\n",
+        "      (5, 'Order to Cash', 'Open Items with Billing Block', 2),\n",
+        "      (6, 'Order to Cash', 'Customer Invoices to be Sent', 12),\n",
+        "      (7, 'Order to Cash', '# Customer Invoices Issued', 40),\n",
+        "      (8, 'Order to Cash', 'Total Invoiced Value (EUR)', 150000),\n",
+        "      (9, 'Procure to Pay', '# POs Created', 25),\n",
+        "      (10, 'Procure to Pay', '# POs Pending Approval', 5),\n",
+        "      (11, 'Procure to Pay', 'Invoices in AP/VIM (not paid)', 15),\n",
+        "      (12, 'Procure to Pay', 'Overdue Invoices', 3),\n",
+        "      (13, 'Procure to Pay', 'Invoice Approvals Missing', 4),\n",
+        "      (14, 'Procure to Pay', 'Invoices without GR', 6),\n",
+        "      (15, 'Production Planning', 'Planned Orders Not Converted', 8),\n",
+        "      (16, 'Production Planning', 'Order Backlog (Overdue)', 4),\n",
+        "      (17, 'Production Planning', 'Daily Confirmations', 30),\n",
+        "      (18, 'Production Planning', 'Orders Not Closed (Passed Finish)', 5),\n",
+        "      (19, 'Warehouse and Logistics', '# Picking Tasks', 60),\n",
+        "      (20, 'Warehouse and Logistics', '# Putaway Tasks', 45),\n",
+        "      (21, 'Warehouse and Logistics', '# Goods Receipts', 35),\n",
+        "      (22, 'Warehouse and Logistics', '# Shipments Completed', 20),\n",
+        "      (23, 'Finance and Governance', '# Journal Entries Posted', 200),\n",
+        "      (24, 'Finance and Governance', '# Payment Transactions', 50),\n",
+        "      (25, 'Finance and Governance', 'Materials Not Created', 10),\n",
+        "      (26, 'Finance and Governance', 'Defect Burn-Down (Created vs Closed)', 5) AS t(\n",
+        "      sort_order, kpi_stream, kpi_name, baseline_target\n",
+        "    )\n",
+        "),\n",
+        "dates AS (\n",
+        "  SELECT\n",
+        "    explode(sequence(date '2026-11-02', date '2026-11-08', interval 1 day)) as snapshot_date\n",
+        "),\n",
+        "actuals AS (\n",
+        "  SELECT\n",
+        "    e.country_name,\n",
+        "    CONCAT(e.plant_id, ' ', e.plant_name) as plant_label,\n",
+        "    k.sort_order,\n",
+        "    k.kpi_stream,\n",
+        "    k.kpi_name,\n",
+        "    d.snapshot_date,\n",
+        "    CAST(\n",
+        "      GREATEST(\n",
+        "        0,\n",
+        "        k.baseline_target\n",
+        "          + (\n",
+        "            ABS(HASH(k.kpi_name, e.plant_id, CAST(d.snapshot_date AS STRING)))\n",
+        "              % GREATEST(CAST(k.baseline_target * 0.5 AS INT), 1)\n",
+        "          )\n",
+        "          - CAST(k.baseline_target * 0.25 AS INT)\n",
+        "      ) AS DOUBLE\n",
+        "    ) as actual_value\n",
+        "  FROM\n",
+        "    enterprise e CROSS JOIN kpis k CROSS JOIN dates d\n",
+        "),\n",
+        "-- Baseline column: one row per KPI with col_label = 'Baseline'\n",
+        "baseline_rows AS (\n",
+        "  SELECT\n",
+        "    b.country_name,\n",
+        "    b.plant_label,\n",
+        "    b.sort_order,\n",
+        "    b.kpi_stream,\n",
+        "    b.kpi_name,\n",
+        "    CONCAT(\n",
+        "      b.country_name,\n",
+        "      ' · ',\n",
+        "      b.plant_label,\n",
+        "      ' · ',\n",
+        "      b.kpi_stream,\n",
+        "      ' · ',\n",
+        "      b.kpi_name\n",
+        "    ) AS row_label,\n",
+        "    'Baseline' AS col_label,\n",
+        "    0 AS col_order,\n",
+        "    b.baseline_value AS cell_value,\n",
+        "    'BASELINE' AS status\n",
+        "  FROM\n",
+        "    baselines b\n",
+        "),\n",
+        "-- Actual date columns\n",
+        "actual_rows AS (\n",
+        "  SELECT\n",
+        "    a.country_name,\n",
+        "    a.plant_label,\n",
+        "    a.sort_order,\n",
+        "    a.kpi_stream,\n",
+        "    a.kpi_name,\n",
+        "    CONCAT(\n",
+        "      a.country_name,\n",
+        "      ' · ',\n",
+        "      a.plant_label,\n",
+        "      ' · ',\n",
+        "      a.kpi_stream,\n",
+        "      ' · ',\n",
+        "      a.kpi_name\n",
+        "    ) AS row_label,\n",
+        "    DATE_FORMAT(a.snapshot_date, 'EEE dd MMM') AS col_label,\n",
+        "    DATEDIFF(a.snapshot_date, DATE '2026-11-02') + 1 AS col_order,\n",
+        "    a.actual_value AS cell_value,\n",
+        "    CASE\n",
+        "      WHEN a.actual_value >= b.baseline_value THEN 'ABOVE'\n",
+        "      ELSE 'BELOW'\n",
+        "    END AS status\n",
+        "  FROM\n",
+        "    actuals a\n",
+        "      JOIN baselines b\n",
+        "        ON a.kpi_name = b.kpi_name\n",
+        "        AND a.country_name = b.country_name\n",
+        "        AND a.plant_label = b.plant_label\n",
+        ")\n",
+        "SELECT *, CONCAT(kpi_name, ' — ', plant_label) AS kpi_label FROM baseline_rows\n",
+        "UNION ALL\n",
+        "SELECT *, CONCAT(kpi_name, ' — ', plant_label) AS kpi_label FROM actual_rows\n",
+        "ORDER BY\n",
+        "  country_name,\n",
+        "  sort_order,\n",
+        "  col_order"
+      ]
+    },
+    {
+      "name": "hc_matrix_formatted",
+      "displayName": "Hypercare Matrix (Formatted Cells)",
+      "queryLines": [
+        "WITH enterprise AS (\n",
+        "  SELECT\n",
+        "    *\n",
+        "  FROM\n",
+        "    VALUES\n",
+        "      ('URSA Germany', '1320', '1321', 'Delitzsch (Prod)'),\n",
+        "      ('URSA Germany', '1320', '1322', 'Queis (Prod)'),\n",
+        "      ('URSA Germany', '1320', '1323', 'Leipzig (HQ)'),\n",
+        "      ('URSA Poland', '2180', '2181', 'Dabrowa (Prod)'),\n",
+        "      ('URSA Hungary', '1340', '1341', 'Salgotarjan (HQ)'),\n",
+        "      ('URSA Slovenia', '2660', '2661', 'Novo Mesto (Prod)'),\n",
+        "      ('URSA Benelux', '7100', '7101', 'Desselgem (Prod)'),\n",
+        "      ('URSA Romania', '2360', '2361', 'Bucharest'),\n",
+        "      ('URSA Slovakia', '2420', '2421', 'Nitra'),\n",
+        "      ('URSA Czechia', '2440', '2441', 'Prague') AS t(\n",
+        "      country_name, company_code, plant_id, plant_name\n",
+        "    )\n",
+        "),\n",
+        "kpis AS (\n",
+        "  SELECT\n",
+        "    *\n",
+        "  FROM\n",
+        "    VALUES\n",
+        "      (1, 'Order to Cash', '# Sales Orders Created', 'P1', 45),\n",
+        "      (2, 'Order to Cash', 'Open Items Missing Outbound Delivery', 'P1', 8),\n",
+        "      (3, 'Order to Cash', 'Open Items Missing Shipment (PGI)', 'P1', 5),\n",
+        "      (4, 'Order to Cash', 'Open Items with Delivery Block', 'P2', 3),\n",
+        "      (5, 'Order to Cash', 'Open Items with Billing Block', 'P2', 2),\n",
+        "      (6, 'Order to Cash', 'Customer Invoices to be Sent', 'P2', 12),\n",
+        "      (7, 'Order to Cash', '# Customer Invoices Issued', 'P1', 40),\n",
+        "      (8, 'Order to Cash', 'Total Invoiced Value (EUR)', 'P1', 150000),\n",
+        "      (9, 'Procure to Pay', '# POs Created', 'P1', 25),\n",
+        "      (10, 'Procure to Pay', '# POs Pending Approval', 'P1', 5),\n",
+        "      (11, 'Procure to Pay', 'Invoices in AP/VIM (not paid)', 'P1', 15),\n",
+        "      (12, 'Procure to Pay', 'Overdue Invoices', 'P1', 3),\n",
+        "      (13, 'Procure to Pay', 'Invoice Approvals Missing', 'P2', 4),\n",
+        "      (14, 'Procure to Pay', 'Invoices without GR', 'P2', 6),\n",
+        "      (15, 'Production Planning', 'Planned Orders Not Converted', 'P1', 8),\n",
+        "      (16, 'Production Planning', 'Order Backlog (Overdue)', 'P1', 4),\n",
+        "      (17, 'Production Planning', 'Daily Confirmations', 'P1', 30),\n",
+        "      (18, 'Production Planning', 'Orders Not Closed (Passed Finish)', 'P1', 5),\n",
+        "      (19, 'Warehouse and Logistics', '# Picking Tasks', 'P1', 60),\n",
+        "      (20, 'Warehouse and Logistics', '# Putaway Tasks', 'P1', 45),\n",
+        "      (21, 'Warehouse and Logistics', '# Goods Receipts', 'P1', 35),\n",
+        "      (22, 'Warehouse and Logistics', '# Shipments Completed', 'P1', 20),\n",
+        "      (23, 'Finance and Governance', '# Journal Entries Posted', 'P1', 200),\n",
+        "      (24, 'Finance and Governance', '# Payment Transactions', 'P1', 50),\n",
+        "      (25, 'Finance and Governance', 'Materials Not Created', 'Ask', 10),\n",
+        "      (26, 'Finance and Governance', 'Defect Burn-Down (Created vs Closed)', 'P1', 5) AS t(\n",
+        "      sort_order, kpi_stream, kpi_name, priority, baseline_target\n",
+        "    )\n",
+        "),\n",
+        "dates AS (\n",
+        "  SELECT\n",
+        "    explode(sequence(date '2026-11-02', date '2026-11-08', interval 1 day)) as snapshot_date\n",
+        "),\n",
+        "raw_data AS (\n",
+        "  SELECT\n",
+        "    e.country_name,\n",
+        "    CONCAT(e.plant_id, ' ', e.plant_name) as plant_label,\n",
+        "    k.sort_order,\n",
+        "    k.kpi_stream,\n",
+        "    k.kpi_name,\n",
+        "    d.snapshot_date,\n",
+        "    CAST(k.baseline_target AS DOUBLE) as expected_value,\n",
+        "    CAST(\n",
+        "      GREATEST(\n",
+        "        0,\n",
+        "        k.baseline_target\n",
+        "          + (\n",
+        "            ABS(HASH(k.kpi_name, e.plant_id, CAST(d.snapshot_date AS STRING)))\n",
+        "              % GREATEST(CAST(k.baseline_target * 0.5 AS INT), 1)\n",
+        "          )\n",
+        "          - CAST(k.baseline_target * 0.25 AS INT)\n",
+        "      ) AS DOUBLE\n",
+        "    ) as actual_value\n",
+        "  FROM\n",
+        "    enterprise e CROSS JOIN kpis k CROSS JOIN dates d\n",
+        ")\n",
+        "SELECT\n",
+        "  country_name,\n",
+        "  plant_label,\n",
+        "  sort_order,\n",
+        "  kpi_stream,\n",
+        "  kpi_name,\n",
+        "  FORMAT_NUMBER(expected_value, 0) AS baseline,\n",
+        "  snapshot_date,\n",
+        "  CASE\n",
+        "    WHEN actual_value >= expected_value THEN CONCAT('▲ ', FORMAT_NUMBER(actual_value, 0))\n",
+        "    ELSE CONCAT('▼ ', FORMAT_NUMBER(actual_value, 0))\n",
+        "  END AS formatted_cell\n",
+        "FROM\n",
+        "  raw_data\n",
+        "ORDER BY\n",
+        "  country_name,\n",
+        "  sort_order,\n",
+        "  snapshot_date"
+      ]
+    },
+    {
+      "name": "o2c_live_matrix",
+      "displayName": "O2C Live Matrix (synapse-prd.pbi)",
+      "queryLines": [
+        "WITH ursa_plants AS (\n",
+        "  SELECT *\n",
+        "  FROM VALUES\n",
+        "    ('6701', 'SK DK (6700)', '6700', '6701 - Skamol Fur (Prod)', 1),\n",
+        "    ('6702', 'SK DK (6700)', '6700', '6702 - Skamol Branden (Prod)', 0),\n",
+        "    ('6703', 'SK DK (6700)', '6700', '6703 - Skamol Roedding (Prod)', 0),\n",
+        "    ('6741', 'SK PL (6740)', '6740', '6741 - Skamol Opole (Prod)', 1),\n",
+        "    ('6761', 'SK EE (6760)', '6760', '6761 - Skamol Sosnowiec (Prod)', 1),\n",
+        "    ('6901', 'SK APAC (6900)', '6900', '6901 - Skamol Mulgrave (WH)', 1),\n",
+        "    ('6902', 'SK APAC (6900)', '6900', '6902 - Skamol Melbourne (WH)', 0),\n",
+        "    ('6904', 'SK APAC (6900)', '6900', '6904 - Skamol Perth (WH)', 0)\n",
+        "    AS t(plant_code, country_name, company_code, plant_label, is_primary_for_cc)\n",
+        "),\n",
+        "date_spine AS (\n",
+        "  SELECT explode(sequence(date_sub(current_date(), 6), current_date(), interval 1 day)) AS snapshot_date\n",
+        "),\n",
+        "plant_key_map AS (\n",
+        "  SELECT\n",
+        "    p.`Plant Key`,\n",
+        "    CAST(p.`Plant Code` AS STRING) AS plant_code,\n",
+        "    u.country_name,\n",
+        "    u.company_code,\n",
+        "    u.plant_label\n",
+        "  FROM `synapse-prd`.pbi.dbx_dim_plant p\n",
+        "  INNER JOIN ursa_plants u ON CAST(p.`Plant Code` AS STRING) = u.plant_code\n",
+        "),\n",
+        "company_key_map AS (\n",
+        "  SELECT\n",
+        "    c.`Company Key`,\n",
+        "    CAST(c.`Company Code` AS STRING) AS company_code,\n",
+        "    u.country_name,\n",
+        "    u.plant_label\n",
+        "  FROM `synapse-prd`.pbi.company c\n",
+        "  INNER JOIN ursa_plants u\n",
+        "    ON CAST(c.`Company Code` AS STRING) = u.company_code\n",
+        "    AND u.is_primary_for_cc = 1\n",
+        "),\n",
+        "kpi_master AS (\n",
+        "  SELECT *\n",
+        "  FROM VALUES\n",
+        "    ('Order to Cash', '# of Sales Order Not entered (Backlog)', 'LOWER'),\n",
+        "    ('Order to Cash', '# of Sales Order created', 'HIGHER'),\n",
+        "    ('Order to Cash', '# Open sales order items missing outbound delivery', 'LOWER'),\n",
+        "    ('Order to Cash', '# Open sales order items with outbound, but missing shipment', 'LOWER'),\n",
+        "    ('Order to Cash', '# Open Sales order Items with Delivery block', 'LOWER'),\n",
+        "    ('Order to Cash', '# Open Sales order Items with billing block', 'LOWER'),\n",
+        "    ('Order to Cash', '# Customer invoices to be sent', 'LOWER'),\n",
+        "    ('Order to Cash', '# of Customer Invoices issued', 'HIGHER'),\n",
+        "    ('Order to Cash', 'Total Invoiced Value (€)', 'HIGHER'),\n",
+        "    ('Procure to Pay', '# of Pos created', 'HIGHER'),\n",
+        "    ('Procure to Pay', '# of Pos pending approval', 'LOWER'),\n",
+        "    ('Procure to Pay', '# Invoices in AP Processing in VIM (not paid)', 'LOWER'),\n",
+        "    ('Procure to Pay', '# Invoice Approvals Missing', 'LOWER'),\n",
+        "    ('Procure to Pay', '# Invoices without GR', 'LOWER'),\n",
+        "    ('Procure to Pay', '# Overdue Invoices', 'LOWER'),\n",
+        "    ('Procure to Pay', '# Vendor invoices received', 'HIGHER'),\n",
+        "    ('Production Planning', 'Planned Production Orders not converted', 'LOWER'),\n",
+        "    ('Production Planning', 'Production order backlog (overdue orders not scheduled)', 'LOWER'),\n",
+        "    ('Production Planning', '# daily production order confirmations', 'HIGHER'),\n",
+        "    ('Production Planning', '# Production orders not closed with passed Finish date', 'LOWER'),\n",
+        "    ('Warehouse and Logistics', '# of picking warehouse tasks', 'HIGHER'),\n",
+        "    ('Warehouse and Logistics', '# of putaway warehouse tasks', 'HIGHER'),\n",
+        "    ('Warehouse and Logistics', '# of goods receipts', 'HIGHER'),\n",
+        "    ('Warehouse and Logistics', '# of shipments completed', 'HIGHER'),\n",
+        "    ('Finance and Governance', '# of Journal entries posted', 'HIGHER'),\n",
+        "    ('Finance and Governance', '# of payment transactions', 'HIGHER'),\n",
+        "    ('Finance and Governance', '# Materials not created', 'LOWER'),\n",
+        "    ('Finance and Governance', '# MTO / MTS Concistency check: incorrect materials', 'LOWER')\n",
+        "    AS t(kpi_stream, kpi_name, direction)\n",
+        "),\n",
+        "master_spine AS (\n",
+        "  SELECT\n",
+        "    m.kpi_stream, m.kpi_name, m.direction,\n",
+        "    u.country_name, u.plant_label, d.snapshot_date\n",
+        "  FROM ursa_plants u\n",
+        "  CROSS JOIN date_spine d\n",
+        "  CROSS JOIN kpi_master m\n",
+        "),\n",
+        "\n",
+        "-- ============================================================================\n",
+        "-- CATEGORY 1: ORDER TO CASH\n",
+        "-- ============================================================================\n",
+        "kpi_backlog AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# of Sales Order Not entered (Backlog)' AS kpi_name,\n",
+        "    COUNT(DISTINCT o.`Sales Document Item`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_sales_distribution_sales_document_item o\n",
+        "    ON to_date(CAST(o.`Created On` AS STRING), 'yyyyMMdd') <= d.snapshot_date\n",
+        "  INNER JOIN plant_key_map pk ON o.`Plant Key` = pk.`Plant Key`\n",
+        "  WHERE COALESCE(o.`Order Status`, '') NOT IN ('C')\n",
+        "    AND COALESCE(o.`Reason for Rejection`, '') = ''\n",
+        "    AND o.`Measure Required Delivery Quantity` > 0\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_sales_orders AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# of Sales Order created' AS kpi_name,\n",
+        "    COUNT(DISTINCT o.`Sales Document Number`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_sales_distribution_sales_document_item o\n",
+        "    ON to_date(CAST(o.`Created On` AS STRING), 'yyyyMMdd') = d.snapshot_date\n",
+        "  INNER JOIN plant_key_map pk ON o.`Plant Key` = pk.`Plant Key`\n",
+        "  WHERE COALESCE(o.`Reason for Rejection`, '') = ''\n",
+        "    AND COALESCE(o.`Document Category`, '') NOT IN ('B')\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_missing_delivery AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# Open sales order items missing outbound delivery' AS kpi_name,\n",
+        "    COUNT(DISTINCT o.`Sales Document Item`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_sales_distribution_sales_document_item o\n",
+        "    ON to_date(CAST(o.`Requested Delivery Date` AS STRING), 'yyyyMMdd')\n",
+        "       BETWEEN d.snapshot_date AND date_add(d.snapshot_date, 7)\n",
+        "  INNER JOIN plant_key_map pk ON o.`Plant Key` = pk.`Plant Key`\n",
+        "  WHERE COALESCE(o.`Order Status`, '') NOT IN ('C')\n",
+        "    AND COALESCE(o.`Reason for Rejection`, '') = ''\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_missing_pgi AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# Open sales order items with outbound, but missing shipment' AS kpi_name,\n",
+        "    COUNT(DISTINCT CONCAT(dh.`Delivery Document Number`, '-', dh.`Delivery Document Item Number`)) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_sales_distribution_delivery_overview dh\n",
+        "    ON to_date(CAST(dh.`Planned Goods Movement Date` AS STRING), 'yyyyMMdd')\n",
+        "       BETWEEN d.snapshot_date AND date_add(d.snapshot_date, 7)\n",
+        "  INNER JOIN plant_key_map pk ON dh.`Plant Key` = pk.`Plant Key`\n",
+        "  WHERE (COALESCE(dh.`Goods Movement Status`, '') <> 'C'\n",
+        "         OR dh.`Actual Goods Movement Date` IS NULL\n",
+        "         OR dh.`Actual Goods Movement Date` = 0)\n",
+        "    AND COALESCE(dh.`Cancel Data Record`, '') <> 'X'\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_delivery_block AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# Open Sales order Items with Delivery block' AS kpi_name,\n",
+        "    COUNT(DISTINCT CONCAT(dh.`Delivery Document Number`, '-', dh.`Delivery Document Item Number`)) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_sales_distribution_delivery_overview dh\n",
+        "    ON to_date(CAST(dh.`Planned Goods Movement Date` AS STRING), 'yyyyMMdd') <= d.snapshot_date\n",
+        "  INNER JOIN plant_key_map pk ON dh.`Plant Key` = pk.`Plant Key`\n",
+        "  WHERE COALESCE(dh.`Delivery Block`, '') <> ''\n",
+        "    AND COALESCE(dh.`Overall Delivery Status`, '') <> 'C'\n",
+        "    AND COALESCE(dh.`Cancel Data Record`, '') <> 'X'\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_billing_block AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# Open Sales order Items with billing block' AS kpi_name,\n",
+        "    COUNT(DISTINCT CONCAT(dh.`Delivery Document Number`, '-', dh.`Delivery Document Item Number`)) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_sales_distribution_delivery_overview dh\n",
+        "    ON to_date(CAST(dh.`Planned Goods Movement Date` AS STRING), 'yyyyMMdd') <= d.snapshot_date\n",
+        "  INNER JOIN plant_key_map pk ON dh.`Plant Key` = pk.`Plant Key`\n",
+        "  WHERE COALESCE(dh.`Billing Block`, '') <> ''\n",
+        "    AND COALESCE(dh.`Order Related Bill Status`, '') <> 'C'\n",
+        "    AND COALESCE(dh.`Cancel Data Record`, '') <> 'X'\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_invoices_to_be_sent AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# Customer invoices to be sent' AS kpi_name,\n",
+        "    COUNT(DISTINCT dh.`Delivery Document Number`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_sales_distribution_delivery_overview dh\n",
+        "    ON to_date(CAST(dh.`Actual Goods Movement Date` AS STRING), 'yyyyMMdd') <= d.snapshot_date\n",
+        "  INNER JOIN plant_key_map pk ON dh.`Plant Key` = pk.`Plant Key`\n",
+        "  WHERE COALESCE(dh.`Goods Movement Status`, '') = 'C'\n",
+        "    AND COALESCE(dh.`Billing Block`, '') = ''\n",
+        "    AND COALESCE(dh.`Order Related Bill Status`, '') NOT IN ('C', '')\n",
+        "    AND COALESCE(dh.`Cancel Data Record`, '') <> 'X'\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_invoices_issued AS (\n",
+        "  SELECT\n",
+        "    COALESCE(pk.country_name, ck.country_name) AS country_name,\n",
+        "    COALESCE(pk.plant_label, ck.plant_label) AS plant_label,\n",
+        "    d.snapshot_date,\n",
+        "    '# of Customer Invoices issued' AS kpi_name,\n",
+        "    COUNT(DISTINCT b.`Billing Document Number`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_billing_document_line_item b\n",
+        "    ON to_date(CAST(b.`Billing Date` AS STRING), 'yyyyMMdd') = d.snapshot_date\n",
+        "  LEFT JOIN plant_key_map pk ON b.`Plant Key` = pk.`Plant Key`\n",
+        "  LEFT JOIN company_key_map ck ON b.`Company Key` = ck.`Company Key`\n",
+        "  WHERE (pk.`Plant Key` IS NOT NULL OR ck.`Company Key` IS NOT NULL)\n",
+        "    AND COALESCE(b.`Cancelled Indicator Flag`, '') <> 'X'\n",
+        "    AND COALESCE(b.`Posting Status Indicator Flag`, '') = 'C'\n",
+        "  GROUP BY\n",
+        "    COALESCE(pk.country_name, ck.country_name),\n",
+        "    COALESCE(pk.plant_label, ck.plant_label),\n",
+        "    d.snapshot_date\n",
+        "),\n",
+        "kpi_invoiced_value AS (\n",
+        "  SELECT\n",
+        "    COALESCE(pk.country_name, ck.country_name) AS country_name,\n",
+        "    COALESCE(pk.plant_label, ck.plant_label) AS plant_label,\n",
+        "    d.snapshot_date,\n",
+        "    'Total Invoiced Value (€)' AS kpi_name,\n",
+        "    SUM(COALESCE(b.`NET Value in Statistical Currency`, 0)) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_billing_document_line_item b\n",
+        "    ON to_date(CAST(b.`Billing Date` AS STRING), 'yyyyMMdd') = d.snapshot_date\n",
+        "  LEFT JOIN plant_key_map pk ON b.`Plant Key` = pk.`Plant Key`\n",
+        "  LEFT JOIN company_key_map ck ON b.`Company Key` = ck.`Company Key`\n",
+        "  WHERE (pk.`Plant Key` IS NOT NULL OR ck.`Company Key` IS NOT NULL)\n",
+        "    AND COALESCE(b.`Cancelled Indicator Flag`, '') <> 'X'\n",
+        "  GROUP BY\n",
+        "    COALESCE(pk.country_name, ck.country_name),\n",
+        "    COALESCE(pk.plant_label, ck.plant_label),\n",
+        "    d.snapshot_date\n",
+        "),\n",
+        "\n",
+        "-- ============================================================================\n",
+        "-- CATEGORY 2: PROCURE TO PAY\n",
+        "-- ============================================================================\n",
+        "kpi_pos_created AS (\n",
+        "  SELECT\n",
+        "    COALESCE(pk.country_name, ck.country_name) AS country_name,\n",
+        "    COALESCE(pk.plant_label, ck.plant_label) AS plant_label,\n",
+        "    d.snapshot_date,\n",
+        "    '# of Pos created' AS kpi_name,\n",
+        "    COUNT(DISTINCT po.`Purchasing Document Number`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_purchasing_document_summary po\n",
+        "    ON to_date(CAST(po.`Purchase Order Date Key` AS STRING), 'yyyyMMdd') = d.snapshot_date\n",
+        "  LEFT JOIN plant_key_map pk ON po.`Plant Key` = pk.`Plant Key`\n",
+        "  LEFT JOIN company_key_map ck ON po.`Company Key` = ck.`Company Key`\n",
+        "  WHERE (pk.`Plant Key` IS NOT NULL OR ck.`Company Key` IS NOT NULL)\n",
+        "    AND COALESCE(po.`Purchasing Doc type`, '') IN ('F', 'NB', 'YNB', 'UB', 'FO', 'YMAV')\n",
+        "    AND COALESCE(po.`Flag Deletion Indicator header`, '') = ''\n",
+        "    AND COALESCE(po.`Flag Deletion Indicator item`, '') = ''\n",
+        "  GROUP BY\n",
+        "    COALESCE(pk.country_name, ck.country_name),\n",
+        "    COALESCE(pk.plant_label, ck.plant_label),\n",
+        "    d.snapshot_date\n",
+        "),\n",
+        "kpi_pos_pending_approval AS (\n",
+        "  SELECT\n",
+        "    COALESCE(pk.country_name, ck.country_name) AS country_name,\n",
+        "    COALESCE(pk.plant_label, ck.plant_label) AS plant_label,\n",
+        "    d.snapshot_date,\n",
+        "    '# of Pos pending approval' AS kpi_name,\n",
+        "    COUNT(DISTINCT po.`Purchasing Document Number`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_purchasing_document_summary po\n",
+        "    ON to_date(CAST(po.`Purchase Order Date Key` AS STRING), 'yyyyMMdd') <= d.snapshot_date\n",
+        "  LEFT JOIN plant_key_map pk ON po.`Plant Key` = pk.`Plant Key`\n",
+        "  LEFT JOIN company_key_map ck ON po.`Company Key` = ck.`Company Key`\n",
+        "  WHERE (pk.`Plant Key` IS NOT NULL OR ck.`Company Key` IS NOT NULL)\n",
+        "    AND COALESCE(po.`Flag Deletion Indicator header`, '') = ''\n",
+        "    AND COALESCE(po.`Flag Deletion Indicator item`, '') = ''\n",
+        "    AND COALESCE(po.`Release Indicator`, '') NOT IN ('R', '')\n",
+        "  GROUP BY\n",
+        "    COALESCE(pk.country_name, ck.country_name),\n",
+        "    COALESCE(pk.plant_label, ck.plant_label),\n",
+        "    d.snapshot_date\n",
+        "),\n",
+        "kpi_ap_not_paid AS (\n",
+        "  SELECT\n",
+        "    ck.country_name, ck.plant_label, d.snapshot_date,\n",
+        "    '# Invoices in AP Processing in VIM (not paid)' AS kpi_name,\n",
+        "    COUNT(DISTINCT ap.`Invoice Document Number`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_accounts_payable ap\n",
+        "    ON ap.`Date Posting` <= d.snapshot_date\n",
+        "  INNER JOIN company_key_map ck ON ap.`Company Key` = ck.`Company Key`\n",
+        "  WHERE COALESCE(ap.`Clearing Document Number`, '') = ''\n",
+        "  GROUP BY ck.country_name, ck.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_vim_approvals_missing AS (\n",
+        "  SELECT\n",
+        "    ck.country_name, ck.plant_label, d.snapshot_date,\n",
+        "    '# Invoice Approvals Missing' AS kpi_name,\n",
+        "    COUNT(DISTINCT v.`Document ID`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_vim_document_header v\n",
+        "    ON v.`Doc Date` <= d.snapshot_date\n",
+        "  INNER JOIN company_key_map ck ON v.`Company Key` = ck.`Company Key`\n",
+        "  WHERE v.`Doc Status` = '11'  -- 11 = Awaiting Approval\n",
+        "  GROUP BY ck.country_name, ck.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_vim_without_gr AS (\n",
+        "  SELECT\n",
+        "    ck.country_name, ck.plant_label, d.snapshot_date,\n",
+        "    '# Invoices without GR' AS kpi_name,\n",
+        "    COUNT(DISTINCT v.`Document ID`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_vim_document_header v\n",
+        "    ON v.`Doc Date` <= d.snapshot_date\n",
+        "  INNER JOIN company_key_map ck ON v.`Company Key` = ck.`Company Key`\n",
+        "  WHERE v.`Doc Status` IN ('02', '03', '04', '14', '18')\n",
+        "    -- 02=Indexed, 03=Sent for Doc Creation, 04=Document Created,\n",
+        "    -- 14=Parked, 18=Blocked — invoices received but GR not yet done\n",
+        "  GROUP BY ck.country_name, ck.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_ap_overdue AS (\n",
+        "  SELECT\n",
+        "    ck.country_name, ck.plant_label, d.snapshot_date,\n",
+        "    '# Overdue Invoices' AS kpi_name,\n",
+        "    COUNT(DISTINCT ap.`Invoice Document Number`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_accounts_payable ap\n",
+        "    ON ap.`Date Due Date Calculation` < d.snapshot_date\n",
+        "  INNER JOIN company_key_map ck ON ap.`Company Key` = ck.`Company Key`\n",
+        "  WHERE COALESCE(ap.`Clearing Document Number`, '') = ''\n",
+        "  GROUP BY ck.country_name, ck.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_vendor_invoices_received AS (\n",
+        "  SELECT\n",
+        "    ck.country_name, ck.plant_label, d.snapshot_date,\n",
+        "    '# Vendor invoices received' AS kpi_name,\n",
+        "    COUNT(DISTINCT v.`Document ID`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_vim_document_header v\n",
+        "    ON v.`Doc Date` = d.snapshot_date\n",
+        "  INNER JOIN company_key_map ck ON v.`Company Key` = ck.`Company Key`\n",
+        "  GROUP BY ck.country_name, ck.plant_label, d.snapshot_date\n",
+        "),\n",
+        "\n",
+        "-- ============================================================================\n",
+        "-- CATEGORY 3: PRODUCTION PLANNING\n",
+        "-- Note: PP tables have NO Skamol data — these will return 0 for now.\n",
+        "-- They will populate when URSA company codes are used at go-live.\n",
+        "-- ============================================================================\n",
+        "kpi_pp_not_converted AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    'Planned Production Orders not converted' AS kpi_name,\n",
+        "    COUNT(DISTINCT pp.`Production Order ID`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_pp_order_headers pp\n",
+        "    ON pp.`Scheduled Start Date` < d.snapshot_date\n",
+        "  INNER JOIN plant_key_map pk ON pp.`Plant Key` = pk.`Plant Key`\n",
+        "  WHERE pp.`Actual Release Date` = DATE '1970-01-01'\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_pp_backlog AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    'Production order backlog (overdue orders not scheduled)' AS kpi_name,\n",
+        "    COUNT(DISTINCT pp.`Production Order ID`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_pp_order_headers pp\n",
+        "    ON pp.`Scheduled Finish Date` < d.snapshot_date\n",
+        "  INNER JOIN plant_key_map pk ON pp.`Plant Key` = pk.`Plant Key`\n",
+        "  WHERE pp.`Actual Finish Date` = DATE '1970-01-01'\n",
+        "    AND pp.`Scheduled Finish Date` <> DATE '1970-01-01'\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_pp_confirmations AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# daily production order confirmations' AS kpi_name,\n",
+        "    COUNT(DISTINCT pc.`Production Order ID (Order Confirmations)`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_pp_order_confirmations pc\n",
+        "    ON pc.`Posting Date` = d.snapshot_date\n",
+        "  INNER JOIN plant_key_map pk ON pc.`Plant Key` = pk.`Plant Key`\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_pp_not_closed AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# Production orders not closed with passed Finish date' AS kpi_name,\n",
+        "    COUNT(DISTINCT pp.`Production Order ID`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_pp_order_headers pp\n",
+        "    ON pp.`Basic Finish Date` < d.snapshot_date\n",
+        "  INNER JOIN plant_key_map pk ON pp.`Plant Key` = pk.`Plant Key`\n",
+        "  WHERE pp.`Actual Finish Date` = DATE '1970-01-01'\n",
+        "    AND pp.`Basic Finish Date` <> DATE '1970-01-01'\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "\n",
+        "-- ============================================================================\n",
+        "-- CATEGORY 4: WAREHOUSE AND LOGISTICS\n",
+        "-- ============================================================================\n",
+        "kpi_wm_picking AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# of picking warehouse tasks' AS kpi_name,\n",
+        "    COUNT(DISTINCT CONCAT(dh.`Delivery Document Number`, '-', dh.`Delivery Document Item Number`)) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_sales_distribution_delivery_overview dh\n",
+        "    ON to_date(CAST(dh.`Planned Goods Movement Date` AS STRING), 'yyyyMMdd') = d.snapshot_date\n",
+        "  INNER JOIN plant_key_map pk ON dh.`Plant Key` = pk.`Plant Key`\n",
+        "  WHERE COALESCE(dh.`Picking Status`, '') = 'C'\n",
+        "    AND COALESCE(dh.`Cancel Data Record`, '') <> 'X'\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_wm_putaway AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# of putaway warehouse tasks' AS kpi_name,\n",
+        "    COUNT(DISTINCT sm.`Material Document Number`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_stock_movements sm\n",
+        "    ON to_date(CAST(sm.`Posting Date Key` AS STRING), 'yyyyMMdd') = d.snapshot_date\n",
+        "  INNER JOIN `synapse-prd`.pbi.dbx_dim_inventory_movement_type mt\n",
+        "    ON sm.`Inventory Movement Type Key` = mt.`Inventory Movement Type Key`\n",
+        "  INNER JOIN plant_key_map pk ON sm.`Plant Key` = pk.`Plant Key`\n",
+        "  WHERE mt.`Inventory Movement Type Code` IN ('311', '315', '321')\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_mm_goods_receipts AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# of goods receipts' AS kpi_name,\n",
+        "    COUNT(DISTINCT sm.`Material Document Number`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_stock_movements sm\n",
+        "    ON to_date(CAST(sm.`Posting Date Key` AS STRING), 'yyyyMMdd') = d.snapshot_date\n",
+        "  INNER JOIN `synapse-prd`.pbi.dbx_dim_inventory_movement_type mt\n",
+        "    ON sm.`Inventory Movement Type Key` = mt.`Inventory Movement Type Key`\n",
+        "  INNER JOIN plant_key_map pk ON sm.`Plant Key` = pk.`Plant Key`\n",
+        "  WHERE mt.`Inventory Movement Type Code` IN ('101', '131', '501')\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_wm_shipments AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# of shipments completed' AS kpi_name,\n",
+        "    COUNT(DISTINCT dh.`Delivery Document Number`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_sales_distribution_delivery_overview dh\n",
+        "    ON to_date(CAST(dh.`Actual Goods Movement Date` AS STRING), 'yyyyMMdd') = d.snapshot_date\n",
+        "  INNER JOIN plant_key_map pk ON dh.`Plant Key` = pk.`Plant Key`\n",
+        "  WHERE COALESCE(dh.`Goods Movement Status`, '') = 'C'\n",
+        "    AND COALESCE(dh.`Cancel Data Record`, '') <> 'X'\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "\n",
+        "-- ============================================================================\n",
+        "-- CATEGORY 5: FINANCE AND GOVERNANCE\n",
+        "-- ============================================================================\n",
+        "kpi_fi_journals AS (\n",
+        "  SELECT\n",
+        "    ck.country_name, ck.plant_label, d.snapshot_date,\n",
+        "    '# of Journal entries posted' AS kpi_name,\n",
+        "    COUNT(DISTINCT ac.`Accounting Document`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_accounting_document_item ac\n",
+        "    ON ac.`Date Posting` = d.snapshot_date\n",
+        "  INNER JOIN company_key_map ck ON ac.`Company Code` = ck.company_code\n",
+        "  GROUP BY ck.country_name, ck.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_fi_payments AS (\n",
+        "  SELECT\n",
+        "    ck.country_name, ck.plant_label, d.snapshot_date,\n",
+        "    '# of payment transactions' AS kpi_name,\n",
+        "    COUNT(DISTINCT ap.`Invoice Document Number`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  JOIN `synapse-prd`.pbi.dbx_fact_accounts_payable ap\n",
+        "    ON ap.`Date Posting` = d.snapshot_date\n",
+        "  INNER JOIN company_key_map ck ON ap.`Company Key` = ck.`Company Key`\n",
+        "  WHERE ap.`Accounting Document Type` IN ('ZP', 'ZB')\n",
+        "  GROUP BY ck.country_name, ck.plant_label, d.snapshot_date\n",
+        "),\n",
+        "kpi_md_materials_not_created AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# Materials not created' AS kpi_name,\n",
+        "    0 AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  CROSS JOIN (SELECT DISTINCT country_name, plant_label FROM plant_key_map) pk\n",
+        "),\n",
+        "kpi_md_mto_mts_check AS (\n",
+        "  SELECT\n",
+        "    pk.country_name, pk.plant_label, d.snapshot_date,\n",
+        "    '# MTO / MTS Concistency check: incorrect materials' AS kpi_name,\n",
+        "    COUNT(DISTINCT mp.`Material Plant Key`) AS actual_value\n",
+        "  FROM date_spine d\n",
+        "  CROSS JOIN `synapse-prd`.pbi.dbx_dim_material_plant mp\n",
+        "  INNER JOIN plant_key_map pk ON mp.`Plant Id` = pk.plant_code\n",
+        "  WHERE COALESCE(mp.`Mrp Type`, '') = ''\n",
+        "  GROUP BY pk.country_name, pk.plant_label, d.snapshot_date\n",
+        "),\n",
+        "\n",
+        "-- ============================================================================\n",
+        "-- UNION ALL 28 KPIS\n",
+        "-- ============================================================================\n",
+        "daily_kpis AS (\n",
+        "  SELECT 'Order to Cash' AS kpi_stream, * FROM kpi_backlog\n",
+        "  UNION ALL SELECT 'Order to Cash', * FROM kpi_sales_orders\n",
+        "  UNION ALL SELECT 'Order to Cash', * FROM kpi_missing_delivery\n",
+        "  UNION ALL SELECT 'Order to Cash', * FROM kpi_missing_pgi\n",
+        "  UNION ALL SELECT 'Order to Cash', * FROM kpi_delivery_block\n",
+        "  UNION ALL SELECT 'Order to Cash', * FROM kpi_billing_block\n",
+        "  UNION ALL SELECT 'Order to Cash', * FROM kpi_invoices_to_be_sent\n",
+        "  UNION ALL SELECT 'Order to Cash', * FROM kpi_invoices_issued\n",
+        "  UNION ALL SELECT 'Order to Cash', * FROM kpi_invoiced_value\n",
+        "  UNION ALL SELECT 'Procure to Pay', * FROM kpi_pos_created\n",
+        "  UNION ALL SELECT 'Procure to Pay', * FROM kpi_pos_pending_approval\n",
+        "  UNION ALL SELECT 'Procure to Pay', * FROM kpi_ap_not_paid\n",
+        "  UNION ALL SELECT 'Procure to Pay', * FROM kpi_vim_approvals_missing\n",
+        "  UNION ALL SELECT 'Procure to Pay', * FROM kpi_vim_without_gr\n",
+        "  UNION ALL SELECT 'Procure to Pay', * FROM kpi_ap_overdue\n",
+        "  UNION ALL SELECT 'Procure to Pay', * FROM kpi_vendor_invoices_received\n",
+        "  UNION ALL SELECT 'Production Planning', * FROM kpi_pp_not_converted\n",
+        "  UNION ALL SELECT 'Production Planning', * FROM kpi_pp_backlog\n",
+        "  UNION ALL SELECT 'Production Planning', * FROM kpi_pp_confirmations\n",
+        "  UNION ALL SELECT 'Production Planning', * FROM kpi_pp_not_closed\n",
+        "  UNION ALL SELECT 'Warehouse and Logistics', * FROM kpi_wm_picking\n",
+        "  UNION ALL SELECT 'Warehouse and Logistics', * FROM kpi_wm_putaway\n",
+        "  UNION ALL SELECT 'Warehouse and Logistics', * FROM kpi_mm_goods_receipts\n",
+        "  UNION ALL SELECT 'Warehouse and Logistics', * FROM kpi_wm_shipments\n",
+        "  UNION ALL SELECT 'Finance and Governance', * FROM kpi_fi_journals\n",
+        "  UNION ALL SELECT 'Finance and Governance', * FROM kpi_fi_payments\n",
+        "  UNION ALL SELECT 'Finance and Governance', * FROM kpi_md_materials_not_created\n",
+        "  UNION ALL SELECT 'Finance and Governance', * FROM kpi_md_mto_mts_check\n",
+        "),\n",
+        "final_merged AS (\n",
+        "  SELECT\n",
+        "    s.kpi_stream, s.kpi_name, s.direction,\n",
+        "    s.country_name, s.plant_label, s.snapshot_date,\n",
+        "    COALESCE(c.actual_value, 0) AS actual_value\n",
+        "  FROM master_spine s\n",
+        "  LEFT JOIN daily_kpis c\n",
+        "    ON s.kpi_stream = c.kpi_stream\n",
+        "    AND s.kpi_name = c.kpi_name\n",
+        "    AND s.country_name = c.country_name\n",
+        "    AND s.plant_label = c.plant_label\n",
+        "    AND s.snapshot_date = c.snapshot_date\n",
+        "),\n",
+        "with_baseline AS (\n",
+        "  SELECT\n",
+        "    kpi_stream, kpi_name, direction,\n",
+        "    country_name, plant_label, snapshot_date,\n",
+        "    actual_value,\n",
+        "    0.0 AS baseline_val\n",
+        "  FROM final_merged\n",
+        ")\n",
+        "SELECT\n",
+        "  kpi_stream, kpi_name,\n",
+        "  country_name, plant_label,\n",
+        "  FORMAT_NUMBER(baseline_val, 0) AS baseline,\n",
+        "  snapshot_date,\n",
+        "  actual_value,\n",
+        "  CASE\n",
+        "    WHEN actual_value = 0 THEN '● NM'\n",
+        "    WHEN direction = 'HIGHER' THEN\n",
+        "      CASE\n",
+        "        WHEN actual_value >= baseline_val THEN CONCAT('▲ ', FORMAT_NUMBER(actual_value, 0))\n",
+        "        ELSE CONCAT('▼ ', FORMAT_NUMBER(actual_value, 0))\n",
+        "      END\n",
+        "    ELSE\n",
+        "      CASE\n",
+        "        WHEN actual_value <= baseline_val THEN CONCAT('▲ ', FORMAT_NUMBER(actual_value, 0))\n",
+        "        ELSE CONCAT('▼ ', FORMAT_NUMBER(actual_value, 0))\n",
+        "      END\n",
+        "  END AS formatted_cell\n",
+        "FROM with_baseline\n",
+        "ORDER BY kpi_stream, kpi_name, country_name, plant_label, snapshot_date"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "a66962f7",
+      "displayName": "Overview",
+      "layout": [
+        {
+          "widget": {
+            "name": "overview_pivot",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ursa_kpi_data",
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "report_date",
+                      "expression": "`report_date`"
+                    },
+                    {
+                      "name": "sum(daily_value)",
+                      "expression": "SUM(`daily_value`)"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "category",
+                          "kpi_name"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "report_date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`category`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`report_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "KPI Overview by Area",
+                  "fields": []
+                }
+              },
+              "version": 4,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": {
+                  "fields": [
+                    {
+                      "fieldName": "category",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "kpi_name",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    }
+                  ]
+                },
+                "columns": {
+                  "fields": [
+                    {
+                      "fieldName": "report_date",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    }
+                  ]
+                },
+                "cells": {
+                  "fields": [
+                    {
+                      "fieldName": "sum(daily_value)",
+                      "cellType": "text"
+                    }
+                  ],
+                  "displayAs": "rows"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 12,
+            "height": 12
+          }
+        },
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## URSA PS4 Daily KPI Tracker\n",
+                "Overview across all areas — filter by company code and date range using the sidebar"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "order_to_cash",
+      "displayName": "Order to Cash",
+      "layout": [
+        {
+          "widget": {
+            "name": "pivot",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ursa_kpi_data",
+                  "fields": [
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "company_code",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "name": "report_date",
+                      "expression": "`report_date`"
+                    },
+                    {
+                      "name": "sum(daily_value)",
+                      "expression": "SUM(`daily_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`category` IN ('Order to Cash')"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "kpi_name",
+                          "company_code"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "report_date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`report_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Order to Cash — Daily Values"
+              },
+              "version": 3,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": [
+                  {
+                    "fieldName": "kpi_name"
+                  },
+                  {
+                    "fieldName": "company_code"
+                  }
+                ],
+                "columns": [
+                  {
+                    "fieldName": "report_date"
+                  }
+                ],
+                "cell": {
+                  "type": "single-cell",
+                  "fieldName": "sum(daily_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 13
+          }
+        },
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Order to Cash\n",
+                "Daily KPI tracking for sales order creation and delivery processes"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "procurement_to_pay",
+      "displayName": "Procure to Pay",
+      "layout": [
+        {
+          "widget": {
+            "name": "pivot",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ursa_kpi_data",
+                  "fields": [
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "company_code",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "name": "report_date",
+                      "expression": "`report_date`"
+                    },
+                    {
+                      "name": "sum(daily_value)",
+                      "expression": "SUM(`daily_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`category` IN ('Procure to Pay')"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "kpi_name",
+                          "company_code"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "report_date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`report_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Procure to Pay — Daily Values"
+              },
+              "version": 4,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": {
+                  "fields": [
+                    {
+                      "fieldName": "kpi_name",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "company_code",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    }
+                  ]
+                },
+                "columns": {
+                  "fields": [
+                    {
+                      "fieldName": "report_date",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    }
+                  ]
+                },
+                "cells": {
+                  "fields": [
+                    {
+                      "fieldName": "sum(daily_value)",
+                      "cellType": "text"
+                    }
+                  ],
+                  "displayAs": "rows"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 13
+          }
+        },
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Procure to Pay\n",
+                "Daily KPI tracking for POs, invoices, approvals, and vendor payments"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "warehouse",
+      "displayName": "Warehouse",
+      "layout": [
+        {
+          "widget": {
+            "name": "pivot",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ursa_kpi_data",
+                  "fields": [
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "company_code",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "name": "report_date",
+                      "expression": "`report_date`"
+                    },
+                    {
+                      "name": "sum(daily_value)",
+                      "expression": "SUM(`daily_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`category` IN ('Warehouse')"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "kpi_name",
+                          "company_code"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "report_date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`report_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Warehouse — Daily Values"
+              },
+              "version": 3,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": [
+                  {
+                    "fieldName": "kpi_name"
+                  },
+                  {
+                    "fieldName": "company_code"
+                  }
+                ],
+                "columns": [
+                  {
+                    "fieldName": "report_date"
+                  }
+                ],
+                "cell": {
+                  "type": "single-cell",
+                  "fieldName": "sum(daily_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 13
+          }
+        },
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Warehouse\n",
+                "Daily KPI tracking for picking, putaway, and transfer tasks"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "logistics",
+      "displayName": "Logistics",
+      "layout": [
+        {
+          "widget": {
+            "name": "pivot",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ursa_kpi_data",
+                  "fields": [
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "company_code",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "name": "report_date",
+                      "expression": "`report_date`"
+                    },
+                    {
+                      "name": "sum(daily_value)",
+                      "expression": "SUM(`daily_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`category` IN ('Logistics')"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "kpi_name",
+                          "company_code"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "report_date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`report_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Logistics — Daily Values"
+              },
+              "version": 3,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": [
+                  {
+                    "fieldName": "kpi_name"
+                  },
+                  {
+                    "fieldName": "company_code"
+                  }
+                ],
+                "columns": [
+                  {
+                    "fieldName": "report_date"
+                  }
+                ],
+                "cell": {
+                  "type": "single-cell",
+                  "fieldName": "sum(daily_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 13
+          }
+        },
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Logistics\n",
+                "Daily KPI tracking for goods receipts, shipments, and deliveries"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "finance_control",
+      "displayName": "Finance & Control",
+      "layout": [
+        {
+          "widget": {
+            "name": "pivot",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ursa_kpi_data",
+                  "fields": [
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "company_code",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "name": "report_date",
+                      "expression": "`report_date`"
+                    },
+                    {
+                      "name": "sum(daily_value)",
+                      "expression": "SUM(`daily_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`category` IN ('Finance and Control')"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "kpi_name",
+                          "company_code"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "report_date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`report_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Finance and Control — Daily Values"
+              },
+              "version": 3,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": [
+                  {
+                    "fieldName": "kpi_name"
+                  },
+                  {
+                    "fieldName": "company_code"
+                  }
+                ],
+                "columns": [
+                  {
+                    "fieldName": "report_date"
+                  }
+                ],
+                "cell": {
+                  "type": "single-cell",
+                  "fieldName": "sum(daily_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 13
+          }
+        },
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Finance and Control\n",
+                "Daily KPI tracking for journal entries, payments, and reconciliation"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "master_data",
+      "displayName": "Master Data",
+      "layout": [
+        {
+          "widget": {
+            "name": "pivot",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ursa_kpi_data",
+                  "fields": [
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "company_code",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "name": "report_date",
+                      "expression": "`report_date`"
+                    },
+                    {
+                      "name": "sum(daily_value)",
+                      "expression": "SUM(`daily_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`category` IN ('Master Data')"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "kpi_name",
+                          "company_code"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "report_date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`report_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Master Data — Daily Values"
+              },
+              "version": 3,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": [
+                  {
+                    "fieldName": "kpi_name"
+                  },
+                  {
+                    "fieldName": "company_code"
+                  }
+                ],
+                "columns": [
+                  {
+                    "fieldName": "report_date"
+                  }
+                ],
+                "cell": {
+                  "type": "single-cell",
+                  "fieldName": "sum(daily_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 13
+          }
+        },
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Master Data\n",
+                "Daily KPI tracking for material, customer, and vendor master changes"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "global_filters",
+      "displayName": "Global Filters",
+      "layout": [
+        {
+          "widget": {
+            "name": "company_filter",
+            "queries": [
+              {
+                "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c64d3694126a902453921a524fb4_company_code",
+                "query": {
+                  "datasetName": "ursa_kpi_data",
+                  "fields": [
+                    {
+                      "name": "company_code",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "name": "company_code_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    },
+                    {
+                      "name": "count(company_code)",
+                      "expression": "COUNT(`company_code`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "scale": {
+                "type": "categorical",
+                "sort": {
+                  "by": "measure-reversed",
+                  "measure": {
+                    "fieldName": "count(company_code)",
+                    "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c64d3694126a902453921a524fb4_company_code"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Company Code",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "company_code",
+                    "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c64d3694126a902453921a524fb4_company_code"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "date_filter",
+            "queries": [
+              {
+                "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c64d3694126a902453921a524fb4_report_date",
+                "query": {
+                  "datasetName": "ursa_kpi_data",
+                  "fields": [
+                    {
+                      "name": "report_date",
+                      "expression": "`report_date`"
+                    },
+                    {
+                      "name": "report_date_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Report Date"
+              },
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "report_date",
+                    "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c64d3694126a902453921a524fb4_report_date"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 0,
+            "width": 3,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "production_planning",
+      "displayName": "Production Planning",
+      "layout": [
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Production Planning & Manufacturing Execution\n",
+                "Daily KPI tracking for production orders, confirmations, and backlog"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "pivot",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ursa_kpi_data",
+                  "fields": [
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "company_code",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "name": "report_date",
+                      "expression": "`report_date`"
+                    },
+                    {
+                      "name": "sum(daily_value)",
+                      "expression": "SUM(`daily_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`category` IN ('Production Planning')"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "kpi_name",
+                          "company_code"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "report_date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`report_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Production Planning — Daily Values"
+              },
+              "version": 3,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": [
+                  {
+                    "fieldName": "kpi_name"
+                  },
+                  {
+                    "fieldName": "company_code"
+                  }
+                ],
+                "columns": [
+                  {
+                    "fieldName": "report_date"
+                  }
+                ],
+                "cell": {
+                  "type": "single-cell",
+                  "fieldName": "sum(daily_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 13
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "roles_auth",
+      "displayName": "Roles and Authorizations",
+      "layout": [
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Roles and Authorizations\n",
+                "Daily KPI tracking for defects and bug resolution"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "pivot",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ursa_kpi_data",
+                  "fields": [
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "company_code",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "name": "report_date",
+                      "expression": "`report_date`"
+                    },
+                    {
+                      "name": "sum(daily_value)",
+                      "expression": "SUM(`daily_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`category` IN ('Roles and Authorizations')"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "kpi_name",
+                          "company_code"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "report_date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`company_code`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`report_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Roles and Authorizations — Daily Values"
+              },
+              "version": 3,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": [
+                  {
+                    "fieldName": "kpi_name"
+                  },
+                  {
+                    "fieldName": "company_code"
+                  }
+                ],
+                "columns": [
+                  {
+                    "fieldName": "report_date"
+                  }
+                ],
+                "cell": {
+                  "type": "single-cell",
+                  "fieldName": "sum(daily_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 13
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "test_dashboard",
+      "displayName": "Test Dashboard",
+      "layout": [
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Test Dashboard — Total Invoiced Value (EUR)\n",
+                "Data source: VBRK/VBRP billing documents | Company codes: 6700, 6740, 6760 | Past 10 days"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "detail_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "test_invoiced_value",
+                  "fields": [
+                    {
+                      "name": "Company Code",
+                      "expression": "`Company Code`"
+                    },
+                    {
+                      "name": "Billing Date",
+                      "expression": "`Billing Date`"
+                    },
+                    {
+                      "name": "Document Currency",
+                      "expression": "`Document Currency`"
+                    },
+                    {
+                      "name": "num_invoices",
+                      "expression": "`num_invoices`"
+                    },
+                    {
+                      "name": "net_value_doc_currency",
+                      "expression": "`net_value_doc_currency`"
+                    },
+                    {
+                      "name": "total_invoiced_value_eur",
+                      "expression": "`total_invoiced_value_eur`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Daily Detail"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "Company Code"
+                  },
+                  {
+                    "fieldName": "Billing Date"
+                  },
+                  {
+                    "fieldName": "Document Currency"
+                  },
+                  {
+                    "fieldName": "num_invoices"
+                  },
+                  {
+                    "fieldName": "net_value_doc_currency"
+                  },
+                  {
+                    "fieldName": "total_invoiced_value_eur"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "pivot_summary",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "test_invoiced_value",
+                  "fields": [
+                    {
+                      "name": "Company Code",
+                      "expression": "`Company Code`"
+                    },
+                    {
+                      "name": "Billing Date",
+                      "expression": "`Billing Date`"
+                    },
+                    {
+                      "name": "sum(total_invoiced_value_eur)",
+                      "expression": "SUM(`total_invoiced_value_eur`)"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "Company Code"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "Billing Date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`Company Code`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`Billing Date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Summary Pivot"
+              },
+              "version": 3,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": [
+                  {
+                    "fieldName": "Company Code"
+                  }
+                ],
+                "columns": [
+                  {
+                    "fieldName": "Billing Date"
+                  }
+                ],
+                "cell": {
+                  "type": "single-cell",
+                  "fieldName": "sum(total_invoiced_value_eur)",
+                  "cellType": "text"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 12,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "test_view_draft",
+      "displayName": "Test View Draft",
+      "layout": [
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Hypercare & Ramp-Up Daily Operations Dashboard\n",
+                "Nov 2 – Nov 8, 2026 | Mock data — filter by country and plant using controls below"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_invoiced",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "sum(actual_value)",
+                      "expression": "SUM(`actual_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`kpi_name` IN ('Total Invoiced Value (EUR)')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Total Invoiced Value (EUR)"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(actual_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "country_filter",
+            "queries": [
+              {
+                "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_country_name",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "name": "country_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Country"
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "country_name",
+                    "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_country_name"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_orders",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "sum(actual_value)",
+                      "expression": "SUM(`actual_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`kpi_name` IN ('# Sales Orders Created')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Sales Orders Created"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(actual_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "plant_filter",
+            "queries": [
+              {
+                "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_plant_label",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "plant_label",
+                      "expression": "`plant_label`"
+                    },
+                    {
+                      "name": "plant_label_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Plant"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "plant_label",
+                    "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_plant_label"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 1,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_confirmations",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "sum(actual_value)",
+                      "expression": "SUM(`actual_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`kpi_name` IN ('Daily Confirmations')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Production Confirmations"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(actual_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "priority_filter",
+            "queries": [
+              {
+                "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_priority",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "priority",
+                      "expression": "`priority`"
+                    },
+                    {
+                      "name": "priority_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Priority"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "priority",
+                    "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_priority"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 1,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_bottlenecks",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "sum(actual_value)",
+                      "expression": "SUM(`actual_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`kpi_name` IN ('Overdue Invoices', 'Invoices in AP/VIM (not paid)', 'Defect Burn-Down (Created vs Closed)')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Active Bottlenecks"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(actual_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "rag_filter",
+            "queries": [
+              {
+                "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_rag_status",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "rag_status",
+                      "expression": "`rag_status`"
+                    },
+                    {
+                      "name": "rag_status_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "RAG Status"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "rag_status",
+                    "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_rag_status"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 1,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "main_matrix",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hc_matrix_formatted",
+                  "fields": [
+                    {
+                      "name": "kpi_stream",
+                      "expression": "`kpi_stream`"
+                    },
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "name": "plant_label",
+                      "expression": "`plant_label`"
+                    },
+                    {
+                      "name": "baseline",
+                      "expression": "`baseline`"
+                    },
+                    {
+                      "name": "snapshot_date",
+                      "expression": "`snapshot_date`"
+                    },
+                    {
+                      "name": "first(formatted_cell)",
+                      "expression": "FIRST(`formatted_cell`)"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "kpi_stream",
+                          "kpi_name",
+                          "country_name",
+                          "plant_label",
+                          "baseline"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "snapshot_date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_stream`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`plant_label`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`baseline`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`snapshot_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Daily KPI Tracking Matrix — Actuals vs Baseline",
+                  "fields": []
+                }
+              },
+              "version": 4,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": {
+                  "fields": [
+                    {
+                      "fieldName": "kpi_stream",
+                      "headerWidth": 100,
+                      "displayName": "Category",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "kpi_name",
+                      "headerWidth": 100,
+                      "displayName": "KPI",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "country_name",
+                      "displayName": "Country",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "plant_label",
+                      "displayName": "Plant",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "baseline",
+                      "displayName": "2025 Av.",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    }
+                  ]
+                },
+                "columns": {
+                  "fields": [
+                    {
+                      "fieldName": "snapshot_date",
+                      "format": {
+                        "type": "date",
+                        "date": "locale-number-month-full-year",
+                        "leadingZeros": true
+                      },
+                      "displayName": "Date",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    }
+                  ]
+                },
+                "cells": {
+                  "fields": [
+                    {
+                      "fieldName": "first(formatted_cell)",
+                      "cellType": "text",
+                      "style": {
+                        "type": "basic",
+                        "rules": [
+                          {
+                            "condition": {
+                              "operand": {
+                                "type": "data-value",
+                                "value": "▲"
+                              },
+                              "operator": "contains"
+                            },
+                            "backgroundColor": "#00A972"
+                          },
+                          {
+                            "condition": {
+                              "operand": {
+                                "type": "data-value",
+                                "value": "▼"
+                              },
+                              "operator": "contains"
+                            },
+                            "backgroundColor": "#E92D2D"
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "displayAs": "rows"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 12,
+            "height": 16
+          }
+        },
+        {
+          "widget": {
+            "name": "expected_matrix",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "kpi_stream",
+                      "expression": "`kpi_stream`"
+                    },
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "snapshot_date",
+                      "expression": "`snapshot_date`"
+                    },
+                    {
+                      "name": "sum(expected_value)",
+                      "expression": "SUM(`expected_value`)"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "kpi_stream",
+                          "kpi_name"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "snapshot_date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_stream`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`snapshot_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Baseline Expected (Target) by Date",
+                  "fields": []
+                }
+              },
+              "version": 4,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": {
+                  "fields": [
+                    {
+                      "fieldName": "kpi_stream",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "kpi_name",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    }
+                  ]
+                },
+                "columns": {
+                  "fields": [
+                    {
+                      "fieldName": "snapshot_date",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    }
+                  ]
+                },
+                "cells": {
+                  "fields": [
+                    {
+                      "fieldName": "sum(expected_value)",
+                      "cellType": "text",
+                      "style": {
+                        "type": "basic",
+                        "rules": [
+                          {
+                            "condition": {
+                              "operator": ">="
+                            },
+                            "backgroundColor": "#00A972"
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "displayAs": "rows"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 21,
+            "width": 12,
+            "height": 16
+          }
+        },
+        {
+          "widget": {
+            "name": "rag_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "name": "plant_label",
+                      "expression": "`plant_label`"
+                    },
+                    {
+                      "name": "kpi_stream",
+                      "expression": "`kpi_stream`"
+                    },
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "priority",
+                      "expression": "`priority`"
+                    },
+                    {
+                      "name": "expected_value",
+                      "expression": "`expected_value`"
+                    },
+                    {
+                      "name": "actual_value",
+                      "expression": "`actual_value`"
+                    },
+                    {
+                      "name": "variance",
+                      "expression": "`variance`"
+                    },
+                    {
+                      "name": "variance_pct",
+                      "expression": "`variance_pct`"
+                    },
+                    {
+                      "name": "rag_status",
+                      "expression": "`rag_status`"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`snapshot_date` IN ('2026-11-08')"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "RAG Status Detail — Latest Day Plant Breakdown"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "country_name"
+                  },
+                  {
+                    "fieldName": "plant_label"
+                  },
+                  {
+                    "fieldName": "kpi_stream"
+                  },
+                  {
+                    "fieldName": "kpi_name"
+                  },
+                  {
+                    "fieldName": "priority"
+                  },
+                  {
+                    "fieldName": "expected_value"
+                  },
+                  {
+                    "fieldName": "actual_value"
+                  },
+                  {
+                    "fieldName": "variance"
+                  },
+                  {
+                    "fieldName": "variance_pct"
+                  },
+                  {
+                    "fieldName": "rag_status"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 37,
+            "width": 12,
+            "height": 10
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "test_view_draft_2",
+      "displayName": "Test View Draft 2",
+      "layout": [
+        {
+          "widget": {
+            "name": "title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Hypercare KPI Heatmap — Actuals vs Baseline\n",
+                "Comparing live daily actuals against Oct–Dec 2025 3-month averages | **Green** = at or above baseline · **Red** = below baseline\n",
+                "\n",
+                "Scope: URSA Germany (1321 Delitzsch) · URSA Poland (2181 Dabrowa)"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "baseline_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hc_baseline",
+                  "fields": [
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "name": "plant_label",
+                      "expression": "`plant_label`"
+                    },
+                    {
+                      "name": "kpi_stream",
+                      "expression": "`kpi_stream`"
+                    },
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "baseline_value",
+                      "expression": "`baseline_value`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Editable Baselines (Oct-Dec 2025 Avg)"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "country_name"
+                  },
+                  {
+                    "fieldName": "plant_label"
+                  },
+                  {
+                    "fieldName": "kpi_stream"
+                  },
+                  {
+                    "fieldName": "kpi_name"
+                  },
+                  {
+                    "fieldName": "baseline_value"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 12,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "a7eeb6e9",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "kpi_stream",
+                      "expression": "`kpi_stream`"
+                    },
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "name": "plant_label",
+                      "expression": "`plant_label`"
+                    },
+                    {
+                      "name": "snapshot_date",
+                      "expression": "`snapshot_date`"
+                    },
+                    {
+                      "name": "sum(actual_value)",
+                      "expression": "SUM(`actual_value`)"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "kpi_stream",
+                          "kpi_name",
+                          "country_name",
+                          "plant_label"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "snapshot_date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_stream`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`plant_label`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`snapshot_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true
+              },
+              "version": 4,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": {
+                  "fields": [
+                    {
+                      "fieldName": "kpi_stream",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "kpi_name",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "country_name",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "plant_label",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    }
+                  ]
+                },
+                "columns": {
+                  "fields": [
+                    {
+                      "fieldName": "snapshot_date",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    }
+                  ]
+                },
+                "cells": {
+                  "fields": [
+                    {
+                      "fieldName": "sum(actual_value)",
+                      "cellType": "text",
+                      "style": {
+                        "type": "basic",
+                        "rules": [
+                          {
+                            "condition": {
+                              "operator": ">="
+                            },
+                            "backgroundColor": "#00A972"
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "displayAs": "rows"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 12,
+            "height": 16
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "8d08593c",
+      "displayName": "Test View Draft 2",
+      "layout": [
+        {
+          "widget": {
+            "name": "80b29ee6",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## Hypercare & Ramp-Up Daily Operations Dashboard\n",
+                "Nov 2 – Nov 8, 2026 | Mock data — filter by country and plant using controls below"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 16,
+            "width": 12,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "b2782ec5",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "sum(actual_value)",
+                      "expression": "SUM(`actual_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`kpi_name` IN ('Total Invoiced Value (EUR)')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Total Invoiced Value (EUR)"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(actual_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "01973ac4",
+            "queries": [
+              {
+                "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_country_name",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "name": "country_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Country",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "country_name",
+                    "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_country_name"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "3a602906",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "sum(actual_value)",
+                      "expression": "SUM(`actual_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`kpi_name` IN ('# Sales Orders Created')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Sales Orders Created"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(actual_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 18,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "ccc14d1e",
+            "queries": [
+              {
+                "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_plant_label",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "plant_label",
+                      "expression": "`plant_label`"
+                    },
+                    {
+                      "name": "plant_label_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Plant"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "plant_label",
+                    "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_plant_label"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 17,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "ab3ac0ea",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "sum(actual_value)",
+                      "expression": "SUM(`actual_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`kpi_name` IN ('Daily Confirmations')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Production Confirmations"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(actual_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 18,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "7a4b4108",
+            "queries": [
+              {
+                "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_priority",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "priority",
+                      "expression": "`priority`"
+                    },
+                    {
+                      "name": "priority_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Priority"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "priority",
+                    "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_priority"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 17,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "d3499691",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "sum(actual_value)",
+                      "expression": "SUM(`actual_value`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`kpi_name` IN ('Overdue Invoices', 'Invoices in AP/VIM (not paid)', 'Defect Burn-Down (Created vs Closed)')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Active Bottlenecks"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(actual_value)"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 18,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "38505310",
+            "queries": [
+              {
+                "name": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_rag_status",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "rag_status",
+                      "expression": "`rag_status`"
+                    },
+                    {
+                      "name": "rag_status_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "RAG Status"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "rag_status",
+                    "queryName": "dashboards/01f1c64b4d221e24ad538c8f31226e41/datasets/01f1c66edf56156baf244f043dd2d282_rag_status"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 17,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "2e61095a",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "o2c_live_matrix",
+                  "fields": [
+                    {
+                      "name": "kpi_stream",
+                      "expression": "`kpi_stream`"
+                    },
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "name": "plant_label",
+                      "expression": "`plant_label`"
+                    },
+                    {
+                      "name": "baseline",
+                      "expression": "`baseline`"
+                    },
+                    {
+                      "name": "snapshot_date",
+                      "expression": "`snapshot_date`"
+                    },
+                    {
+                      "name": "first(formatted_cell)",
+                      "expression": "FIRST(`formatted_cell`)"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "kpi_stream",
+                          "kpi_name",
+                          "country_name",
+                          "plant_label",
+                          "baseline"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "snapshot_date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_stream`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`plant_label`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`baseline`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`snapshot_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Daily KPI Tracking Matrix — Actuals vs Baseline",
+                  "fields": []
+                }
+              },
+              "version": 4,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": {
+                  "fields": [
+                    {
+                      "fieldName": "kpi_stream",
+                      "headerWidth": 100,
+                      "displayName": "Category",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "kpi_name",
+                      "headerWidth": 100,
+                      "displayName": "KPI",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "country_name",
+                      "displayName": "Country",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "plant_label",
+                      "displayName": "Plant",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "baseline",
+                      "displayName": "2025 Av.",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    }
+                  ]
+                },
+                "columns": {
+                  "fields": [
+                    {
+                      "fieldName": "snapshot_date",
+                      "format": {
+                        "type": "date",
+                        "date": "locale-number-month-full-year",
+                        "leadingZeros": true
+                      },
+                      "displayName": "Date",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    }
+                  ]
+                },
+                "cells": {
+                  "fields": [
+                    {
+                      "fieldName": "first(formatted_cell)",
+                      "cellType": "text",
+                      "style": {
+                        "type": "basic",
+                        "rules": [
+                          {
+                            "condition": {
+                              "operand": {
+                                "type": "data-value",
+                                "value": "▲"
+                              },
+                              "operator": "contains"
+                            },
+                            "backgroundColor": "#00A972"
+                          },
+                          {
+                            "condition": {
+                              "operand": {
+                                "type": "data-value",
+                                "value": "▼"
+                              },
+                              "operator": "contains"
+                            },
+                            "backgroundColor": "#E92D2D"
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "displayAs": "rows"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 16
+          }
+        },
+        {
+          "widget": {
+            "name": "3f3a9955",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "kpi_stream",
+                      "expression": "`kpi_stream`"
+                    },
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "snapshot_date",
+                      "expression": "`snapshot_date`"
+                    },
+                    {
+                      "name": "sum(expected_value)",
+                      "expression": "SUM(`expected_value`)"
+                    }
+                  ],
+                  "cubeGroupingSets": {
+                    "sets": [
+                      {
+                        "fieldNames": [
+                          "kpi_stream",
+                          "kpi_name"
+                        ]
+                      },
+                      {
+                        "fieldNames": [
+                          "snapshot_date"
+                        ]
+                      }
+                    ]
+                  },
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_stream`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "direction": "ASC",
+                      "expression": "`snapshot_date`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Baseline Expected (Target) by Date",
+                  "fields": []
+                }
+              },
+              "version": 4,
+              "widgetType": "pivot",
+              "encodings": {
+                "rows": {
+                  "fields": [
+                    {
+                      "fieldName": "kpi_stream",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    },
+                    {
+                      "fieldName": "kpi_name",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    }
+                  ]
+                },
+                "columns": {
+                  "fields": [
+                    {
+                      "fieldName": "snapshot_date",
+                      "scale": {
+                        "type": "categorical"
+                      }
+                    }
+                  ]
+                },
+                "cells": {
+                  "fields": [
+                    {
+                      "fieldName": "sum(expected_value)",
+                      "cellType": "text",
+                      "style": {
+                        "type": "basic",
+                        "rules": [
+                          {
+                            "condition": {
+                              "operator": ">="
+                            },
+                            "backgroundColor": "#00A972"
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "displayAs": "rows"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 21,
+            "width": 12,
+            "height": 16
+          }
+        },
+        {
+          "widget": {
+            "name": "0a0b76fc",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "hypercare_mock",
+                  "fields": [
+                    {
+                      "name": "country_name",
+                      "expression": "`country_name`"
+                    },
+                    {
+                      "name": "plant_label",
+                      "expression": "`plant_label`"
+                    },
+                    {
+                      "name": "kpi_stream",
+                      "expression": "`kpi_stream`"
+                    },
+                    {
+                      "name": "kpi_name",
+                      "expression": "`kpi_name`"
+                    },
+                    {
+                      "name": "priority",
+                      "expression": "`priority`"
+                    },
+                    {
+                      "name": "expected_value",
+                      "expression": "`expected_value`"
+                    },
+                    {
+                      "name": "actual_value",
+                      "expression": "`actual_value`"
+                    },
+                    {
+                      "name": "variance",
+                      "expression": "`variance`"
+                    },
+                    {
+                      "name": "variance_pct",
+                      "expression": "`variance_pct`"
+                    },
+                    {
+                      "name": "rag_status",
+                      "expression": "`rag_status`"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`snapshot_date` IN ('2026-11-08')"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "RAG Status Detail — Latest Day Plant Breakdown"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "country_name"
+                  },
+                  {
+                    "fieldName": "plant_label"
+                  },
+                  {
+                    "fieldName": "kpi_stream"
+                  },
+                  {
+                    "fieldName": "kpi_name"
+                  },
+                  {
+                    "fieldName": "priority"
+                  },
+                  {
+                    "fieldName": "expected_value"
+                  },
+                  {
+                    "fieldName": "actual_value"
+                  },
+                  {
+                    "fieldName": "variance"
+                  },
+                  {
+                    "fieldName": "variance_pct"
+                  },
+                  {
+                    "fieldName": "rag_status"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 37,
+            "width": 12,
+            "height": 10
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
