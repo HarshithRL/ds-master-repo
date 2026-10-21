@@ -1851,6 +1851,70 @@
           ]
         }
       ]
+    },
+    {
+      "data_product": "ursa-kpi-dashboards",
+      "warehouse": true,
+      "consumer_groups": [
+        {
+          "tier": "READ",
+          "members": [
+            "ariel.mlot@etexgroup.com",
+            "mustafaarda.bicakci@etexgroup.com",
+            "arne.rotty@etexgroup.com",
+            "luc.vautmans@etexgroup.com",
+            "hugo.reis@etexgroup.com",
+            "alberto.olmos@etexgroup.com",
+            "patricio.vega@etexgroup.com",
+            "kerem.yenideniz@etexgroup.com",
+            "yusakayra.saltan@etexgroup.com"
+          ],
+          "grants": [
+            {"catalog": "automation", "privileges": ["USE_CATALOG"]},
+            {"catalog": "automation", "schema": "gold", "privileges": ["USE_SCHEMA"]},
+            {"catalog": "automation", "schema": "gold", "table": "URSA_KPI_result_ursa_kpi_data", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "gold", "table": "URSA_KPI_result_test_invoiced_value", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "gold", "table": "URSA_KPI_result_hypercare_mock", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "gold", "table": "URSA_KPI_result_hc_baseline", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "gold", "table": "URSA_KPI_result_hc_actuals_vs_baseline", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "gold", "table": "URSA_KPI_result_hc_matrix_formatted", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "gold", "table": "URSA_KPI_result_o2c_live_matrix", "privileges": ["SELECT"]}
+          ]
+        },
+        {
+          "tier": "WRITE",
+          "members": [
+            "ariel.mlot@etexgroup.com",
+            "mustafaarda.bicakci@etexgroup.com",
+            "arne.rotty@etexgroup.com",
+            "luc.vautmans@etexgroup.com",
+            "hugo.reis@etexgroup.com",
+            "alberto.olmos@etexgroup.com",
+            "patricio.vega@etexgroup.com",
+            "kerem.yenideniz@etexgroup.com",
+            "yusakayra.saltan@etexgroup.com"
+          ],
+          "grants": [
+            {"catalog": "automation", "privileges": ["USE_CATALOG"]},
+            {"catalog": "automation", "schema": "gold", "privileges": ["USE_SCHEMA"]},
+            {"catalog": "automation", "schema": "gold", "table": "URSA_KPI_result_ursa_kpi_data", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "gold", "table": "URSA_KPI_result_test_invoiced_value", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "gold", "table": "URSA_KPI_result_hypercare_mock", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "gold", "table": "URSA_KPI_result_hc_baseline", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "gold", "table": "URSA_KPI_result_hc_actuals_vs_baseline", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "gold", "table": "URSA_KPI_result_hc_matrix_formatted", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "gold", "table": "URSA_KPI_result_o2c_live_matrix", "privileges": ["SELECT"]},
+            {"catalog": "automation", "schema": "silver", "privileges": ["USE_SCHEMA"]},
+            {"catalog": "automation", "schema": "silver", "table": "URSA_KPI_result_ursa_kpi_data", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "URSA_KPI_result_test_invoiced_value", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "URSA_KPI_result_hypercare_mock", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "URSA_KPI_result_hc_baseline", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "URSA_KPI_result_hc_actuals_vs_baseline", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "URSA_KPI_result_hc_matrix_formatted", "privileges": ["SELECT", "MODIFY"]},
+            {"catalog": "automation", "schema": "silver", "table": "URSA_KPI_result_o2c_live_matrix", "privileges": ["SELECT", "MODIFY"]}
+          ]
+        }
+      ]
     }
   ]
 }
