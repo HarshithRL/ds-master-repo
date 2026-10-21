@@ -196,9 +196,20 @@ No direct ACC/PRD deployment is part of this implementation.
   the authenticated browser rendering. A/P schedules are enabled by deployment,
   so complete initial refresh and access acceptance before the first daily run.
 
-No consumer members were supplied, so this bundle does not invent memberships,
-change the shared permissions manifest, or bind nonexistent groups during the
-initial deployment. Managers use the existing Arda/Pierre bundle convention.
+The user confirmed that the URSA consumer groups have been created. Target A/P
+dashboard overrides now grant `CAN_READ` to both
+`AUTOMATION.URSAKPIDASHBOARDS.CONSUMER.READ` and
+`AUTOMATION.URSAKPIDASHBOARDS.CONSUMER.WRITE`. These grants apply only to the
+dashboard, not the refresh job, and do not grant dashboard editing or management.
+Targets D/T and the existing Arda/Pierre manager permissions are unchanged.
+The binding takes effect when this source is promoted through the normal
+pipeline; this update does not directly apply permissions in ACC or PRD.
+
+Consumer membership and Unity Catalog grants are managed separately through the
+root `permissions/access.json` process. Both groups need `CAN_USE` on the actual
+SQL warehouse referenced by the target dashboard; provisioning a separate
+consumer warehouse does not rebind this dashboard or grant access to its
+currently configured warehouse. Warehouse bindings are unchanged by this update.
 Dashboard credentials are not embedded: consumers require their own appropriate
 automation data, warehouse and dashboard permissions, but no Synapse access.
 

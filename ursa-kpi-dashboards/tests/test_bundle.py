@@ -1,4 +1,5 @@
 import ast
+import json
 import sys
 import types
 import unittest
@@ -27,6 +28,26 @@ class BundleContractTests(unittest.TestCase):
             self.assertNotIn("*", include)
             self.assertTrue((ROOT / include).is_file())
             self.assertNotIn("permissions", include)
+
+    def test_consumer_dashboard_access_is_limited_to_acc_and_prd(self):
+        bundle = yaml.safe_load((ROOT / "databricks.yml").read_text())
+        expected = [
+            {"group_name": "AUTOMATION.URSAKPIDASHBOARDS.CONSUMER.READ", "level": "CAN_READ"},
+            {"group_name": "AUTOMATION.URSAKPIDASHBOARDS.CONSUMER.WRITE", "level": "CAN_READ"},
+        ]
+        for target in ("A", "P"):
+            with self.subTest(target=target):
+                self.assertEqual(bundle["targets"][target]["resources"], {
+                    "dashboards": {"ursa_ps4_daily_kpi_tracker": {"permissions": expected}},
+                })
+        for target in ("D", "T"):
+            self.assertNotIn("resources", bundle["targets"][target])
+        self.assertEqual(bundle["permissions"], [
+            {"user_name": "mustafaarda.bicakci@etexgroup.com", "level": "CAN_MANAGE"},
+            {"user_name": "pierre.delaguiche@etexgroup.com", "level": "CAN_MANAGE"},
+        ])
+        job = yaml.safe_load((ROOT / "resources" / "jobs" / "ursa_kpi_refresh.job.yml").read_text())
+        self.assertNotIn("AUTOMATION.URSAKPIDASHBOARDS", json.dumps(job))
 
     def test_refresh_graph_has_preflight_materialization_and_native_readback(self):
         definition = yaml.safe_load((ROOT / "resources" / "jobs" / "ursa_kpi_refresh.job.yml").read_text())

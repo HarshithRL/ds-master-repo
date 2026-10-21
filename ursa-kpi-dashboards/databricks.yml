@@ -79,6 +79,14 @@ targets:
       policy_id: 306312B973005677
       warehouse_id: 0ef3e37fbbd5b772
       refresh_pause_status: UNPAUSED
+    resources:
+      dashboards:
+        ursa_ps4_daily_kpi_tracker:
+          permissions:
+            - group_name: AUTOMATION.URSAKPIDASHBOARDS.CONSUMER.READ
+              level: CAN_READ
+            - group_name: AUTOMATION.URSAKPIDASHBOARDS.CONSUMER.WRITE
+              level: CAN_READ
     permissions:
       - service_principal_name: 9e7c67eb-3d7a-4b0a-8338-f2ecc4d386e8
         level: CAN_MANAGE
@@ -93,3 +101,11 @@ targets:
       policy_id: 306312B973005150
       warehouse_id: f500d0d670ae024b
       refresh_pause_status: UNPAUSED
+    resources:
+      dashboards:
+        ursa_ps4_daily_kpi_tracker:
+          permissions:
+            - group_name: AUTOMATION.URSAKPIDASHBOARDS.CONSUMER.READ
+              level: CAN_READ
+            - group_name: AUTOMATION.URSAKPIDASHBOARDS.CONSUMER.WRITE
+              level: CAN_READ
