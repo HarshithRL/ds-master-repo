@@ -140,6 +140,43 @@ are committed for review but excluded from runtime sync. The runtime receives
 `--config-path` explicitly and does not depend on `__file__` being defined by
 the Databricks Python task wrapper.
 
+## Manual DEV UI Capture
+
+The manual `Sync_URSA_Dashboard_To_Bundle` notebook lives outside this bundle at
+`/Workspace/Users/mustafaarda.bicakci@etexgroup.com/DEV-Tools/`.
+It is not a job, is not scheduled, and is not included in ACC/PRD deployments.
+The local notebook is `dev_tools/sync_ursa_dashboard.ipynb` in the development
+workspace, also outside the bundle project.
+
+The notebook defaults to the bundle's DEV dashboard
+`01f1ccc9fb9c1806b7de5a73ac5154fa`. The original Kerem dashboard can be selected
+explicitly if its dataset SQL still matches the archived source contract.
+It reads the current draft, not a possibly older published revision.
+
+1. Edit the selected DEV dashboard's presentation in the UI.
+2. Run the notebook through Cell 8 to preview and validate the proposed changes.
+3. In Cell 10, set `APPLY_CHANGES=True` and set `CONFIRMATION` to that preview's
+  approval value. Rerun Cell 10 to apply. The default remains preview-only.
+4. Review the DEV Git folder diff, then commit/push and promote through the
+  existing PR/pipeline process. The notebook does not commit, push or deploy.
+
+Capture writes only `source_dashboards/dashboard_presentation.json` and
+`resources/dashboards/ursa_ps4.dashboard.yml`. The build now consumes the
+optional presentation file so captured visuals survive regeneration, while
+the archived source SQL and `src/config/dashboard_plan.json` remain unchanged.
+New pages/widgets and expressions over existing result columns are supported;
+dataset SQL/inventory and relationship-graph changes require separate review.
+DEV result addresses are replaced by the existing catalog/suffix placeholders.
+
+The authenticated server must confirm the DEV workspace ID. Branch/head, source
+bytes, dashboard etag and native result schemas are rechecked before writes.
+Original files are backed up outside the repo under
+`DEV-Tools/URSA_Dashboard_Backups`, and uploads are read back byte-for-byte.
+Workspace file writes have no cross-file transaction or server-side CAS lock:
+a partial failure stops with the backup path and requires review before commit.
+The notebook never modifies the live dashboard, data tables, job, schedules,
+permissions, warehouse bindings or shared pipeline files.
+
 ## ACC and PRD Promotion
 
 Add this folder to the current DEV Git folder and use the existing shared Azure

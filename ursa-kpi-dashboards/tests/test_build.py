@@ -22,7 +22,8 @@ class ArtifactTests(unittest.TestCase):
         self.assertFalse(dashboard["embed_credentials"])
         self.assertEqual(dashboard["warehouse_id"], "${var.warehouse_id}")
         compiled = json.loads(dashboard["serialized_dashboard"])
-        original = json.loads((ROOT / "source_dashboards" / "ursa_ps4_daily_kpi_tracker.lvdash.json").read_text())
+        presentation = ROOT / "source_dashboards" / "dashboard_presentation.json"
+        original = json.loads((presentation if presentation.is_file() else ROOT / "source_dashboards" / "ursa_ps4_daily_kpi_tracker.lvdash.json").read_text())
         expected = copy.deepcopy(original)
         actual = copy.deepcopy(compiled)
         for definition in (expected, actual):

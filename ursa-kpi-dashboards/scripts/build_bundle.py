@@ -8,7 +8,9 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "scripts"))
 
+from dashboard_presentation import merge_presentation
 from ursa_plan import compile_dashboard
 
 
@@ -30,6 +32,9 @@ BundleDumper.add_representer(LiteralString, represent_literal)
 def generated_artifacts(root):
     source = json.loads((root / "source_dashboards" / "ursa_ps4_daily_kpi_tracker.lvdash.json").read_text())
     compiled, plan = compile_dashboard(source)
+    presentation_path = root / "source_dashboards" / "dashboard_presentation.json"
+    if presentation_path.is_file():
+        compiled = merge_presentation(compiled, json.loads(presentation_path.read_text()), plan)
     resource = {
         "resources": {
             "dashboards": {
