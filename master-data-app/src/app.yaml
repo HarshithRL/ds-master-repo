@@ -7,7 +7,7 @@ command:
   - --server.address
   - "0.0.0.0"
 
-# Same file in T, A and P. What differs per environment comes from the
+# Same file in T, A and P. What differs per environment comes from the 
 # workspace (catalog, tables, SAP host, Workbench URL in portal/config.py)
 # and from the app resources declared per target in databricks.yml.
 env:
