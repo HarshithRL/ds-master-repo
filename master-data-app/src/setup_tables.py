@@ -9,7 +9,7 @@ from pyspark.sql import SparkSession
 
 ALLOWED_CATALOGS = {"automation_d", "automation_a", "automation_p"}
 CONFIGURATION_FILES = {
-    "customer_reference_library.xlsx": {
+    "general_data.xlsx": {
         "General_Data_Fields",
         "Company_Sales_Org",
         "Tax_Details",
@@ -17,6 +17,7 @@ CONFIGURATION_FILES = {
     "customer_form_rules.xlsx": {"Form_Fields", "Field_Options"},
     "credit_management_rules.xlsx": {"Credit_Mapping", "Form_Fields"},
     "assignment_rules.xlsx": {"Members", "Assignment_Pool", "Notification_Messages"},
+    "sap_api_mapping.xlsx": {"Field_Mapping"},
 }
 PRODUCTION_BLOCKERS = ("test only", "dummy configuration", "used only to verify")
 CONFIGURATION_TABLE_SCHEMA = """
@@ -70,8 +71,11 @@ def load_configuration_snapshot(
 
     for file_name, required_sheets in CONFIGURATION_FILES.items():
         file_path = root / file_name
+        if file_name == "general_data.xlsx" and not file_path.is_file():
+            file_path = root / "customer_reference_library.xlsx"
         if not file_path.is_file():
             raise FileNotFoundError(f"Required configuration workbook is missing: {file_path}")
+        file_name = file_path.name
 
         source_sha256 = hashlib.sha256(file_path.read_bytes()).hexdigest()
         workbook = load_workbook(file_path, read_only=True, data_only=True)

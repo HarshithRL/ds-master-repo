@@ -12,6 +12,11 @@ variables:
   warehouse_id:
     description: Environment-specific SQL warehouse used by the app.
     default: "69ada62b2fb9b9e2"
+  secret_scope:
+    description: >-
+      Databricks secret scope (in each workspace) holding the SAP technical user
+      (sap-user, sap-password) and the signed Power Automate URL (notification-flow-url).
+    default: master-data-app
 
 targets:
   D:
@@ -60,6 +65,21 @@ targets:
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: CAN_USE
+            - name: sap-user
+              secret:
+                scope: ${var.secret_scope}
+                key: sap-user
+                permission: READ
+            - name: sap-password
+              secret:
+                scope: ${var.secret_scope}
+                key: sap-password
+                permission: READ
+            - name: notification-flow-url
+              secret:
+                scope: ${var.secret_scope}
+                key: notification-flow-url
+                permission: READ
 
   A:
     mode: production
@@ -69,7 +89,7 @@ targets:
     variables:
       catalog: automation_a
       policy_id: 306312B973005677
-      warehouse_id: 0ef3e37fbbd5b772
+      warehouse_id: d0aa411377ac7611
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
@@ -81,6 +101,13 @@ targets:
           name: ds-master-data-app
           description: Customer master data request app (acceptance)
           source_code_path: src
+          permissions:
+            - user_name: anastasija.lebedeva@etexgroup.com
+              level: CAN_MANAGE
+            - group_name: AUTOMATION.MASTERDATAAPP.CONSUMER.WRITE
+              level: CAN_USE
+            - group_name: AUTOMATION.MASTERDATAAPP.CONSUMER.READ
+              level: CAN_USE
           user_api_scopes:
             - sql
           resources:
@@ -88,6 +115,21 @@ targets:
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: CAN_USE
+            - name: sap-user
+              secret:
+                scope: ${var.secret_scope}
+                key: sap-user
+                permission: READ
+            - name: sap-password
+              secret:
+                scope: ${var.secret_scope}
+                key: sap-password
+                permission: READ
+            - name: notification-flow-url
+              secret:
+                scope: ${var.secret_scope}
+                key: notification-flow-url
+                permission: READ
 
   P:
     mode: production
@@ -97,7 +139,7 @@ targets:
     variables:
       catalog: automation_p
       policy_id: 306312B973005150
-      warehouse_id: f500d0d670ae024b
+      warehouse_id: 71c2830f1b638f65
     permissions:
       - user_name: mustafaarda.bicakci@etexgroup.com
         level: CAN_MANAGE
@@ -109,6 +151,13 @@ targets:
           name: ds-master-data-app
           description: Customer master data request app (production)
           source_code_path: src
+          permissions:
+            - user_name: anastasija.lebedeva@etexgroup.com
+              level: CAN_MANAGE
+            - group_name: AUTOMATION.MASTERDATAAPP.CONSUMER.WRITE
+              level: CAN_USE
+            - group_name: AUTOMATION.MASTERDATAAPP.CONSUMER.READ
+              level: CAN_USE
           user_api_scopes:
             - sql
           resources:
@@ -116,3 +165,18 @@ targets:
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: CAN_USE
+            - name: sap-user
+              secret:
+                scope: ${var.secret_scope}
+                key: sap-user
+                permission: READ
+            - name: sap-password
+              secret:
+                scope: ${var.secret_scope}
+                key: sap-password
+                permission: READ
+            - name: notification-flow-url
+              secret:
+                scope: ${var.secret_scope}
+                key: notification-flow-url
+                permission: READ

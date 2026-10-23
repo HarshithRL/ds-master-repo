@@ -205,7 +205,7 @@ class SetupTablesTests(unittest.TestCase):
         reference_row = next(
             row
             for row in snapshot
-            if row[0] == "customer_reference_library.xlsx"
+            if row[0] == "general_data.xlsx"
             and row[1] == "General_Data_Fields"
         )
         self.assertEqual(json.loads(reference_row[2]), [{"field": "sample", "value": "ok"}])
@@ -236,6 +236,30 @@ class SetupTablesTests(unittest.TestCase):
                     main("automation_d", root)
 
         self.assertEqual(spark.statements, [])
+
+    def test_reference_workbook_supports_legacy_volume_name_and_prefers_latest(self):
+        for include_latest in (False, True):
+            with self.subTest(include_latest=include_latest), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                workbook_data = {}
+                for file_name, sheets in CONFIGURATION_FILES.items():
+                    (root / file_name).write_bytes(file_name.encode("ascii"))
+                    workbook_data[file_name] = FakeWorkbook([
+                        FakeWorksheet(sheet, [("field", "value"), ("sample", "approved")])
+                        for sheet in sheets
+                    ])
+                legacy_name = "customer_reference_library.xlsx"
+                (root / legacy_name).write_bytes(b"legacy reference workbook")
+                workbook_data[legacy_name] = workbook_data["general_data.xlsx"]
+                if not include_latest:
+                    (root / "general_data.xlsx").unlink()
+                openpyxl = types.ModuleType("openpyxl")
+                openpyxl.load_workbook = lambda path, **_kwargs: workbook_data[Path(path).name]
+                with patch.dict(sys.modules, {"openpyxl": openpyxl}):
+                    snapshot, _ = load_configuration_snapshot(root, "automation_a")
+                expected = "general_data.xlsx" if include_latest else legacy_name
+                reference_rows = [row for row in snapshot if row[1] == "General_Data_Fields"]
+                self.assertEqual([row[0] for row in reference_rows], [expected])
 
 
 if __name__ == "__main__":
