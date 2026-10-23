@@ -68,10 +68,19 @@ def load_reference_library() -> dict[str, pd.DataFrame]:
     }
 
 
+def _optional_configuration_sheet(source_file: str, sheet_name: str) -> pd.DataFrame:
+    """A sheet older snapshots may not have yet: empty instead of an error."""
+    try:
+        return _load_configuration_sheet(source_file, sheet_name)
+    except RuntimeError:
+        return pd.DataFrame()
+
+
 def load_form_rules() -> dict[str, pd.DataFrame]:
     return {
         "fields": _load_configuration_sheet("customer_form_rules.xlsx", "Form_Fields"),
         "options": _load_configuration_sheet("customer_form_rules.xlsx", "Field_Options"),
+        "dependencies": _optional_configuration_sheet("customer_form_rules.xlsx", "Field_Dependencies"),
     }
 
 
@@ -88,3 +97,8 @@ def load_assignment_rules() -> dict[str, pd.DataFrame]:
         "pool": _load_configuration_sheet("assignment_rules.xlsx", "Assignment_Pool"),
         "messages": _load_configuration_sheet("assignment_rules.xlsx", "Notification_Messages"),
     }
+
+
+def load_sap_mapping() -> pd.DataFrame:
+    """Field_Mapping of sap_api_mapping.xlsx (AXIOM attribute -> API property)."""
+    return _load_configuration_sheet("sap_api_mapping.xlsx", "Field_Mapping")

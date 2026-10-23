@@ -7,9 +7,11 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from portal.constants import CHECKBOX, FLAG_ON, PARTY_MODE_KEYS, SAME_AS_CUSTOMER
+from portal.constants import CHECKBOX, EXISTING, FLAG_ON, PARTY_MODE_KEYS, SAME_AS_CUSTOMER
 from portal.core.rules import (
+    ForcedValue,
     build_select_choices,
+    existing_value,
     find_default,
     get_field_options,
     readonly_value,
@@ -158,7 +160,7 @@ def _text_input(
     **kwargs,
 ) -> str:
     if email:
-        kwargs.setdefault("placeholder", EMAIL_PLACEHOLDER)
+        kwargs["placeholder"] = kwargs.get("placeholder") or EMAIL_PLACEHOLDER
         kwargs["help"] = kwargs.get("help") or EMAIL_HELP
 
     value = st.text_input(label, key=widget_key, **kwargs)
@@ -173,6 +175,8 @@ def render_rule_field(
     sales_org: str,
     rules: dict[str, pd.DataFrame],
     context: dict[str, str],
+    customer: dict[str, str] | None = None,
+    forced: dict[str, ForcedValue] | None = None,
 ) -> str:
     """Render one Form_Fields row as its configured widget and return the value."""
     field_key = clean(field.get("field_key"))
@@ -182,21 +186,48 @@ def render_rule_field(
     hidden = is_yes(field.get("hidden"))
     input_type = clean(field.get("input_type")).lower() or "text"
     help_text = clean(field.get("notes")) or None
+
+    # A Field_Dependencies rule sets this field's value (and may lock it)
+    rule = (forced or {}).get(field_key)
+    if rule:
+        st.session_state[f"form__{field_key}"] = rule.value
+        editable = editable and not rule.lock
+        help_text = rule.reason
+    placeholder = clean(field.get("placeholder")) or None
     max_length = as_int(field.get("max_length"))
     # Required fields get their red star from apply_field_state (CSS),
     # so screen readers read the plain label
     display_label = label
 
-    if input_type == "readonly":
-        value = readonly_value(field, context)
+    if input_type in {"readonly", EXISTING}:
+        value = (
+            existing_value(field, customer)
+            if input_type == EXISTING
+            else readonly_value(field, context)
+        )
         if not hidden:
+            # Show the option description next to the code, as a dropdown would
+            description = next(
+                (
+                    option["description"]
+                    for option in get_field_options(
+                        field_key=field_key,
+                        company_code=company_code,
+                        sales_org=sales_org,
+                        rules=rules,
+                    )
+                    if value and option["value"] == value
+                ),
+                "",
+            )
             _text_input(
                 display_label,
-                required=required,
+                required=required and input_type != EXISTING,
                 widget_key=f"form__{field_key}",
-                value=value,
+                value=format_option(value, description) if value else "",
                 disabled=True,
                 help=help_text,
+                placeholder=placeholder or ("Not set in SAP" if input_type == EXISTING else None),
             )
         return value
 
@@ -255,6 +286,7 @@ def render_rule_field(
                     disabled=not editable,
                     max_chars=max_length,
                     help=help_text,
+                    placeholder=placeholder,
                 )
             )
 
@@ -271,11 +303,13 @@ def render_rule_field(
         value = st.selectbox(
             display_label,
             options=choices.options,
-            index=choices.index,
+            # A rule already put the value in Session State; no second default
+            index=None if rule else choices.index,
             key=widget_key,
             disabled=not editable,
             format_func=format_choice,
             help=help_text,
+            placeholder="Choose an option",
         )
         apply_field_state(widget_key=widget_key, value=value, required=required)
         return clean(value)
@@ -289,6 +323,7 @@ def render_rule_field(
             height=110,
             max_chars=max_length,
             help=help_text,
+            placeholder=placeholder,
         )
         apply_field_state(widget_key=widget_key, value=value, required=required)
         return clean(value)
@@ -303,5 +338,6 @@ def render_rule_field(
             disabled=not editable,
             max_chars=max_length,
             help=help_text,
+            placeholder=placeholder,
         )
     )

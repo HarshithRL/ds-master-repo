@@ -16,6 +16,7 @@ from portal.core.general_data import (
     process_attachments,
     process_bank_attachments,
     requestable_general_fields,
+    required_general_keys,
 )
 from portal.core.utils import as_int, clean
 from portal.core.validation import is_email_field
@@ -54,10 +55,10 @@ def _render_row_controls() -> int:
     if ROW_COUNT_KEY not in st.session_state:
         st.session_state[ROW_COUNT_KEY] = 0
 
-    controls = st.columns([1.15, 1.35, 4])
+    controls = st.columns([1.6, 1.9, 2.5])
 
     with controls[0]:
-        if st.button("＋ Add field", key="general_data__add", use_container_width=True):
+        if st.button("＋ Add field", key="general_data__add", width="stretch"):
             st.session_state[ROW_COUNT_KEY] = min(
                 int(st.session_state[ROW_COUNT_KEY]) + 1,
                 MAX_ROWS,
@@ -67,7 +68,7 @@ def _render_row_controls() -> int:
         if st.button(
             "− Remove last",
             key="general_data__remove",
-            use_container_width=True,
+            width="stretch",
             disabled=(int(st.session_state[ROW_COUNT_KEY]) <= 0),
         ):
             last_index = int(st.session_state[ROW_COUNT_KEY]) - 1
@@ -77,30 +78,110 @@ def _render_row_controls() -> int:
     return int(st.session_state[ROW_COUNT_KEY])
 
 
+def _render_value_input(config: dict[str, Any], field_key: str, value_key: str) -> str:
+    """Requested-value input of one General Data row (always required once shown)."""
+    max_length = as_int(config.get("max_length"))
+
+    if (clean(config.get("input_type")).lower() or "text") == "textarea":
+        value = st.text_area(
+            "Requested value",
+            key=value_key,
+            max_chars=max_length,
+            height=90,
+        )
+    else:
+        value = st.text_input(
+            "Requested value",
+            key=value_key,
+            max_chars=max_length,
+            placeholder=EMAIL_PLACEHOLDER if is_email_field(field_key) else None,
+            help=EMAIL_HELP if is_email_field(field_key) else None,
+        )
+
+    apply_field_state(
+        widget_key=value_key,
+        value=value,
+        required=True,
+        email=is_email_field(field_key),
+    )
+    return value
+
+
+def _render_required_rows(
+    required_keys: list[str],
+    field_records: dict[str, Any],
+    customer: dict[str, str],
+    results: dict[str, dict[str, str]],
+) -> None:
+    """Fields the rules require for this customer's country: always shown."""
+    st.markdown("**Required for this customer**")
+
+    for field_key in required_keys:
+        config = field_records[field_key]
+        current_value = current_general_value(config, field_key, customer)
+        columns = st.columns([1.25, 1, 1.5])
+
+        with columns[0]:
+            st.text_input(
+                "General Data field",
+                value=field_label(config, field_key),
+                disabled=True,
+                key=f"general_data__required_field__{field_key}",
+                help=clean(config.get("notes")) or None,
+            )
+        with columns[1]:
+            st.text_input(
+                "Current value",
+                value=(current_value or "—"),
+                disabled=True,
+                key=f"general_data__required_current__{field_key}",
+            )
+        with columns[2]:
+            requested_value = _render_value_input(
+                config, field_key, f"general_data__required_value__{field_key}"
+            )
+
+        results[field_key] = {
+            "field_key": field_key,
+            "label": field_label(config, field_key),
+            "sap_field": clean(config.get("sap_field")),
+            "current_value": current_value,
+            "requested_value": clean(requested_value),
+        }
+
+
 def render_general_data_requests(
     *,
     customer: dict[str, str],
     reference_library: dict[str, pd.DataFrame],
+    request_type: str = "",
 ) -> tuple[dict[str, dict[str, str]], list[str], bool]:
     """Returns (requested changes by field, duplicate labels, bank docs needed)."""
+    field_records = requestable_general_fields(
+        customer=customer,
+        reference_library=reference_library,
+    )
+    required_keys = required_general_keys(field_records, request_type)
+    results: dict[str, dict[str, str]] = {}
+
+    if required_keys:
+        _render_required_rows(required_keys, field_records, customer, results)
+        st.markdown("**Other changes**")
+
     st.caption(
         "Add only the General Data fields you need. "
         "Select a field, review its current value, "
         "then enter the requested new value"
     )
 
-    field_records = requestable_general_fields(
-        customer=customer,
-        reference_library=reference_library,
-    )
-    field_keys = list(field_records.keys())
+    # Required fields already have their own row
+    field_keys = [key for key in field_records if key not in required_keys]
 
     row_count = _render_row_controls()
 
     if row_count == 0:
         st.info("No General Data changes added")
 
-    results: dict[str, dict[str, str]] = {}
     selected_keys: list[str] = []
 
     for index in range(row_count):
@@ -147,32 +228,10 @@ def render_general_data_requests(
                 key=f"general_data__current__{index}__{selected_key}",
             )
 
-        value_key = f"general_data__value__{index}__{selected_key}"
-        max_length = as_int(config.get("max_length"))
-
         # A chosen field needs its new value
         with columns[2]:
-            if (clean(config.get("input_type")).lower() or "text") == "textarea":
-                requested_value = st.text_area(
-                    "Requested value",
-                    key=value_key,
-                    max_chars=max_length,
-                    height=90,
-                )
-            else:
-                requested_value = st.text_input(
-                    "Requested value",
-                    key=value_key,
-                    max_chars=max_length,
-                    placeholder=EMAIL_PLACEHOLDER if is_email_field(selected_key) else None,
-                    help=EMAIL_HELP if is_email_field(selected_key) else None,
-                )
-
-            apply_field_state(
-                widget_key=value_key,
-                value=requested_value,
-                required=True,
-                email=is_email_field(selected_key),
+            requested_value = _render_value_input(
+                config, selected_key, f"general_data__value__{index}__{selected_key}"
             )
 
         results[selected_key] = {

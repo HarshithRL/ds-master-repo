@@ -1,4 +1,4 @@
-"""Customer search: the demo workbook, or Databricks outside demo mode."""
+"""Customer search: the demo workbook, SAP (Business Partner API) or Databricks."""
 
 from __future__ import annotations
 
@@ -6,20 +6,36 @@ from typing import Mapping
 
 import pandas as pd
 
-from portal.config import DEMO_MODE
+from portal.config import CUSTOMER_SOURCE, DEMO_MODE
 from portal.core.customers import CustomerRecord, get_customer, search_customers
-from portal.core.loaders import load_customer_database
+from portal.core.loaders import load_customer_database, load_sap_mapping
 from portal.core.utils import active_rows, clean, column_text
 from portal.integrations.databricks_sql import execute_sql, result_rows, sql_parameter
+from portal.integrations.sap_business_partner import sap_customer, sap_search
 
 
 def find_customer(
     customer_id: str,
     reference_library: dict[str, pd.DataFrame],
     request_headers: Mapping[str, str] | None = None,
+    *,
+    company_code: str = "",
+    sales_org: str = "",
 ) -> CustomerRecord | None:
+    """
+    One customer. From SAP, company-code and sales-area values come from the
+    chosen Company Code / Sales Organization (else the first ones).
+    """
     if DEMO_MODE:
         return get_customer(customer_id, load_customer_database())
+
+    if CUSTOMER_SOURCE == "sap":
+        return sap_customer(
+            customer_id,
+            load_sap_mapping(),
+            company_code=company_code,
+            sales_org=sales_org,
+        )
 
     return live_customer_lookup(customer_id, reference_library, request_headers)
 
@@ -102,6 +118,9 @@ def search_customers_anywhere(
 ) -> list[CustomerRecord]:
     if DEMO_MODE:
         return search_customers(query, load_customer_database(), limit)
+
+    if CUSTOMER_SOURCE == "sap":
+        return sap_search(query, limit)
 
     return live_customer_search(query, reference_library, request_headers, limit)
 

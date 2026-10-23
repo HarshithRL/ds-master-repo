@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Collection
 
 import pandas as pd
 
@@ -46,7 +46,8 @@ def _required_missing(
         clean(field.get("field_key"))
         for field in section_fields.to_dict("records")
         if is_yes(field.get("required"))
-        and clean(field.get("input_type")).lower() != CHECKBOX
+        # Tick boxes are never empty; computed fields copy a field that is checked itself
+        and clean(field.get("input_type")).lower() not in {CHECKBOX, "computed"}
         and clean(field.get("field_key"))
         and not clean(values.get(clean(field.get("field_key")), ""))
     ]
@@ -110,28 +111,56 @@ def _general_data_state(
     attachments: list[dict[str, Any]],
     bank_attachment_errors: list[str],
     attachment_errors: list[str],
-) -> tuple[bool, bool]:
-    """(started, has_problem) for the optional General Data section."""
-    started = bool(general_data_values or bank_attachments or attachments)
-    problem = bool(
-        general_data_duplicates
-        or bank_attachment_errors
-        or attachment_errors
-        or _general_data_missing(general_data_values)
-        or _general_data_invalid_emails(general_data_values)
+) -> SectionStatus:
+    """General Data is optional: grey until something is added."""
+    return section_status(
+        started=bool(general_data_values or bank_attachments or attachments),
+        missing=len(_general_data_missing(general_data_values)) + len(bank_attachment_errors),
+        invalid=len(general_data_duplicates)
+        + len(attachment_errors)
+        + len(_general_data_invalid_emails(general_data_values)),
     )
-    return started, problem
+
+
+@dataclass(frozen=True)
+class SectionStatus:
+    """Colour of a section plus the short note shown in its header."""
+
+    state: str  # neutral / error / check / complete
+    note: str = ""
 
 
 def section_status(
     *,
-    problem: bool,
-    optional_untouched: bool = False,
-) -> str:
-    """neutral (optional, untouched) / error (required value missing or invalid) / complete."""
-    if optional_untouched:
-        return "neutral"
-    return "error" if problem else "complete"
+    missing: int = 0,
+    invalid: int = 0,
+    started: bool = True,
+    reviewed: bool = True,
+    done_note: str = "Complete",
+    missing_note: str = "required missing",
+) -> SectionStatus:
+    """
+    neutral   optional section, nothing entered yet (grey)
+    error     a required value is missing or a value is invalid (red)
+    check     nothing missing, but the requester has not opened the section
+              yet to check the pre-filled values (purple)
+    complete  everything required is filled in and valid (green)
+    """
+    if not started:
+        return SectionStatus("neutral", "Optional")
+
+    if missing or invalid:
+        parts = []
+        if missing:
+            parts.append(f"{missing} {missing_note}")
+        if invalid:
+            parts.append(f"{invalid} invalid")
+        return SectionStatus("error", " · ".join(parts))
+
+    if not reviewed:
+        return SectionStatus("check", "To check")
+
+    return SectionStatus("complete", f"✓ {done_note}")
 
 
 def _messages(
@@ -195,35 +224,44 @@ def build_section_statuses(
     partner_values: dict[str, Any],
     credit_fields: pd.DataFrame,
     credit_values: dict[str, Any],
-) -> dict[str, str]:
-    partner_missing = _required_missing(partner_fields, partner_values)
-    partner_missing += [key for key, _label in _party_gaps(partner_values)]
-    credit_missing = _required_missing(credit_fields, credit_values)
-
-    for key, _label in _invalid_emails(partner_values, credit_values):
-        if key == COLLECTION_EMAIL[0]:
-            credit_missing.append(key)
-        else:
-            partner_missing.append(key)
-
-    general_started, general_problem = _general_data_state(
-        general_data_values=general_data_values,
-        general_data_duplicates=general_data_duplicates,
-        bank_attachments=bank_attachments,
-        attachments=attachments,
-        bank_attachment_errors=bank_attachment_errors,
-        attachment_errors=attachment_errors,
-    )
-
-    def status(problem: bool, optional_untouched: bool = False) -> str:
-        return section_status(problem=problem, optional_untouched=optional_untouched)
+    reviewed: Collection[str] = (),
+) -> dict[str, SectionStatus]:
+    """
+    Red while a required value is missing or invalid. Once nothing is
+    missing, "To check" until the requester has opened the section (reviewed
+    holds the opened section keys), then green.
+    """
+    invalid = [key for key, _label in _invalid_emails(partner_values, credit_values)]
+    credit_invalid = [key for key in invalid if key == COLLECTION_EMAIL[0]]
 
     return {
-        "general_data": status(general_problem, optional_untouched=not general_started),
-        "company_code": status(bool(_required_missing(company_fields, company_values))),
-        "sales_distribution": status(bool(_required_missing(sales_fields, sales_values))),
-        "partner_functions": status(bool(partner_missing)),
-        "credit_management": status(bool(credit_missing)),
+        "general_data": _general_data_state(
+            general_data_values=general_data_values,
+            general_data_duplicates=general_data_duplicates,
+            bank_attachments=bank_attachments,
+            attachments=attachments,
+            bank_attachment_errors=bank_attachment_errors,
+            attachment_errors=attachment_errors,
+        ),
+        "company_code": section_status(
+            missing=len(_required_missing(company_fields, company_values)),
+            reviewed="company_code" in reviewed,
+        ),
+        "sales_distribution": section_status(
+            missing=len(_required_missing(sales_fields, sales_values)),
+            reviewed="sales_distribution" in reviewed,
+        ),
+        "partner_functions": section_status(
+            missing=len(_required_missing(partner_fields, partner_values))
+            + len(_party_gaps(partner_values)),
+            invalid=len(invalid) - len(credit_invalid),
+            reviewed="partner_functions" in reviewed,
+        ),
+        "credit_management": section_status(
+            missing=len(_required_missing(credit_fields, credit_values)),
+            invalid=len(credit_invalid),
+            reviewed="credit_management" in reviewed,
+        ),
     }
 
 
@@ -249,7 +287,7 @@ def collect_validation_errors(
     missing = _general_data_missing(general_data_values)
 
     for field in fields.to_dict("records"):
-        if not is_yes(field.get("required")):
+        if not is_yes(field.get("required")) or clean(field.get("input_type")).lower() == "computed":
             continue
 
         field_key = clean(field.get("field_key"))
@@ -322,31 +360,26 @@ def build_change_section_statuses(
     bank_attachment_errors: list[str],
     attachment_errors: list[str],
     entries_by_section: dict[str, list[ChangeEntry]],
-) -> dict[str, str]:
-    """Nothing is required: a section is neutral until a field is picked."""
-    general_started, general_problem = _general_data_state(
-        general_data_values=general_data_values,
-        general_data_duplicates=general_data_duplicates,
-        bank_attachments=bank_attachments,
-        attachments=attachments,
-        bank_attachment_errors=bank_attachment_errors,
-        attachment_errors=attachment_errors,
-    )
-
+) -> dict[str, SectionStatus]:
+    """Nothing is required: a section is grey until a field is picked."""
     statuses = {
-        "general_data": section_status(
-            problem=general_problem,
-            optional_untouched=not general_started,
+        "general_data": _general_data_state(
+            general_data_values=general_data_values,
+            general_data_duplicates=general_data_duplicates,
+            bank_attachments=bank_attachments,
+            attachments=attachments,
+            bank_attachment_errors=bank_attachment_errors,
+            attachment_errors=attachment_errors,
         )
     }
 
     for section_key, entries in entries_by_section.items():
         statuses[section_key] = section_status(
-            problem=bool(
-                any(entry.missing for entry in entries)
-                or _change_email_problems(entries)
-            ),
-            optional_untouched=not entries,
+            started=bool(entries),
+            missing=sum(entry.missing for entry in entries),
+            invalid=len(_change_email_problems(entries)),
+            done_note=f"{len(entries)} change" + ("" if len(entries) == 1 else "s"),
+            missing_note="value missing" if sum(entry.missing for entry in entries) == 1 else "values missing",
         )
 
     return statuses

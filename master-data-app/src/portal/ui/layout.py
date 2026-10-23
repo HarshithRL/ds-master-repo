@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import pandas as pd
 import streamlit as st
 
-from portal.config import HEADER_LOGO_FILE
+from portal.config import APP_ENV, DEMO_MODE, HEADER_LOGO_FILE
 from portal.constants import CREATE_CUSTOMER, REQUEST_TYPE_LABELS, REQUEST_TYPES
 from portal.core.customers import customer_company_code, customer_display_name
 from portal.core.rules import (
@@ -28,8 +28,9 @@ def render_header(
     *,
     loaded_customer_id: str,
     header_customer: dict[str, str] | None,
+    show_workbench_link: bool = False,
 ) -> None:
-    """Logo on the left, the loaded customer on the right."""
+    """Logo on the left, the loaded customer on the right; the Workbench button for the team."""
     header_customer_name = customer_display_name(header_customer)
 
     if loaded_customer_id and header_customer_name:
@@ -50,6 +51,15 @@ def render_header(
             st.image(HEADER_LOGO_FILE, width=165)
 
         with customer_col:
+            if show_workbench_link:
+                with st.container(key="header_workbench_link"):
+                    st.page_link(
+                        "master_data_workbench.py",
+                        label="Master Data",
+                        icon=":material/admin_panel_settings:",
+                        help="Customer Master Workbench (Master Data team only)",
+                    )
+
             if loaded_customer_id:
                 st.markdown(
                     f"""
@@ -67,11 +77,74 @@ def render_header(
 
 
 # =============================================================================
+# ENVIRONMENT RIBBON (demo, dev, acc; none in production)
+# =============================================================================
+
+ENVIRONMENT_RIBBONS = {
+    "dev": ("DEV", "DEVELOPMENT environment · for building and testing only."),
+    "test": ("TEST", "TEST environment · for testing only. Requests here are test requests."),
+    "acc": ("ACC", "ACCEPTANCE environment · for testing before production. Requests here are test requests."),
+}
+
+
+def environment_label() -> str:
+    """Short label for the tab title and sidebar badge ("" in production)."""
+    if DEMO_MODE:
+        return "Demo"
+    return {"dev": "DEV", "test": "TEST", "acc": "ACC"}.get(APP_ENV, "")
+
+
+def render_environment_banner() -> None:
+    """The demo ribbon in demo mode, an environment ribbon in dev / acc."""
+    if DEMO_MODE:
+        render_demo_banner()
+        return
+
+    if APP_ENV not in ENVIRONMENT_RIBBONS:
+        return
+
+    badge, text = ENVIRONMENT_RIBBONS[APP_ENV]
+    st.markdown(
+        f"""
+        <div class="demo-banner env-banner-{"dev" if APP_ENV == "test" else html.escape(APP_ENV)}" role="status">
+            <span class="demo-banner-badge">{html.escape(badge)}</span>
+            <span>{html.escape(text)}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+DEMO_BANNER = (
+    "TEST SYSTEM · Demo customers and local test data only. "
+)
+
+
+def render_demo_banner() -> None:
+    """Striped ribbon at the top of the page so nobody mistakes the demo for live."""
+    st.markdown(
+        f"""
+        <div class="demo-banner" role="status">
+            <span class="demo-banner-badge">DEMO</span>
+            <span>{html.escape(DEMO_BANNER)}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# =============================================================================
 # WELCOME (no customer loaded yet)
 # =============================================================================
 
 WELCOME_STEPS = [
-    ("1", "Find the customer", "Search by SAP ID, name or VAT number in the sidebar."),
+    (
+        "1",
+        "Pick a test customer" if DEMO_MODE else "Find the customer",
+        "Click a row below, or search by SAP ID, name or VAT number."
+        if DEMO_MODE
+        else "Search by SAP ID, name or VAT number in the sidebar.",
+    ),
     ("2", "Choose the request", "Create, Extend or Change, plus the Sales Organization."),
     ("3", "Fill in and submit", "Complete the sections. You receive a reference and a confirmation email."),
 ]
@@ -89,13 +162,28 @@ def render_welcome() -> None:
         for number, title, text in WELCOME_STEPS
     )
 
+    if DEMO_MODE:
+        eyebrow = "CUSTOMER REQUEST PORTAL · TEST SYSTEM"
+        title = "Try a customer master data request"
+        text = (
+            "This is the demo of the AXIOM portal. It uses test customers and local "
+            "test data: nothing is sent to SAP. Pick a test customer below, or search "
+            "in the sidebar."
+        )
+    else:
+        eyebrow = "CUSTOMER REQUEST PORTAL"
+        title = "Start a customer master data request"
+        text = (
+            "Requests go to the Master Data team, who process them in SAP. Start by "
+            "searching for the customer in the sidebar."
+        )
+
     st.markdown(
         f"""
         <div class="welcome-card">
-            <div class="header-eyebrow">CUSTOMER REQUEST PORTAL</div>
-            <div class="welcome-title">Start a customer master data request</div>
-            <div class="welcome-text">Requests go to the Master Data team, who
-            process them in SAP. Start by searching for the customer in the sidebar.</div>
+            <div class="header-eyebrow">{eyebrow}</div>
+            <div class="welcome-title">{title}</div>
+            <div class="welcome-text">{text}</div>
             <div class="welcome-steps">{steps}</div>
         </div>
         """,

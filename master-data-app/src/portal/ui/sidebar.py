@@ -8,7 +8,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from portal.config import DEMO_MODE, USER_GUIDE_FILE
+from portal.config import APP_ENV, DEMO_MODE, USER_GUIDE_FILE
 from portal.core.identity import requester_email, requester_user
 from portal.core.storage import demo_requests_for
 from portal.core.utils import clean, normalize_customer_id
@@ -506,6 +506,7 @@ section[data-testid="stSidebar"] [data-testid="stExpander"] svg {
 """
 
 DEMO_STATUS = "Submitted"
+TEST_PICKER_KEY = "sidebar_test_customer"
 MY_REQUESTS_SLOT_KEY = "_sidebar_my_requests_slot"
 MAX_RECENT = 5
 
@@ -527,6 +528,15 @@ def load_customer(customer_id: str) -> None:
 def _clear_customer() -> None:
     st.session_state.pop(LOADED_CUSTOMER_KEY, None)
     reset_form_state()
+
+
+def _pick_test_customer() -> None:
+    """Sidebar test customer picker: open the choice, then empty the picker again."""
+    customer_id = clean(st.session_state.get(TEST_PICKER_KEY))
+    st.session_state[TEST_PICKER_KEY] = ""
+
+    if customer_id:
+        load_customer(customer_id)
 
 
 def _run_search(reference_library: dict[str, pd.DataFrame]) -> None:
@@ -615,6 +625,7 @@ def render_sidebar(
     *,
     customer: dict[str, str] | None,
     reference_library: dict[str, pd.DataFrame],
+    test_customers: list[dict[str, str]] | None = None,
 ) -> None:
     st.markdown(SIDEBAR_CSS, unsafe_allow_html=True)
     st.markdown(SIDEBAR_EXTRA_CSS, unsafe_allow_html=True)
@@ -625,7 +636,20 @@ def render_sidebar(
         _remember(customer)
 
     with st.sidebar:
+        badge = (
+            "TEST SYSTEM · DEMO DATA"
+            if DEMO_MODE
+            else {"dev": "DEVELOPMENT", "test": "TEST", "acc": "ACCEPTANCE"}.get(APP_ENV, "")
+        )
+        if badge:
+            st.markdown(
+                f'<div class="sidebar-demo-badge sidebar-env-{"dev" if APP_ENV == "test" else APP_ENV}">{badge}</div>',
+                unsafe_allow_html=True,
+            )
         _render_search(reference_library)
+
+        if test_customers:
+            _render_test_picker(test_customers)
 
         if customer:
             _render_current_customer(customer)
@@ -662,8 +686,25 @@ def _render_search(reference_library: dict[str, pd.DataFrame]) -> None:
                 key=f"sidebar__match__{match.get('customer_id')}",
                 on_click=load_customer,
                 args=(clean(match.get("customer_id")),),
-                use_container_width=True,
+                width="stretch",
             )
+
+
+def _render_test_picker(test_customers: list[dict[str, str]]) -> None:
+    _section("TEST CUSTOMERS")
+    labels = {
+        row["customer_id"]: f"{row['country']} · {row['company_code']} · {row['name']} ({row['customer_id']})"
+        for row in test_customers
+    }
+    st.selectbox(
+        "Test customer",
+        options=[""] + list(labels),
+        format_func=lambda key: labels.get(key, "Pick a test customer…") if key else "Pick a test customer…",
+        key=TEST_PICKER_KEY,
+        label_visibility="collapsed",
+        on_change=_pick_test_customer,
+    )
+    _hint("Country · Company Code · name")
 
 
 def _render_current_customer(customer: dict[str, str]) -> None:
@@ -682,7 +723,7 @@ def _render_current_customer(customer: dict[str, str]) -> None:
         "✕  Clear customer",
         key="sidebar__clear",
         on_click=_clear_customer,
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -703,7 +744,7 @@ def _render_recent(current_id: str) -> None:
             key=f"sidebar__recent__{item['customer_id']}",
             on_click=load_customer,
             args=(item["customer_id"],),
-            use_container_width=True,
+            width="stretch",
         )
 
 
@@ -773,5 +814,5 @@ def _render_help(headers) -> None:
             file_name="AXIOM_Customer_Request_Portal_User_Guide.pdf",
             mime="application/pdf",
             key="sidebar__guide",
-            use_container_width=True,
+            width="stretch",
         )

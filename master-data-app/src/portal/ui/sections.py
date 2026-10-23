@@ -20,6 +20,8 @@ def render_section(
     sales_org: str,
     rules: dict[str, pd.DataFrame],
     context: dict[str, str],
+    customer: dict[str, str] | None = None,
+    forced: dict | None = None,
 ) -> dict[str, str]:
     """Render a rules section three fields per row; hidden fields keep defaults."""
     values: dict[str, str] = {}
@@ -36,6 +38,8 @@ def render_section(
                 sales_org=sales_org,
                 rules=rules,
                 context=context,
+                customer=customer,
+                forced=forced,
             )
         )
 
@@ -102,6 +106,8 @@ def render_partner_functions(
     sales_org: str,
     rules: dict[str, pd.DataFrame],
     context: dict[str, str],
+    customer: dict[str, str] | None = None,
+    forced: dict | None = None,
 ) -> dict[str, str]:
     values: dict[str, str] = {}
 
@@ -127,6 +133,8 @@ def render_partner_functions(
                 sales_org=sales_org,
                 rules=rules,
                 context=context,
+                customer=customer,
+                forced=forced,
             )
         )
         values[field_key] = value
@@ -156,7 +164,7 @@ def render_partner_functions(
         )
 
     # Invoice contact
-    st.markdown("#### Invoice Contact (YF)")
+    _subheading("Invoice Contact (YF)", "Email address that receives the invoices")
 
     invoice_contact_col, _ = st.columns([2, 1], gap="small")
     with invoice_contact_col:
@@ -181,7 +189,7 @@ def render_partner_functions(
     spacer(16)
 
     # Internal responsibility
-    st.markdown("#### Internal Responsibility")
+    _subheading("Internal Responsibility", "Etex employees responsible for this customer")
 
     sales_rep_col, customer_service_col, _ = st.columns([1, 1, 1], gap="small")
 
@@ -194,25 +202,15 @@ def render_partner_functions(
     spacer(16)
 
     # Bill-to, payer and ship-to parties
-    st.markdown("#### Bill-to, Payer and Ship-to Party")
-
-    st.markdown(
-        """
-        <div style="font-size:0.85rem;color:#6B7280;margin-bottom:12px;">
-            The current customer ID is shown by default. If another partner is
-            required, select an existing partner and enter its ID, or select a
-            new partner and enter the full address to be created
-        </div>
-        """,
-        unsafe_allow_html=True,
+    _subheading(
+        "Bill-to, Payer and Ship-to Party",
+        "The current customer ID is shown by default. If another partner is "
+        "required, select an existing partner and enter its ID, or select a "
+        "new partner and enter the full address to be created",
     )
 
-    # One row per level (titles, modes, details) so each row lines up
-    # on its own, whatever the title wrapping or selected modes.
-    for column, (_label, title, *_keys) in zip(st.columns(3), PARTY_GROUPS):
-        with column:
-            st.markdown(f"##### {title}")
-
+    # One row per level (modes, details) so each row lines up on its own,
+    # whatever the selected modes. The mode fields carry the party names.
     modes: dict[str, str] = {}
 
     for column, (_label, _title, mode_key, *_keys) in zip(st.columns(3), PARTY_GROUPS):

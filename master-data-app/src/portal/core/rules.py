@@ -8,15 +8,24 @@ options and defaults, and the Company Code / Sales Org reference list.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from fnmatch import fnmatchcase
 from typing import Any
 
 import pandas as pd
 
-from portal.constants import CHECKBOX, COMPANY_CODE, RULE_SECTIONS, SALES_DISTRIBUTION
+from portal.constants import (
+    CHECKBOX,
+    COMPANY_CODE,
+    CREATE_CUSTOMER,
+    EXISTING,
+    RULE_SECTIONS,
+    SALES_DISTRIBUTION,
+)
 from portal.core.utils import (
     active_rows,
     clean,
     column_text,
+    country_rows,
     is_yes,
     rows_for_scope,
     sort_by_display_order,
@@ -92,6 +101,23 @@ def get_form_fields(
     return sort_by_display_order(fields, by=["section"])
 
 
+def fields_for_request(
+    fields: pd.DataFrame,
+    request_type: str,
+    country: str = "",
+) -> pd.DataFrame:
+    """
+    Fields for this customer's country (countries column), and without the
+    existing fields on Create: a new customer has no SAP value yet.
+    """
+    fields = country_rows(fields, country)
+
+    if request_type != CREATE_CUSTOMER:
+        return fields
+
+    return fields[column_text(fields, "input_type").str.lower().ne(EXISTING)]
+
+
 def section_fields(fields: pd.DataFrame, section: str) -> pd.DataFrame:
     return fields[column_text(fields, "section").eq(section)]
 
@@ -148,7 +174,7 @@ def find_default(
 @dataclass(frozen=True)
 class SelectChoices:
     options: list[str]
-    index: int
+    index: int | None  # None: nothing chosen yet (shows "Choose an option")
     descriptions: dict[str, str]
 
 
@@ -162,9 +188,11 @@ def build_select_choices(
     """
     Options and starting index for a select field.
 
-    Optional fields get a blank first option. A value already chosen that is
-    no longer configured stays selectable. None means no options exist and
-    the field falls back to a text input.
+    Optional fields get a blank first option. A required field without a
+    default starts empty, so the requester has to choose (unless there is only
+    one value). A value already chosen that is no longer configured stays
+    selectable. None means no options exist and the field falls back to a
+    text input.
     """
     option_values = [option["value"] for option in option_rows if option["value"]]
 
@@ -184,6 +212,8 @@ def build_select_choices(
         index = options.index(current_value)
     elif default_value in options:
         index = options.index(default_value)
+    elif required and len(options) > 1:
+        index = None
     else:
         index = 0
 
@@ -203,6 +233,11 @@ def readonly_value(field: FieldRecord, context: dict[str, str]) -> str:
     """Readonly fields show the request context value, else default_value."""
     field_key = clean(field.get("field_key"))
     return clean(context.get(field_key) or clean(field.get("default_value")))
+
+
+def existing_value(field: FieldRecord, customer: dict[str, str] | None) -> str:
+    """Existing fields show the customer's current SAP value."""
+    return clean((customer or {}).get(clean(field.get("field_key"))))
 
 
 def copy_computed_values(
@@ -227,6 +262,7 @@ def get_original_defaults(
     sales_org: str,
     rules: dict[str, pd.DataFrame],
     context: dict[str, str],
+    customer: dict[str, str] | None = None,
 ) -> dict[str, dict[str, str]]:
     """{section: {field_key: value the form starts with}} for every field."""
     result: dict[str, dict[str, str]] = {}
@@ -241,6 +277,8 @@ def get_original_defaults(
 
         if input_type == "readonly":
             value = readonly_value(field, context)
+        elif input_type == EXISTING:
+            value = existing_value(field, customer)
         elif input_type == "computed":
             value = ""
         else:
@@ -267,15 +305,71 @@ def get_original_defaults(
 
 
 # =============================================================================
+# FIELD DEPENDENCIES
+# =============================================================================
+
+
+@dataclass(frozen=True)
+class ForcedValue:
+    """A value set by a Field_Dependencies rule."""
+
+    value: str
+    lock: bool  # greyed out while the rule applies
+    reason: str  # shown in the field's help
+
+
+def forced_values(
+    *,
+    current: dict[str, str],
+    company_code: str,
+    sales_org: str,
+    rules: dict[str, pd.DataFrame],
+) -> dict[str, ForcedValue]:
+    """
+    {then_field: value} for every active Field_Dependencies row whose if_field
+    currently matches if_value (* = any characters, e.g. 4*0).
+    """
+    dependencies = rules.get("dependencies")
+
+    if dependencies is None or dependencies.empty:
+        return {}
+
+    rows = rows_for_scope(active_rows(dependencies), company_code=company_code, sales_org=sales_org)
+    result: dict[str, ForcedValue] = {}
+
+    for row in rows.to_dict("records"):
+        if_field = clean(row.get("if_field"))
+        value = clean(current.get(if_field))
+        pattern = clean(row.get("if_value"))
+
+        if value and pattern and fnmatchcase(value, pattern):
+            result[clean(row.get("then_field"))] = ForcedValue(
+                value=clean(row.get("then_value")),
+                lock=is_yes(row.get("lock")),
+                reason=clean(row.get("notes")) or f"Set by {if_field} = {value}",
+            )
+
+    return result
+
+
+def dependency_sources(rules: dict[str, pd.DataFrame]) -> list[str]:
+    """Fields whose value can set another field (if_field column)."""
+    dependencies = rules.get("dependencies")
+    if dependencies is None or dependencies.empty:
+        return []
+    return unique(column_text(active_rows(dependencies), "if_field").tolist())
+
+
+# =============================================================================
 # CHANGE REQUESTS
 # =============================================================================
 
 
 def changeable_fields(section_df: pd.DataFrame) -> list[FieldRecord]:
-    """Fields a Change request may target: visible, not computed, not readonly."""
+    """Fields a Change request may target: visible and editable by the requester."""
     return [
         field
         for field in section_df.to_dict("records")
         if not is_yes(field.get("hidden"))
-        and clean(field.get("input_type")).lower() not in {"computed", "readonly"}
+        and clean(field.get("input_type")).lower() not in {"computed", "readonly", EXISTING}
     ]

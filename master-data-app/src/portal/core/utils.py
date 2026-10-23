@@ -71,6 +71,27 @@ def flagged_rows(df: pd.DataFrame, column: str) -> pd.DataFrame:
     return df[column_text(df, column).str.upper().isin(YES_VALUES)].copy()
 
 
+def applies_to_country(record: dict[str, Any], country: str) -> bool:
+    """
+    A row's optional countries column ("BE, FR") limits it to those customer
+    countries; an empty or missing column means every country.
+    """
+    countries = {
+        code.strip().upper()
+        for code in clean(record.get("countries")).replace(";", ",").split(",")
+        if code.strip()
+    }
+    return not countries or clean(country).upper() in countries
+
+
+def country_rows(df: pd.DataFrame, country: str) -> pd.DataFrame:
+    """Rows that apply to the customer's country (see applies_to_country)."""
+    if "countries" not in df.columns or df.empty:
+        return df
+
+    return df[[applies_to_country(row, country) for row in df.to_dict("records")]]
+
+
 def active_rows(df: pd.DataFrame) -> pd.DataFrame:
     """Rows marked active; every row when the sheet has no active column."""
     if "active" not in df.columns:

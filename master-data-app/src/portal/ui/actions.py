@@ -8,6 +8,7 @@ from typing import Any, Callable
 import pandas as pd
 import streamlit as st
 
+from portal.config import DEMO_MODE
 from portal.core.submission import submit_to_master_data
 from portal.ui.sidebar import refresh_my_requests
 from portal.ui.state import LAST_REQUEST_KEY, SESSION_REQUESTS_KEY
@@ -20,7 +21,7 @@ def render_action_buttons(key_prefix: str) -> bool:
     with save_col:
         st.button(
             "Save Draft",
-            use_container_width=True,
+            width="stretch",
             key=f"{key_prefix}__save_draft",
             disabled=True,
             help="Save Draft functionality is coming soon",
@@ -29,7 +30,7 @@ def render_action_buttons(key_prefix: str) -> bool:
     with submit_col:
         return st.button(
             "Submit to Master Data",
-            use_container_width=True,
+            width="stretch",
             key=f"{key_prefix}__submit",
             type="primary",
         )
@@ -63,11 +64,18 @@ def handle_submit(
         _remember_request(submission["request_id"], payload)
         refresh_my_requests()
 
-        st.success(
-            f"Request reference {submission['request_id']} "
-            f"was created and assigned to "
-            f"{submission['assigned_to']}."
-        )
+        if DEMO_MODE:
+            st.success(
+                f"Test request {submission['request_id']} "
+                f"was created and assigned to "
+                f"{submission['assigned_to']}. It is saved in the demo only; "
+                "nothing is sent to SAP."
+            )
+        else:
+            st.success(
+                f"Request {submission['request_id']} was sent to the Master Data "
+                f"team and assigned to {submission['assigned_to']}."
+            )
 
         _show_notification_result(submission)
 

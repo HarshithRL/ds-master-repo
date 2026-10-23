@@ -5,6 +5,7 @@ from typing import Mapping
 import streamlit as st
 
 from portal.constants import SECTION_KEYS
+from portal.core.validation import SectionStatus
 
 # =============================================================================
 # DESIGN TOKENS
@@ -41,14 +42,22 @@ STATUS = {
     "neutral": {
         "rail": "#AEB7BE",
         "fill": "#F7F8F9",
+        "note": "#667085",
+    },
+    "check": {
+        "rail": "#663BFF",
+        "fill": "#F5F2FF",
+        "note": "#5429E8",
     },
     "complete": {
         "rail": "#2E7D32",
         "fill": "#F0F8F1",
+        "note": "#2E7D32",
     },
     "error": {
         "rail": "#C62828",
         "fill": "#FFF1F1",
+        "note": "#C62828",
     },
 }
 
@@ -735,6 +744,98 @@ div[data-testid="stVerticalBlockBorderWrapper"] {{
    WELCOME
 ================================================================ */
 
+/* ================================================================
+   TEST SYSTEM (demo build)
+   ================================================================ */
+
+.st-key-header_workbench_link {{
+    display: flex;
+    justify-content: flex-end;
+}}
+
+.st-key-header_workbench_link a {{
+    border: 1px solid #D0D5DD;
+    border-radius: 999px;
+    padding: 2px 12px;
+    background: #FFFFFF;
+}}
+
+.demo-banner {{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: -6px 0 12px 0;
+    padding: 8px 14px;
+    border: 1px solid #F79009;
+    border-radius: 10px;
+    color: #93370D;
+    font-size: 0.86rem;
+    font-weight: 600;
+    background: repeating-linear-gradient(
+        135deg, #FFF6E9 0px, #FFF6E9 14px, #FFEBD1 14px, #FFEBD1 28px
+    );
+}}
+
+.demo-banner-badge {{
+    flex: none;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: #F79009;
+    color: #FFFFFF;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}}
+
+.env-banner-dev {{
+    border-color: #1570EF;
+    color: #1849A9;
+    background: repeating-linear-gradient(
+        135deg, #EFF8FF 0px, #EFF8FF 14px, #D1E9FF 14px, #D1E9FF 28px
+    );
+}}
+
+.env-banner-dev .demo-banner-badge, .sidebar-env-dev {{
+    background: #1570EF !important;
+}}
+
+.env-banner-acc {{
+    border-color: #663BFF;
+    color: #3E1C96;
+    background: repeating-linear-gradient(
+        135deg, #F5F2FF 0px, #F5F2FF 14px, #E6DEFF 14px, #E6DEFF 28px
+    );
+}}
+
+.env-banner-acc .demo-banner-badge, .sidebar-env-acc {{
+    background: #663BFF !important;
+}}
+
+.sidebar-demo-badge {{
+    margin: 0 0 14px 0;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #F79009;
+    color: #FFFFFF;
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}}
+
+.test-customers-title {{
+    margin-top: 18px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: {TEXT};
+}}
+
+.test-customers-text {{
+    margin: 2px 0 8px 0;
+    font-size: 0.85rem;
+    color: #667085;
+}}
+
 .welcome-card {{
     background: var(--surface);
     border: 1px solid var(--border);
@@ -1117,20 +1218,24 @@ SECTION_CONTAINER_PREFIX = "section__"
 
 
 def apply_section_statuses(
-    statuses: Mapping[str, str],
+    statuses: Mapping[str, SectionStatus],
 ) -> None:
     """
-    Colour each section's left rail and header by its state.
+    Colour each section's left rail and header by its state and show its
+    note (e.g. "2 required missing") at the right of the header.
 
     neutral   optional section not started (grey)
     error     a required value is missing or invalid (red)
+    check     nothing missing, section not opened yet: "To check" (purple)
     complete  everything required is filled in (green)
     """
     rules: list[str] = []
 
     for section_key in SECTION_KEYS:
-        palette = STATUS.get(statuses.get(section_key, "neutral"), STATUS["neutral"])
+        status = statuses.get(section_key, SectionStatus("neutral"))
+        palette = STATUS.get(status.state, STATUS["neutral"])
         section = f".st-key-{SECTION_CONTAINER_PREFIX}{section_key}"
+        note = status.note.replace("\\", "").replace('"', "'")
 
         rules.append(
             f"""
@@ -1140,6 +1245,16 @@ def apply_section_statuses(
 
             {section} div[data-testid="stExpander"] details > summary {{
                 background: {palette["fill"]} !important;
+            }}
+
+            {section} div[data-testid="stExpander"] details > summary::after {{
+                content: "{note}";
+                margin-left: auto;
+                padding-left: 12px;
+                white-space: nowrap;
+                font-size: 0.78rem;
+                font-weight: 600;
+                color: {palette["note"]};
             }}
             """
         )

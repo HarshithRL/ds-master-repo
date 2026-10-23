@@ -127,6 +127,11 @@ def get_credit_initial_value(
     field_key = clean(field.get("field_key"))
     existing_value = clean(customer.get(field_key))
     mapped = mapping or {}
+    value_source = clean(field.get("value_source")).lower()
+
+    # Typed by the requester: the field starts empty
+    if value_source == "manual":
+        return ""
 
     if field_key in COLLECTION_CONTACT_KEYS:
         explicit_value = existing_value or clean(mapped.get(field_key))
@@ -150,15 +155,16 @@ def get_credit_initial_value(
     if is_yes(field.get("preserve_existing")) and existing_value:
         return existing_value
 
-    value_source = clean(field.get("value_source")).lower()
     if value_source == "existing":
         return existing_value
 
     if value_source == "mapping":
-        mapping_column = clean(field.get("mapping_column")) or field_key
-        mapped_value = clean(mapped.get(mapping_column))
-        if mapped_value:
-            return mapped_value
+        # "collection_specialist|credit_controller": the first filled column wins
+        mapping_columns = clean(field.get("mapping_column")) or field_key
+        for mapping_column in mapping_columns.split("|"):
+            mapped_value = clean(mapped.get(clean(mapping_column)))
+            if mapped_value:
+                return mapped_value
         if existing_value:
             return existing_value
 

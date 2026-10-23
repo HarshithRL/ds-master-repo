@@ -4,3 +4,6 @@ backgroundColor = "#F7F8FA"
 secondaryBackgroundColor = "#FFFFFF"
 textColor = "#182033"
 base = "light"
+[client]
+# Hide the developer toolbar (Deploy button) so it does not cover the environment ribbon
+toolbarMode = "minimal"

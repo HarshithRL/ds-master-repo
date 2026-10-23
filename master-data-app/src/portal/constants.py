@@ -15,6 +15,10 @@ EMAIL_PATTERN = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
 CHECKBOX = "checkbox"
 FLAG_ON = "X"
 
+# Form_Fields input_type: read-only current SAP value of the customer; left
+# out of Create requests (a new customer has no value yet)
+EXISTING = "existing"
+
 # =============================================================================
 # REQUEST TYPES
 # =============================================================================

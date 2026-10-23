@@ -9,7 +9,8 @@ import pandas as pd
 
 from portal.config import MAX_ATTACHMENT_SIZE_BYTES, MAX_ATTACHMENTS_TOTAL_BYTES
 from portal.core.customers import tax_number_labels
-from portal.core.utils import active_rows, clean, lowercase_columns
+from portal.constants import CHANGE_CUSTOMER
+from portal.core.utils import active_rows, clean, country_rows, is_yes, lowercase_columns
 
 FieldRecord = dict[str, Any]
 
@@ -30,7 +31,8 @@ def requestable_general_fields(
     """
     {field_key: config} for fields with can_request_change=Y, sorted by label.
 
-    Tax number labels use the customer's country (Tax_Details) when set.
+    Only fields for the customer's country (countries column). Tax number
+    labels use the customer's country (Tax_Details) when set.
     """
     library = lowercase_columns(active_rows(reference_library["general_data_fields"]))
 
@@ -39,10 +41,9 @@ def requestable_general_fields(
             library["can_request_change"].astype(str).str.strip().str.upper().eq("Y")
         ].copy()
 
-    tax_labels = tax_number_labels(
-        reference_library,
-        clean(customer.get("country", "")).upper(),
-    )
+    country = clean(customer.get("country", "")).upper()
+    library = country_rows(library, country)
+    tax_labels = tax_number_labels(reference_library, country)
 
     records: list[FieldRecord] = []
 
@@ -76,6 +77,20 @@ def requestable_general_fields(
     }
 
 
+def required_general_keys(
+    field_records: dict[str, FieldRecord],
+    request_type: str,
+) -> list[str]:
+    """
+    Fields with required=Y must be filled on Create / Extend (for the
+    countries they apply to). Change requests stay pick-what-you-need.
+    """
+    if request_type == CHANGE_CUSTOMER:
+        return []
+
+    return [key for key, config in field_records.items() if is_yes(config.get("required"))]
+
+
 def field_label(config: FieldRecord, field_key: str) -> str:
     return clean(config.get("label")) or field_key
 
@@ -89,8 +104,8 @@ def current_general_value(
     source_field = clean(config.get("customer_source_field"))
     value = clean(customer.get(source_field, "")) if source_field else ""
 
-    # Tax numbers may sit directly on the customer record
-    if not value and field_key in TAX_FIELD_KEYS:
+    # Otherwise the customer record's value of the same field (SAP mapping)
+    if not value:
         value = clean(customer.get(field_key, ""))
 
     return value

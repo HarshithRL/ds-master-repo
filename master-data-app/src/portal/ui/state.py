@@ -21,8 +21,17 @@ SESSION_REQUESTS_KEY = "_session_requests"
 CHANGE_PICK_PREFIX = "change__pick__"
 CHANGE_VALUE_PREFIX = "change__value__"
 
+# Fields currently set by a Field_Dependencies rule
+FORCED_FIELDS_KEY = "_forced_fields"
+
+# Section expanders (open / closed) and the sections already opened once
+EXPANDER_PREFIX = "section_expander__"
+REVIEWED_PREFIX = "_section_reviewed__"
+
 # Widgets whose values come from the Company Code + Sales Org rules
 RULE_DEPENDENT_PREFIXES = (
+    REVIEWED_PREFIX,
+    FORCED_FIELDS_KEY,
     "form__",
     "computed_display__",
     "credit__",
@@ -36,6 +45,8 @@ RULE_DEPENDENT_PREFIXES = (
 
 # Everything that belongs to one customer's request
 FORM_PREFIXES = (
+    REVIEWED_PREFIX,
+    FORCED_FIELDS_KEY,
     "form__",
     "computed_display__",
     "credit__",

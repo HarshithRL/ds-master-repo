@@ -31,11 +31,15 @@ from portal.core.payload import (
 )
 from portal.core.rules import (
     copy_computed_values,
+    dependency_sources,
+    forced_values,
     get_original_defaults,
     split_rule_sections,
 )
+from portal.core.utils import clean
 from portal.core.validation import (
     build_change_section_statuses,
+    SectionStatus,
     build_section_statuses,
     collect_change_errors,
     collect_validation_errors,
@@ -49,6 +53,7 @@ from portal.ui.general_data import (
     render_general_data_requests,
 )
 from portal.ui.sections import render_partner_functions, render_section
+from portal.ui.state import EXPANDER_PREFIX, FORCED_FIELDS_KEY, REVIEWED_PREFIX
 from portal.ui.theme import SECTION_CONTAINER_PREFIX, apply_section_statuses
 from portal.ui.widgets import render_section_comment
 
@@ -88,15 +93,37 @@ class RequestContext:
         )
 
 
+def _mark_reviewed(section_key: str) -> None:
+    if st.session_state.get(f"{EXPANDER_PREFIX}{section_key}"):
+        st.session_state[f"{REVIEWED_PREFIX}{section_key}"] = True
+
+
+def reviewed_sections() -> set[str]:
+    """Sections the requester has opened (or has open right now)."""
+    return {
+        key
+        for key in SECTION_KEYS
+        if st.session_state.get(f"{REVIEWED_PREFIX}{key}")
+        or st.session_state.get(f"{EXPANDER_PREFIX}{key}")
+    }
+
+
 def create_section_expanders(panel) -> dict[str, Any]:
     """
     The five collapsed section expanders, keyed like SECTION_KEYS.
 
     Each sits in a keyed container (class st-key-section__<key>) so
-    apply_section_statuses can colour exactly that section.
+    apply_section_statuses can colour exactly that section. Opening one
+    marks it as reviewed ("To check" turns green).
     """
     return {
-        key: panel.container(key=f"{SECTION_CONTAINER_PREFIX}{key}").expander(title, expanded=False)
+        key: panel.container(key=f"{SECTION_CONTAINER_PREFIX}{key}").expander(
+            title,
+            expanded=False,
+            key=f"{EXPANDER_PREFIX}{key}",
+            on_change=_mark_reviewed,
+            args=(key,),
+        )
         for key, title in SECTIONS
     }
 
@@ -106,7 +133,7 @@ def render_waiting_sections(panel) -> None:
         with expander:
             st.caption(PREREQUISITE_TEXT)
 
-    apply_section_statuses({key: "neutral" for key in SECTION_KEYS})
+    apply_section_statuses({key: SectionStatus("neutral") for key in SECTION_KEYS})
 
 
 @dataclass
@@ -142,6 +169,7 @@ def _render_general_data(ctx: RequestContext) -> GeneralDataInput:
     values, duplicates, bank_required = render_general_data_requests(
         customer=ctx.customer,
         reference_library=ctx.reference_library,
+        request_type=ctx.request_type,
     )
     bank_attachments, bank_errors = render_bank_details_attachment(bank_required)
     attachments, attachment_errors = render_attachments()
@@ -162,9 +190,33 @@ def _render_general_data(ctx: RequestContext) -> GeneralDataInput:
 # =============================================================================
 
 
+def _forced_values(ctx: RequestContext) -> dict:
+    """
+    Field_Dependencies rules from the values chosen so far. A field that was
+    set by a rule and no longer is gets emptied, so the requester chooses again.
+    """
+    forced = forced_values(
+        current={
+            key: clean(st.session_state.get(f"form__{key}"))
+            for key in dependency_sources(ctx.rules)
+        },
+        company_code=ctx.company_code,
+        sales_org=ctx.sales_org,
+        rules=ctx.rules,
+    )
+
+    for key in st.session_state.get(FORCED_FIELDS_KEY, []):
+        if key not in forced:
+            st.session_state.pop(f"form__{key}", None)
+    st.session_state[FORCED_FIELDS_KEY] = list(forced)
+
+    return forced
+
+
 def render_standard_request(panel, ctx: RequestContext) -> None:
     expanders = create_section_expanders(panel)
     sections = split_rule_sections(ctx.fields)
+    forced = _forced_values(ctx)
     values: dict[str, dict[str, str]] = {}
     comments = {"request_information": ctx.request_comment}
 
@@ -182,6 +234,8 @@ def render_standard_request(panel, ctx: RequestContext) -> None:
                 sales_org=ctx.sales_org,
                 rules=ctx.rules,
                 context=ctx.rule_context,
+                customer=ctx.customer,
+                forced=forced,
             )
             comments[section_key] = render_section_comment(section_key)
 
@@ -210,6 +264,7 @@ def render_standard_request(panel, ctx: RequestContext) -> None:
             sales_org=ctx.sales_org,
             rules=ctx.rules,
             context=ctx.rule_context,
+            customer=ctx.customer,
         ),
         credit_defaults,
     )
@@ -235,6 +290,7 @@ def render_standard_request(panel, ctx: RequestContext) -> None:
             partner_values=values["partner_functions"],
             credit_fields=credit_fields,
             credit_values=values["credit_management"],
+            reviewed=reviewed_sections(),
         )
     )
 

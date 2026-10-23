@@ -17,6 +17,7 @@ CONFIGURATION_FILES = {
     "customer_form_rules.xlsx": {"Form_Fields", "Field_Options"},
     "credit_management_rules.xlsx": {"Credit_Mapping", "Form_Fields"},
     "assignment_rules.xlsx": {"Members", "Assignment_Pool", "Notification_Messages"},
+    "sap_api_mapping.xlsx": {"Field_Mapping"},
 }
 PRODUCTION_BLOCKERS = ("test only", "dummy configuration", "used only to verify")
 CONFIGURATION_TABLE_SCHEMA = """

@@ -10,6 +10,7 @@ from portal.core.utils import (
     active_rows,
     clean,
     column_text,
+    country_rows,
     lowercase_columns,
     normalize_customer_id,
 )
@@ -42,6 +43,33 @@ def get_customer(
 def customer_company_code(customer: CustomerRecord | None) -> str:
     """Company Code the customer belongs to (company_code column)."""
     return clean((customer or {}).get("company_code"))
+
+
+def test_customer_rows(
+    db: dict[str, pd.DataFrame],
+    reference_library: dict[str, pd.DataFrame],
+) -> list[dict[str, str]]:
+    """Active demo customers with their country and Company Code (for the pickers)."""
+    companies = {
+        clean(row.get("company_code")): clean(row.get("company_name"))
+        for row in active_rows(reference_library["company_sales_org"]).to_dict("records")
+    }
+    rows = []
+
+    for record in active_rows(db["customers"]).to_dict("records"):
+        company_code = clean(record.get("company_code"))
+        rows.append(
+            {
+                "customer_id": clean(record.get("customer_id")),
+                "name": clean(record.get("name_1")),
+                "city": clean(record.get("city")),
+                "country": clean(record.get("country")).upper(),
+                "company_code": company_code,
+                "company": companies.get(company_code, ""),
+            }
+        )
+
+    return sorted(rows, key=lambda row: (row["country"], row["company_code"], row["name"].casefold()))
 
 
 def search_customers(
@@ -160,6 +188,8 @@ def build_customer_overview(
 
     if "display" in fields.columns:
         fields = fields[column_text(fields, "display").str.upper().eq("Y")]
+
+    fields = country_rows(fields, clean(customer.get("country")))
 
     configured: dict[str, dict] = {}
 
