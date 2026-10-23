@@ -12,21 +12,10 @@ from config import (
 # FILE PATHS
 # =============================================================================
 
+# Configuration workbooks are not shipped with the app: the setup job reads
+# them from the Volume and the app reads the seeded snapshots (core/loaders.py).
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-DATA_DIR = BASE_DIR / "data"
-ASSETS_DIR = BASE_DIR / "assets"
-
-# =============================================================================
-# DATA FILES
-# =============================================================================
-
-CUSTOMER_DB_FILE = DATA_DIR / "customer_demo_database.xlsx"
-RULES_FILE = DATA_DIR / "customer_form_rules.xlsx"
-CREDIT_RULES_FILE = DATA_DIR / "credit_management_rules.xlsx"
-ASSIGNMENT_RULES_FILE = DATA_DIR / "assignment_rules.xlsx"
-REFERENCE_LIBRARY_FILE = DATA_DIR / "general_data.xlsx"
-SAP_MAPPING_FILE = DATA_DIR / "sap_api_mapping.xlsx"
 
 DEMO_REQUESTS_FILE = BASE_DIR / "demo_requests.jsonl"
 
@@ -99,6 +88,11 @@ SAP_VERIFY_TLS = _flag("SAP_VERIFY_TLS", "true")
 SAP_TIMEOUT_SECONDS = int(setting("SAP_TIMEOUT_SECONDS", "20") or 20)
 # How long one customer's SAP data is reused while a request is filled in
 SAP_CACHE_SECONDS = int(setting("SAP_CACHE_SECONDS", "300") or 300)
+
+# An environment without an SAP endpoint or technical user keeps the Databricks
+# source instead of failing every lookup.
+if CUSTOMER_SOURCE == "sap" and not (SAP_API_URL and SAP_USER and SAP_PASSWORD):
+    CUSTOMER_SOURCE = "databricks"
 
 # =============================================================================
 # CUSTOMER MASTER WORKBENCH (page "workbench" of this app)

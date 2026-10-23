@@ -3,8 +3,8 @@ Live customer data from SAP through the Business Partner OData API
 (API_BUSINESS_PARTNER, OData v2), read with the app's SAP technical user.
 
 Which API property fills which AXIOM attribute is maintained in
-data/sap_api_mapping.xlsx (Field_Mapping); this module only knows how to
-reach each API entity.
+sap_api_mapping.xlsx (Field_Mapping) in the Volume and reaches the app through
+the seeded snapshot table; this module only knows how to reach each API entity.
 """
 
 from __future__ import annotations
@@ -110,7 +110,7 @@ def _results(entity: dict[str, Any], navigation: str) -> list[dict[str, Any]]:
 
 
 # =============================================================================
-# MAPPING (data/sap_api_mapping.xlsx)
+# MAPPING (sap_api_mapping.xlsx, Field_Mapping)
 # =============================================================================
 
 
