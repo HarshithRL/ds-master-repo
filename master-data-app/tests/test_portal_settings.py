@@ -22,7 +22,14 @@ def portal_settings(host, **extra):
     env["PYTHONPATH"] = str(PROJECT_ROOT / "src")
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     env["DATABRICKS_HOST"] = host
-    for name in ("MASTER_DATA_CATALOG", "SAP_API_URL", "WORKBENCH_URL", "CUSTOMER_SOURCE"):
+    for name in (
+        "MASTER_DATA_CATALOG",
+        "SAP_API_URL",
+        "WORKBENCH_URL",
+        "CUSTOMER_SOURCE",
+        "SAP_USER",
+        "SAP_PASSWORD",
+    ):
         env.pop(name, None)
     env.update(extra)
     result = subprocess.run(
@@ -39,12 +46,12 @@ class PortalSettingsTests(unittest.TestCase):
     def test_environment_follows_the_workspace(self):
         for host, (expected_env, sap_host) in WORKSPACES.items():
             with self.subTest(host=host):
-                result = portal_settings(host)
+                result = portal_settings(host, SAP_USER="tech-user", SAP_PASSWORD="pw")
                 self.assertEqual(result.returncode, 0, result.stderr)
                 app_env, demo, source, sap_url, workbench_url = result.stdout.strip().split("|")
                 self.assertEqual(app_env, expected_env)
                 self.assertEqual(demo, "False")
-                self.assertEqual(source, "sap")
+                self.assertEqual(source, "sap" if sap_host else "databricks")
                 if sap_host:
                     self.assertIn(sap_host, sap_url)
                 # The Workbench is the "workbench" page of this same app
@@ -63,6 +70,17 @@ class PortalSettingsTests(unittest.TestCase):
         self.assertEqual(source, "databricks")
         self.assertEqual(sap_url, "https://sap-acc.example/sap/opu/odata/sap/API_BUSINESS_PARTNER")
         self.assertEqual(workbench_url, "https://workbench.example/")
+
+    def test_sap_needs_an_endpoint_and_a_technical_user(self):
+        host = "https://adb-7181820732839861.1.azuredatabricks.net"
+
+        without_user = portal_settings(host)
+        self.assertEqual(without_user.returncode, 0, without_user.stderr)
+        self.assertEqual(without_user.stdout.strip().split("|")[2], "databricks")
+
+        with_user = portal_settings(host, SAP_USER="tech-user", SAP_PASSWORD="pw")
+        self.assertEqual(with_user.returncode, 0, with_user.stderr)
+        self.assertEqual(with_user.stdout.strip().split("|")[2], "sap")
 
 
 if __name__ == "__main__":

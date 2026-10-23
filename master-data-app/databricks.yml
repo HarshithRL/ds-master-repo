@@ -14,8 +14,10 @@ variables:
     default: "69ada62b2fb9b9e2"
   secret_scope:
     description: >-
-      Databricks secret scope (in each workspace) holding the SAP technical user
-      (sap-user, sap-password) and the signed Power Automate URL (notification-flow-url).
+      Databricks secret scope holding the SAP technical user (sap-user,
+      sap-password) and the signed Power Automate URL (notification-flow-url).
+      Create it in a workspace, then add the three secret resources back to that
+      target's app; a bundle cannot create the scope itself.
     default: master-data-app
 
 targets:
@@ -65,21 +67,6 @@ targets:
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: CAN_USE
-            - name: sap-user
-              secret:
-                scope: ${var.secret_scope}
-                key: sap-user
-                permission: READ
-            - name: sap-password
-              secret:
-                scope: ${var.secret_scope}
-                key: sap-password
-                permission: READ
-            - name: notification-flow-url
-              secret:
-                scope: ${var.secret_scope}
-                key: notification-flow-url
-                permission: READ
 
   A:
     mode: production
@@ -115,21 +102,6 @@ targets:
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: CAN_USE
-            - name: sap-user
-              secret:
-                scope: ${var.secret_scope}
-                key: sap-user
-                permission: READ
-            - name: sap-password
-              secret:
-                scope: ${var.secret_scope}
-                key: sap-password
-                permission: READ
-            - name: notification-flow-url
-              secret:
-                scope: ${var.secret_scope}
-                key: notification-flow-url
-                permission: READ
 
   P:
     mode: production
@@ -165,18 +137,3 @@ targets:
               sql_warehouse:
                 id: ${var.warehouse_id}
                 permission: CAN_USE
-            - name: sap-user
-              secret:
-                scope: ${var.secret_scope}
-                key: sap-user
-                permission: READ
-            - name: sap-password
-              secret:
-                scope: ${var.secret_scope}
-                key: sap-password
-                permission: READ
-            - name: notification-flow-url
-              secret:
-                scope: ${var.secret_scope}
-                key: notification-flow-url
-                permission: READ

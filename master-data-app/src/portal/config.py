@@ -89,6 +89,11 @@ SAP_TIMEOUT_SECONDS = int(setting("SAP_TIMEOUT_SECONDS", "20") or 20)
 # How long one customer's SAP data is reused while a request is filled in
 SAP_CACHE_SECONDS = int(setting("SAP_CACHE_SECONDS", "300") or 300)
 
+# An environment without an SAP endpoint or technical user keeps the Databricks
+# source instead of failing every lookup.
+if CUSTOMER_SOURCE == "sap" and not (SAP_API_URL and SAP_USER and SAP_PASSWORD):
+    CUSTOMER_SOURCE = "databricks"
+
 # =============================================================================
 # CUSTOMER MASTER WORKBENCH (page "workbench" of this app)
 # =============================================================================

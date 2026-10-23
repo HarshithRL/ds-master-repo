@@ -7,9 +7,11 @@ command:
   - --server.address
   - "0.0.0.0"
 
-# Same file in T, A and P. What differs per environment comes from the 
+# Same file in T, A and P. What differs per environment comes from the
 # workspace (catalog, tables, SAP host, Workbench URL in portal/config.py)
 # and from the app resources declared per target in databricks.yml.
+# SAP_USER, SAP_PASSWORD and NOTIFICATION_FLOW_URL come from secret resources;
+# add them back here once the secret scope exists in the workspace.
 env:
   - name: SQL_WAREHOUSE_ID
     valueFrom: sql-warehouse
@@ -17,9 +19,3 @@ env:
     value: "sap"
   - name: WORKBENCH_DEMO_MODE
     value: "false"
-  - name: SAP_USER
-    valueFrom: sap-user
-  - name: SAP_PASSWORD
-    valueFrom: sap-password
-  - name: NOTIFICATION_FLOW_URL
-    valueFrom: notification-flow-url
