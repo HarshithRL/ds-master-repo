@@ -98,7 +98,7 @@ class SetupTablesTests(unittest.TestCase):
         FakeBuilder.spark = spark
 
         snapshot = [("assignment_rules.xlsx", "Members", "[]", "sha", None)]
-        config_directory = "/Workspace/automation/ds-master-data-app/A/files/src/data"
+        config_directory = "/Volumes/automation_a/bronze/bronze_volume/master_data_app"
         observed = {}
 
         def fake_load_configuration_snapshot(directory, catalog):
@@ -121,19 +121,18 @@ class SetupTablesTests(unittest.TestCase):
         self.assertEqual(spark.saved_table, "automation_d.bronze.master_data_app_configuration")
         self.assertEqual(spark.rows, snapshot)
 
-    def test_notebook_context_requires_explicit_configuration_directory(self):
+    def test_configuration_directory_is_required(self):
         spark = RecordingSpark()
         FakeBuilder.spark = spark
 
-        with patch.dict(main.__globals__, {"__file__": None}):
-            with self.assertRaisesRegex(ValueError, "configuration directory must be supplied"):
-                main("automation_d")
+        with self.assertRaisesRegex(ValueError, "configuration directory must be supplied"):
+            main("automation_d", "")
 
         self.assertEqual(spark.statements, [])
 
     def test_rejects_catalog_outside_the_automation_environments(self):
         with self.assertRaises(ValueError):
-            main("automation_custom")
+            main("automation_custom", "/Volumes/automation_d/bronze/bronze_volume/master_data_app")
 
     def test_blocks_test_only_configuration_in_acceptance_and_production(self):
         for catalog in ("automation_a", "automation_p"):

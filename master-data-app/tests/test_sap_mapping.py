@@ -16,7 +16,41 @@ from portal.integrations.sap_business_partner import (  # noqa: E402
     mapping_rows,
 )
 
-MAPPING = pd.read_excel(SOURCE_DIR / "data" / "sap_api_mapping.xlsx", "Field_Mapping", dtype=str, keep_default_na=False)
+MAPPING = pd.DataFrame(
+    # Field_Mapping is configuration: it lives in the Volume and reaches the app
+    # through the seeded snapshot table, so the tests use their own rows here.
+    [
+        {"field_key": "customer_id", "api_entity": "A_Customer", "api_property": "Customer"},
+        {"field_key": "name_1", "api_entity": "A_BusinessPartner", "api_property": "OrganizationBPName1"},
+        {"field_key": "name_1", "api_entity": "A_Customer", "api_property": "CustomerName"},
+        {"field_key": "vat_number", "api_entity": "A_Customer", "api_property": "VATRegistration"},
+        {"field_key": "created_on", "api_entity": "A_Customer", "api_property": "CreationDate", "value_format": "date"},
+        {"field_key": "street", "api_entity": "A_BusinessPartnerAddress", "api_property": "StreetName + HouseNumber"},
+        {"field_key": "city", "api_entity": "A_BusinessPartnerAddress", "api_property": "CityName"},
+        {"field_key": "postal_code", "api_entity": "A_BusinessPartnerAddress", "api_property": "PostalCode"},
+        {"field_key": "country", "api_entity": "A_BusinessPartnerAddress", "api_property": "Country"},
+        {"field_key": "telephone", "api_entity": "A_AddressPhoneNumber", "api_property": "PhoneNumber"},
+        {"field_key": "company_code", "api_entity": "A_CustomerCompany", "api_property": "CompanyCode"},
+        {"field_key": "reconciliation_account", "api_entity": "A_CustomerCompany", "api_property": "ReconciliationAccount"},
+        {
+            "field_key": "payment_history_record",
+            "api_entity": "A_CustomerCompany",
+            "api_property": "RecordPaymentHistoryIndicator",
+            "value_format": "flag",
+        },
+        {"field_key": "dunning_procedure", "api_entity": "A_CustomerDunning", "api_property": "DunningProcedure"},
+        {"field_key": "incoterm_location", "api_entity": "A_CustomerSalesArea", "api_property": "IncotermsLocation1"},
+        {
+            "field_key": "ship_to_party_id",
+            "api_entity": "A_CustSalesPartnerFunc",
+            "api_property": "BPCustomerNumber",
+            "api_filter": "PartnerFunction=WE",
+        },
+        {"field_key": "retired", "api_entity": "A_NotSupported", "api_property": "Whatever", "active": "no"},
+    ],
+    columns=["field_key", "api_entity", "api_property", "api_filter", "value_format", "active"],
+).fillna("")
+MAPPING["active"] = MAPPING["active"].replace("", "yes")
 
 # Shape of the API_BUSINESS_PARTNER responses (OData v2, expanded lists in "results")
 RAW = {

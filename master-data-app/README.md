@@ -36,7 +36,7 @@ Nothing outside `databricks.yml`, the job file and the shared pipeline deploys a
 1. **Customer from SAP.** The portal reads the customer through SAP's Business Partner API (`API_BUSINESS_PARTNER`, OData v2) with the technical user from the `sap-user` / `sap-password` secrets (`src/portal/integrations/sap_business_partner.py`).
    * Which API property fills which AXIOM field is maintained in `sap_api_mapping.xlsx`, sheet Field_Mapping. It is seeded like the other workbooks.
    * `CUSTOMER_SOURCE=databricks` in `src/app.yaml` switches back to the Databricks source table mapped in `general_data.xlsx`.
-2. **Rules from the configuration table.** Company list, fields, dropdowns, dependencies, credit and assignment rules come from `{catalog}.bronze.master_data_app_configuration`, not from the files in `src/data` (those are the source copies).
+2. **Rules from the configuration table.** Company list, fields, dropdowns, dependencies, credit and assignment rules come from `{catalog}.bronze.master_data_app_configuration`, seeded from the workbooks in the Volume.
 3. **Submit.** The request is written to `{catalog}.bronze.master_data_app_requests` with status ASSIGNED, using the visitor's forwarded token (`sql` scope). Power Automate sends the Teams message (with a link that opens the request in the Workbench) and the confirmation email.
 4. **Workbench page.** The Master Data team opens the request, enters the TOPdesk ticket and sets the status (history in `…_request_history`). The requester sees the status under **My requests**.
 
@@ -51,7 +51,7 @@ Nothing outside `databricks.yml`, the job file and the shared pipeline deploys a
 * To give someone the Workbench: add them as an active row in Members of `assignment_rules.xlsx` (Volume), then re-run the setup job. They then also receive requests through the assignment pool.
 * The setup job reads `/Volumes/{catalog}/bronze/bronze_volume/master_data_app`. T uses D's `automation_d` volume.
   * It needs `general_data.xlsx` (or the old `customer_reference_library.xlsx`), `customer_form_rules.xlsx`, `credit_management_rules.xlsx`, `assignment_rules.xlsx` and `sap_api_mapping.xlsx`.
-  * The latest source copies are in `src/data`. Replacing Repo files does not update the Volumes or the seeded table; upload the files to the Volume and re-run the job.
+  * The workbooks live only in the Volume; the app source carries no copies. After replacing a workbook, re-run the job so the seeded table follows.
   * The job's identity needs `USE_CATALOG`, `USE_SCHEMA`, `READ_VOLUME` and rights to create and write the app tables in the existing bronze schema.
 * No data is copied from the previous personal-schema request table. A historical migration needs a separately reviewed plan.
 

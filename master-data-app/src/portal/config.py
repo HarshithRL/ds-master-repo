@@ -12,21 +12,10 @@ from config import (
 # FILE PATHS
 # =============================================================================
 
+# Configuration workbooks are not shipped with the app: the setup job reads
+# them from the Volume and the app reads the seeded snapshots (core/loaders.py).
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-DATA_DIR = BASE_DIR / "data"
-ASSETS_DIR = BASE_DIR / "assets"
-
-# =============================================================================
-# DATA FILES
-# =============================================================================
-
-CUSTOMER_DB_FILE = DATA_DIR / "customer_demo_database.xlsx"
-RULES_FILE = DATA_DIR / "customer_form_rules.xlsx"
-CREDIT_RULES_FILE = DATA_DIR / "credit_management_rules.xlsx"
-ASSIGNMENT_RULES_FILE = DATA_DIR / "assignment_rules.xlsx"
-REFERENCE_LIBRARY_FILE = DATA_DIR / "general_data.xlsx"
-SAP_MAPPING_FILE = DATA_DIR / "sap_api_mapping.xlsx"
 
 DEMO_REQUESTS_FILE = BASE_DIR / "demo_requests.jsonl"
 
