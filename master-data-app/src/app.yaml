@@ -10,8 +10,8 @@ command:
 # Same file in T, A and P. What differs per environment comes from the
 # workspace (catalog, tables, SAP host, Workbench URL in portal/config.py)
 # and from the app resources declared per target in databricks.yml.
-# SAP_USER, SAP_PASSWORD and NOTIFICATION_FLOW_URL come from secret resources;
-# add them back here once the secret scope exists in the workspace.
+# NOTIFICATION_FLOW_URL is not wired yet: add the secret resource and a
+# valueFrom entry once the signed URL is stored in the scope.
 env:
   - name: SQL_WAREHOUSE_ID
     valueFrom: sql-warehouse
@@ -19,3 +19,7 @@ env:
     value: "sap"
   - name: WORKBENCH_DEMO_MODE
     value: "false"
+  - name: SAP_USER
+    valueFrom: sap-user
+  - name: SAP_PASSWORD
+    valueFrom: sap-password
