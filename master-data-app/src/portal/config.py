@@ -74,8 +74,8 @@ CUSTOMER_SOURCE = setting("CUSTOMER_SOURCE", "sap").lower()
 
 _SAP_API_URL_BY_CATALOG = {
     "automation_d": "https://vhmcosd1ci.sap.etexgroup.com:44300/sap/opu/odata/sap/API_BUSINESS_PARTNER",
-    "automation_a": "",  # SAP acceptance host: to be filled
-    "automation_p": "",  # SAP production host: to be filled
+    "automation_a": "https://vhmcosd1ci.sap.etexgroup.com:44300/sap/opu/odata/sap/API_BUSINESS_PARTNER",  #
+    "automation_p": "https://vhmcosd1ci.sap.etexgroup.com:44300/sap/opu/odata/sap/API_BUSINESS_PARTNER",  
 }
 SAP_API_URL = setting("SAP_API_URL") or _SAP_API_URL_BY_CATALOG[UNITY_CATALOG]
 SAP_CLIENT = setting("SAP_CLIENT")  # sap-client, e.g. 100; empty = the system default

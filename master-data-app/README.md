@@ -58,12 +58,12 @@ Nothing outside `databricks.yml`, the job file and the shared pipeline deploys a
 ## Before the first deployment of this version (per workspace: DEV/TEST, ACC, PRD)
 
 1. **Secret scope `master-data-app`** (variable `secret_scope`), with these keys:
-   * `sap-user`, `sap-password`: the read-only SAP technical user of that environment's SAP system.
-   * `notification-flow-url`: the signed Power Automate URL.
+   * `sap-user`, `sap-password`: the read-only SAP technical user of that environment's SAP system (DEV/TEST = SD1, ACC = SQ1, PRD = SP1).
+   * `notification-flow-url`: the signed Power Automate URL. Not wired yet — add the secret resource in `databricks.yml` and a `valueFrom` entry in `src/app.yaml` once the URL is stored, until then notifications stay off.
 
-   A bundle cannot create the scope, so the three secret resources are currently **not** declared in `databricks.yml` and `src/app.yaml` does not read them: a deploy against a workspace without the scope fails with `Secret with scope master-data-app and key sap-user does not exist`. Once the scope exists in a workspace, add the `sap-user` / `sap-password` / `notification-flow-url` resources back to that target and the matching `valueFrom` entries to `src/app.yaml`. The deployment identity needs **Can manage** on the scope.
+   A bundle cannot create the scope, so it must exist in a workspace **before** the deploy; otherwise the deploy fails with `Secret with scope master-data-app and key sap-user does not exist`. The deployment identity needs **Can manage** on the scope.
 
-   Until then the portal reads customers from Databricks: `portal/config.py` falls back to `CUSTOMER_SOURCE=databricks` whenever the SAP endpoint or the technical user is missing, and Power Automate notifications stay off.
+   An environment without an SAP endpoint or technical user keeps reading customers from Databricks: `portal/config.py` falls back to `CUSTOMER_SOURCE=databricks`.
 2. **Network route** from Databricks serverless to SAP (`vhmcosd1ci.sap.etexgroup.com:44300` for DEV/TEST). Set up by the Databricks account admin and the network team; test from a serverless notebook.
 3. **SAP host for ACC/PRD.** Fill in `_SAP_API_URL_BY_CATALOG` in `src/portal/config.py`, or set `SAP_API_URL` in `src/app.yaml`. If SAP's certificate is from an internal CA, add the CA file to `src/assets/` and set `SAP_CA_BUNDLE`.
 4. **Upload** the five workbooks to the environment's Volume and **run the setup job**.
