@@ -69,19 +69,25 @@ class DeploymentConfigTest < Minitest::Test
     job = jobs.fetch('resources').fetch('jobs').fetch('pmo_import')
     receipt = JSON.parse(File.read(File.join(ROOT, 'migration/EXPORT_RECEIPT.json')))
     parameters = job.fetch('parameters').to_h { |entry| [entry.fetch('name'), entry.fetch('default')] }
-    assert_equal({
-      'snapshot' => receipt.fetch('snapshot'),
-      'mode' => 'apply',
-      'manifest_sha256' => receipt.fetch('manifest_sha256'),
-      'accept_user_authorization' => 'true'
-    }, parameters)
+    assert_equal %w[snapshot mode manifest_sha256 supersedes_snapshot supersedes_sha256 accept_user_authorization],
+                 parameters.keys
+    assert_equal receipt.fetch('snapshot'), parameters.fetch('snapshot')
+    assert_equal 'apply', parameters.fetch('mode')
+    assert_equal receipt.fetch('manifest_sha256'), parameters.fetch('manifest_sha256')
+    assert_equal 'true', parameters.fetch('accept_user_authorization')
     assert_match(/\A[0-9a-f]{64}\z/, parameters.fetch('manifest_sha256'))
+    superseded_snapshot = parameters.fetch('supersedes_snapshot')
+    superseded_hash = parameters.fetch('supersedes_sha256')
+    assert_equal superseded_snapshot.empty?, superseded_hash.empty?
+    unless superseded_hash.empty?
+      assert_match(/\A[0-9a-f]{64}\z/, superseded_hash)
+      refute_equal parameters.fetch('manifest_sha256'), superseded_hash
+      refute_equal parameters.fetch('snapshot'), superseded_snapshot
+    end
     assert_equal 1, job.fetch('max_concurrent_runs')
     %w[schedule trigger triggers continuous].each { |key| refute job.key?(key) }
     task_parameters = job.fetch('tasks').first.fetch('spark_python_task').fetch('parameters')
-    %w[snapshot mode manifest_sha256 accept_user_authorization].each do |name|
-      assert_includes task_parameters, "{{job.parameters.#{name}}}"
-    end
+    parameters.each_key { |name| assert_includes task_parameters, "{{job.parameters.#{name}}}" }
     assert_includes task_parameters, '${var.catalog}'
     export_job = jobs.fetch('targets').fetch('D').fetch('resources').fetch('jobs').fetch('pmo_export')
     validation = export_job.fetch('tasks').find { |task| task.fetch('task_key') == 'validate_export' }

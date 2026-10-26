@@ -102,18 +102,20 @@ def spark_schema(columns: list[Column]):
     ]})
 
 
+def records_frame(spark, table: str, rows: list[dict], contract: dict):
+    columns = contract[table]
+    transformed = [{target_column_name(table, key): value for key, value in row.items()} for row in rows]
+    data = [tuple(row[column.name] for column in columns) for row in transformed]
+    frame = spark.createDataFrame(data, spark_schema(columns)).cache()
+    frame.count()
+    return frame
+
+
 def source_frames(spark, records: dict, contract: dict):
-    frames = {}
-    for table in TABLES:
-        columns = contract[table]
-        transformed = [{target_column_name(table, key): value for key, value in row.items()} for row in records[table]]
-        rows = [tuple(row[column.name] for column in columns) for row in transformed]
-        frames[table] = spark.createDataFrame(rows, spark_schema(columns)).cache()
-        frames[table].count()
-    return frames
+    return {table: records_frame(spark, table, records[table], contract) for table in TABLES}
 
 
-def target_plan(spark, catalog: str, frames: dict, contract: dict, initial_admin: str, records: dict) -> dict:
+def target_plan(spark, catalog: str, frames: dict, contract: dict, initial_admin: str, records: dict, baseline: dict | None = None) -> dict:
     from pyspark.sql import functions as functions
     schemas = {}
     target_counts = {}
@@ -155,8 +157,11 @@ def target_plan(spark, catalog: str, frames: dict, contract: dict, initial_admin
     for table, current in target_frames.items():
         if table == "users" and bootstrap:
             current = current.where(functions.col("id") != bootstrap)
-        if current.exceptAll(frames[table]).limit(1).count():
+        expected = frames[table] if baseline is None else baseline[table]
+        if current.exceptAll(expected).limit(1).count():
             raise ValueError(f"Target contains changed or unrelated records; no data has been overwritten: {table}")
+        if baseline is not None and expected.exceptAll(current).limit(1).count():
+            raise ValueError(f"Target no longer matches the approved baseline snapshot; manual review required: {table}")
     return {"schema_changes": schemas, "existing_rows": target_counts,
             "bootstrap_id": bootstrap, "source_rows": {table: len(records[table]) for table in TABLES}}
 
@@ -173,7 +178,8 @@ def apply_schema(spark, catalog: str, table: str, changes: list, columns: list[C
             spark.sql(f"ALTER TABLE {qualified} ALTER COLUMN `{change['column']}` DROP NOT NULL")
 
 
-def import_snapshot(spark, catalog: str, snapshot: str, mode: str, expected_hash: str, accept_authorization: bool, initial_admin: str) -> dict:
+def import_snapshot(spark, catalog: str, snapshot: str, mode: str, expected_hash: str, accept_authorization: bool,
+                    initial_admin: str, supersedes_snapshot: str = "", supersedes_hash: str = "") -> dict:
     base = volume_path(catalog)
     contract = load_contract(CONTRACT_PATH)
     manifest, records, manifest_hash = load_snapshot(base, snapshot, contract)
@@ -181,17 +187,65 @@ def import_snapshot(spark, catalog: str, snapshot: str, mode: str, expected_hash
         raise ValueError("Manifest does not match the approved export hash")
     if not records["projects"] or not records["users"]:
         raise ValueError("Refusing an empty initial PMO migration")
+    if bool(supersedes_snapshot) != bool(supersedes_hash):
+        raise ValueError("A resync needs both the superseded snapshot name and its approved manifest hash")
+    resync = bool(supersedes_snapshot)
+    if resync and (supersedes_snapshot == snapshot or supersedes_hash == manifest_hash
+                   or not re.fullmatch(r"[0-9a-f]{64}", supersedes_hash)):
+        raise ValueError("A resync must supersede a different, already approved snapshot")
     state_path = base / f"_PMO_initial_migration_{catalog}.json"
     previous_state = json.loads(state_path.read_text()) if state_path.exists() else None
-    if previous_state and previous_state.get("manifest_sha256") != manifest_hash:
+    resuming = bool(previous_state) and previous_state.get("manifest_sha256") == manifest_hash
+    if resync:
+        if previous_state is None:
+            raise ValueError("A resync requires the receipt of the completed import it supersedes")
+        if resuming:
+            if previous_state.get("supersedes_manifest_sha256") != supersedes_hash:
+                raise ValueError("The interrupted migration in this environment superseded a different snapshot; manual review required")
+        elif previous_state.get("manifest_sha256") != supersedes_hash or previous_state.get("status") != "COMPLETE":
+            raise ValueError("This environment did not complete the snapshot this resync supersedes; manual review required")
+    elif previous_state and not resuming:
         raise ValueError("This environment already started a different initial migration; manual review required")
+    baseline_records = {}
+    retained_records = {}
+    if resync:
+        _, baseline_records, baseline_hash = load_snapshot(base, supersedes_snapshot, contract)
+        if baseline_hash != supersedes_hash:
+            raise ValueError("The superseded package does not match its approved manifest hash")
+        imported = {table: {row["id"] for row in records[table]} for table in TABLES}
+        retained_records = {table: [row for row in baseline_records[table] if row["id"] not in imported[table]]
+                            for table in TABLES}
     frames = source_frames(spark, records, contract)
+    baseline_frames = []
     try:
-        plan = target_plan(spark, catalog, frames, contract, initial_admin, records)
-        report = {"status": "VALIDATED", "catalog": catalog, "snapshot": snapshot, "manifest_sha256": manifest_hash,
+        baseline = None
+        retained_frames = {}
+        expected_before = {}
+        if resync:
+            # A table already resynced by an interrupted run holds the new rows, not the superseded ones.
+            done = set(previous_state.get("completed_tables", [])) if resuming else set()
+            retained_frames = {table: records_frame(spark, table, retained_records[table], contract) for table in TABLES}
+            baseline_frames.extend(retained_frames.values())
+            baseline = {}
+            for table in TABLES:
+                if table in done:
+                    baseline[table] = frames[table].unionByName(retained_frames[table])
+                    expected_before[table] = len(records[table]) + len(retained_records[table])
+                else:
+                    baseline[table] = records_frame(spark, table, baseline_records[table], contract)
+                    baseline_frames.append(baseline[table])
+                    expected_before[table] = len(baseline_records[table])
+        plan = target_plan(spark, catalog, frames, contract, initial_admin, records, baseline)
+        if resync and any(plan["existing_rows"][table] != expected_before[table] for table in TABLES):
+            raise ValueError("Target row counts do not match the approved baseline snapshot; manual review required")
+        report = {"status": "VALIDATED", "operation": "resync" if resync else "initial", "catalog": catalog,
+                  "snapshot": snapshot, "manifest_sha256": manifest_hash,
                   "source_rows": plan["source_rows"], "target_rows_before": plan["existing_rows"],
                   "schema_changes": plan["schema_changes"], "replace_pristine_bootstrap": bool(plan["bootstrap_id"]),
                   "authorization_summary": manifest["authorization_summary"]}
+        if resync:
+            report["supersedes"] = {"snapshot": supersedes_snapshot, "manifest_sha256": supersedes_hash}
+            report["retained_rows_absent_from_source"] = {table: len(rows) for table, rows in retained_records.items()}
         if mode == "validate":
             return report
         if not re.fullmatch(r"[0-9a-f]{64}", expected_hash) or not accept_authorization:
@@ -199,11 +253,16 @@ def import_snapshot(spark, catalog: str, snapshot: str, mode: str, expected_hash
         source_admins = [row for row in records["users"] if (row.get("email") or "").lower() == initial_admin]
         if len(source_admins) != 1 or source_admins[0]["global_role"] != "ADMIN" or source_admins[0]["is_active"] is not True:
             raise ValueError("Snapshot must retain the configured initial administrator as active ADMIN")
-        state = previous_state or {"catalog": catalog, "snapshot": snapshot, "manifest_sha256": manifest_hash,
-                                   "started_at_utc": datetime.now(timezone.utc).isoformat(), "completed_tables": []}
-        if previous_state is None:
-            with state_path.open("x", encoding="utf-8") as handle:
-                json.dump(state, handle, sort_keys=True, indent=2)
+        state = previous_state if resuming else {"catalog": catalog, "snapshot": snapshot, "manifest_sha256": manifest_hash,
+                                                 "started_at_utc": datetime.now(timezone.utc).isoformat(), "completed_tables": []}
+        if not resuming:
+            if resync:
+                state["supersedes_snapshot"] = supersedes_snapshot
+                state["supersedes_manifest_sha256"] = supersedes_hash
+                state_path.write_text(json.dumps(state, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+            else:
+                with state_path.open("x", encoding="utf-8") as handle:
+                    json.dump(state, handle, sort_keys=True, indent=2)
         for table in TABLES:
             apply_schema(spark, catalog, table, plan["schema_changes"][table], contract[table])
         token = uuid.uuid4().hex
@@ -211,27 +270,37 @@ def import_snapshot(spark, catalog: str, snapshot: str, mode: str, expected_hash
             qualified = f"{catalog}.silver.PMO_{table}"
             view = f"pmo_migration_{token}_{table}"
             frames[table].createOrReplaceTempView(view)
-            statement = f"MERGE INTO {qualified} AS target USING {view} AS source ON target.id = source.id WHEN NOT MATCHED THEN INSERT *"
+            statement = f"MERGE INTO {qualified} AS target USING {view} AS source ON target.id = source.id"
+            if resync:
+                statement += " WHEN MATCHED THEN UPDATE SET *"
+            statement += " WHEN NOT MATCHED THEN INSERT *"
             parameters = {}
             if table == "users" and plan["bootstrap_id"]:
                 statement += " WHEN NOT MATCHED BY SOURCE AND target.id = :bootstrap_id THEN DELETE"
                 parameters["bootstrap_id"] = plan["bootstrap_id"]
             spark.sql(statement, args=parameters)
             actual = spark.table(qualified).select([column.name for column in contract[table]])
-            if actual.exceptAll(frames[table]).limit(1).count() or frames[table].exceptAll(actual).limit(1).count():
+            if frames[table].exceptAll(actual).limit(1).count():
+                raise ValueError(f"Post-import reconciliation failed; no unrelated data was overwritten: {table}")
+            remaining = actual.exceptAll(frames[table])
+            if resync:
+                if remaining.exceptAll(retained_frames[table]).limit(1).count() or retained_frames[table].exceptAll(remaining).limit(1).count():
+                    raise ValueError(f"Post-resync reconciliation failed; unexpected target rows remain: {table}")
+            elif remaining.limit(1).count():
                 raise ValueError(f"Post-import reconciliation failed; no unrelated data was overwritten: {table}")
             if table not in state["completed_tables"]:
                 state["completed_tables"].append(table)
             state["status"] = "IN_PROGRESS"
             state_path.write_text(json.dumps(state, sort_keys=True, indent=2) + "\n", encoding="utf-8")
             spark.catalog.dropTempView(view)
-            print(json.dumps({"table": f"PMO_{table}", "reconciled_rows": len(records[table])}))
+            print(json.dumps({"table": f"PMO_{table}", "reconciled_rows": len(records[table]),
+                              "retained_rows": len(retained_records.get(table, []))}))
         state["status"] = "COMPLETE"
         state["completed_at_utc"] = datetime.now(timezone.utc).isoformat()
         state_path.write_text(json.dumps(state, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         return {**report, "status": "IMPORTED", "receipt": str(state_path)}
     finally:
-        for frame in frames.values():
+        for frame in [*frames.values(), *baseline_frames]:
             frame.unpersist()
 
 
@@ -243,6 +312,8 @@ def main() -> None:
     parser.add_argument("--snapshot", required=True)
     parser.add_argument("--mode", choices=["validate", "apply"], default="validate")
     parser.add_argument("--manifest-sha256", default="")
+    parser.add_argument("--supersedes-snapshot", default="")
+    parser.add_argument("--supersedes-sha256", default="")
     parser.add_argument("--accept-user-authorization", choices=["true", "false"], default="false")
     parser.add_argument("--initial-admin-email", default="mustafaarda.bicakci@etexgroup.com")
     arguments = parser.parse_args()
@@ -256,7 +327,8 @@ def main() -> None:
     else:
         result = import_snapshot(spark, arguments.catalog, arguments.snapshot, arguments.mode,
                                  arguments.manifest_sha256, arguments.accept_user_authorization == "true",
-                                 arguments.initial_admin_email)
+                                 arguments.initial_admin_email, arguments.supersedes_snapshot,
+                                 arguments.supersedes_sha256)
     print(json.dumps(result, sort_keys=True, indent=2))
 
 

@@ -2,7 +2,7 @@ resources:
   jobs:
     pmo_import:
       name: PMO - One-Time Import From Volume
-      description: Run now imports the approved pmo_initial_20261019 snapshot from this environment's bronze_volume/pmo_app, including source user roles. All integrity and target-conflict checks run before writes. No original-catalog access is used.
+      description: Run now imports the approved snapshot from this environment's bronze_volume/pmo_app, including source user roles. Supplying supersedes_snapshot/supersedes_sha256 resyncs an already completed snapshot instead, which also updates changed rows. All integrity, baseline and target-conflict checks run before writes. No original-catalog access is used.
       max_concurrent_runs: 1
       timeout_seconds: 3600
       tags:
@@ -15,6 +15,10 @@ resources:
           default: apply
         - name: manifest_sha256
           default: 07ec01659fe5364a690a3b2e4bd55eac7d67d4d7faf8006d7515807842b65630
+        - name: supersedes_snapshot
+          default: ''
+        - name: supersedes_sha256
+          default: ''
         - name: accept_user_authorization
           default: 'true'
       tasks:
@@ -35,6 +39,10 @@ resources:
               - '{{job.parameters.mode}}'
               - --manifest-sha256
               - '{{job.parameters.manifest_sha256}}'
+              - --supersedes-snapshot
+              - '{{job.parameters.supersedes_snapshot}}'
+              - --supersedes-sha256
+              - '{{job.parameters.supersedes_sha256}}'
               - --accept-user-authorization
               - '{{job.parameters.accept_user_authorization}}'
               - --initial-admin-email
@@ -68,7 +76,7 @@ targets:
             purpose: one-time-export
           parameters:
             - name: snapshot
-              default: pmo_initial_20261019
+              default: pmo_resync_20261026
           tasks:
             - task_key: export_to_volume
               job_cluster_key: migration_cluster
