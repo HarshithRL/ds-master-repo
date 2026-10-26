@@ -52,6 +52,12 @@ def package_fixture(base: Path, name: str = "validation", flat: bool = False):
     return folder, contract, records, manifest
 
 
+def reconciled_frame():
+    frame = MagicMock()
+    frame.exceptAll.return_value.limit.return_value.count.return_value = 0
+    return frame
+
+
 class TransferTests(unittest.TestCase):
     def test_flat_volume_layout_reads_the_same_snapshot_without_moving_files(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -234,6 +240,139 @@ class TransferTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "different initial migration"):
                     runner.import_snapshot(spark, "automation_a", "other", "apply", "b" * 64, True, "admin@etexgroup.com")
                 create_frames.assert_not_called()
+
+    def test_resync_updates_matched_rows_keeps_absent_rows_and_supersedes_the_receipt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            records = {table: [] for table in transfer.TABLES}
+            records["users"] = [{"id": "admin", "email": "admin@etexgroup.com", "global_role": "ADMIN", "is_active": True}]
+            records["projects"] = [{"id": "project"}, {"id": "new-project"}]
+            baseline_records = {table: [] for table in transfer.TABLES}
+            baseline_records["users"] = list(records["users"])
+            baseline_records["projects"] = [{"id": "project"}, {"id": "archived-project"}]
+            receipt = base / "_PMO_initial_migration_automation_a.json"
+            receipt.write_text(json.dumps({"catalog": "automation_a", "snapshot": "initial", "manifest_sha256": "a" * 64,
+                                           "status": "COMPLETE", "completed_tables": list(transfer.TABLES)}))
+            frames = {table: MagicMock() for table in transfer.TABLES}
+            for frame in frames.values():
+                frame.exceptAll.return_value.limit.return_value.count.return_value = 0
+            plan = {"schema_changes": {table: [] for table in transfer.TABLES},
+                    "existing_rows": {table: len(rows) for table, rows in baseline_records.items()},
+                    "source_rows": {table: len(rows) for table, rows in records.items()}, "bootstrap_id": None}
+            spark = MagicMock()
+            remaining = spark.table.return_value.select.return_value.exceptAll.return_value
+            remaining.limit.return_value.count.return_value = 0
+            remaining.exceptAll.return_value.limit.return_value.count.return_value = 0
+            contract = {table: [transfer.Column("id", "string", False)] for table in transfer.TABLES}
+            snapshots = {"resync": ({"authorization_summary": {}}, records, "b" * 64),
+                         "initial": ({"authorization_summary": {}}, baseline_records, "a" * 64)}
+            with patch.object(runner, "volume_path", return_value=base), \
+                 patch.object(runner, "load_contract", return_value=contract), \
+                 patch.object(runner, "load_snapshot", side_effect=lambda _base, name, _contract: snapshots[name]), \
+                 patch.object(runner, "source_frames", return_value=frames), \
+                 patch.object(runner, "records_frame", side_effect=lambda *_: reconciled_frame()), \
+                 patch.object(runner, "target_plan", return_value=plan), \
+                 patch("builtins.print"):
+                result = runner.import_snapshot(spark, "automation_a", "resync", "apply", "b" * 64, True,
+                                                "admin@etexgroup.com", "initial", "a" * 64)
+            self.assertEqual(result["status"], "IMPORTED")
+            self.assertEqual(result["operation"], "resync")
+            self.assertEqual(result["supersedes"], {"snapshot": "initial", "manifest_sha256": "a" * 64})
+            self.assertEqual(result["retained_rows_absent_from_source"]["projects"], 1)
+            statements = [call.args[0] for call in spark.sql.call_args_list]
+            self.assertEqual(len(statements), 18)
+            self.assertTrue(all("WHEN MATCHED THEN UPDATE SET * WHEN NOT MATCHED THEN INSERT *" in statement for statement in statements))
+            self.assertTrue(all("DELETE" not in statement for statement in statements))
+            saved = json.loads(receipt.read_text())
+            self.assertEqual(saved["status"], "COMPLETE")
+            self.assertEqual(saved["snapshot"], "resync")
+            self.assertEqual(saved["manifest_sha256"], "b" * 64)
+            self.assertEqual(saved["supersedes_snapshot"], "initial")
+            self.assertEqual(saved["supersedes_manifest_sha256"], "a" * 64)
+            self.assertEqual(saved["completed_tables"], list(transfer.TABLES))
+
+    def test_resync_needs_both_approvals_and_a_completed_different_baseline(self):
+        cases = [
+            ({"manifest_sha256": "a" * 64, "status": "COMPLETE"}, "initial", "", "needs both"),
+            (None, "initial", "a" * 64, "requires the receipt"),
+            ({"manifest_sha256": "c" * 64, "status": "COMPLETE"}, "initial", "a" * 64, "did not complete"),
+            ({"manifest_sha256": "a" * 64, "status": "IN_PROGRESS"}, "initial", "a" * 64, "did not complete"),
+            ({"manifest_sha256": "a" * 64, "status": "COMPLETE"}, "resync", "a" * 64, "supersede a different"),
+            ({"manifest_sha256": "a" * 64, "status": "COMPLETE"}, "initial", "b" * 64, "supersede a different"),
+            ({"manifest_sha256": "b" * 64, "status": "IN_PROGRESS", "supersedes_manifest_sha256": "c" * 64,
+              "completed_tables": []}, "initial", "a" * 64, "superseded a different snapshot"),
+        ]
+        for state, supersedes_snapshot, supersedes_hash, message in cases:
+            with tempfile.TemporaryDirectory() as directory:
+                base = Path(directory)
+                records = {table: [] for table in transfer.TABLES}
+                records["users"] = [{"id": "admin", "email": "admin@etexgroup.com", "global_role": "ADMIN", "is_active": True}]
+                records["projects"] = [{"id": "project"}]
+                if state is not None:
+                    (base / "_PMO_initial_migration_automation_a.json").write_text(json.dumps(state))
+                spark = MagicMock()
+                with patch.object(runner, "volume_path", return_value=base), \
+                     patch.object(runner, "load_contract", return_value={}), \
+                     patch.object(runner, "load_snapshot", return_value=({"authorization_summary": {}}, records, "b" * 64)), \
+                     patch.object(runner, "source_frames") as create_frames:
+                    with self.assertRaisesRegex(ValueError, message):
+                        runner.import_snapshot(spark, "automation_a", "resync", "apply", "b" * 64, True,
+                                               "admin@etexgroup.com", supersedes_snapshot, supersedes_hash)
+                    create_frames.assert_not_called()
+                spark.sql.assert_not_called()
+
+    def test_resync_stops_before_writes_when_target_counts_left_the_baseline(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            records = {table: [] for table in transfer.TABLES}
+            records["users"] = [{"id": "admin", "email": "admin@etexgroup.com", "global_role": "ADMIN", "is_active": True}]
+            records["projects"] = [{"id": "project"}]
+            baseline_records = {table: [] for table in transfer.TABLES}
+            baseline_records["users"] = list(records["users"])
+            baseline_records["projects"] = [{"id": "project"}]
+            (base / "_PMO_initial_migration_automation_a.json").write_text(
+                json.dumps({"manifest_sha256": "a" * 64, "status": "COMPLETE", "completed_tables": list(transfer.TABLES)}))
+            frames = {table: MagicMock() for table in transfer.TABLES}
+            plan = {"schema_changes": {table: [] for table in transfer.TABLES},
+                    "existing_rows": {**{table: len(rows) for table, rows in baseline_records.items()}, "projects": 2},
+                    "source_rows": {table: len(rows) for table, rows in records.items()}, "bootstrap_id": None}
+            snapshots = {"resync": ({"authorization_summary": {}}, records, "b" * 64),
+                         "initial": ({"authorization_summary": {}}, baseline_records, "a" * 64)}
+            spark = MagicMock()
+            with patch.object(runner, "volume_path", return_value=base), \
+                 patch.object(runner, "load_contract", return_value={}), \
+                 patch.object(runner, "load_snapshot", side_effect=lambda _base, name, _contract: snapshots[name]), \
+                 patch.object(runner, "source_frames", return_value=frames), \
+                 patch.object(runner, "records_frame", side_effect=lambda *_: MagicMock()), \
+                 patch.object(runner, "target_plan", return_value=plan):
+                with self.assertRaisesRegex(ValueError, "do not match the approved baseline"):
+                    runner.import_snapshot(spark, "automation_a", "resync", "apply", "b" * 64, True,
+                                           "admin@etexgroup.com", "initial", "a" * 64)
+            spark.sql.assert_not_called()
+            for frame in frames.values():
+                frame.unpersist.assert_called_once()
+
+    def test_baseline_comparison_detects_rows_an_editor_removed_from_the_target(self):
+        contract = {table: [transfer.Column("id", "string", False)] for table in transfer.TABLES}
+        spark = MagicMock()
+        spark.catalog.tableExists.return_value = True
+        spark.table.return_value.schema.fields = [
+            SimpleNamespace(name="id", dataType=SimpleNamespace(simpleString=lambda: "string"), nullable=False)]
+        spark.table.return_value.count.return_value = 2
+        spark.table.return_value.select.return_value.exceptAll.return_value.limit.return_value.count.return_value = 0
+        frames = {table: MagicMock() for table in transfer.TABLES}
+        baseline = {table: MagicMock() for table in transfer.TABLES}
+        for frame in baseline.values():
+            frame.exceptAll.return_value.limit.return_value.count.return_value = 1
+        records = {table: [] for table in transfer.TABLES}
+        fake_sql = SimpleNamespace(functions=SimpleNamespace(col=lambda name: name))
+        with patch.dict(sys.modules, {"pyspark": SimpleNamespace(sql=fake_sql), "pyspark.sql": fake_sql}):
+            with self.assertRaisesRegex(ValueError, "no longer matches the approved baseline"):
+                runner.target_plan(spark, "automation_a", frames, contract, "admin@etexgroup.com", records, baseline)
+            for frame in baseline.values():
+                frame.exceptAll.return_value.limit.return_value.count.return_value = 0
+            plan = runner.target_plan(spark, "automation_a", frames, contract, "admin@etexgroup.com", records, baseline)
+        self.assertEqual(set(plan["existing_rows"].values()), {2})
 
     def test_complete_snapshot_and_portable_zip_have_identical_rows_and_manifest_hash(self):
         with tempfile.TemporaryDirectory() as directory:

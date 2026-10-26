@@ -28,7 +28,7 @@ Run from the project bundle directory:
 databricks bundle run pmo_export --target D --profile DEFAULT
 ```
 
-Default snapshot: `pmo_initial_20261019`. For a fresh capture use a new simple snapshot name in the job parameters; existing captures are never overwritten. Pause edits in the original app during capture. Export pins all 18 Delta versions and refuses publication if any table version changed during collection. This is a version-pinned capture, not a cross-table transactional lock.
+Default snapshot: `pmo_resync_20261026`. For a fresh capture use a new simple snapshot name in the job parameters; existing captures are never overwritten. Pause edits in the original app during capture. Export pins all 18 Delta versions and refuses publication if any table version changed during collection. This is a version-pinned capture, not a cross-table transactional lock.
 
 The export job's second task, `validate_export`, reads the produced package through the actual import validator on the same cluster. It performs read-only target preflight; it never applies data. If export succeeds but this second task fails, the ZIP can exist while import is not yet accepted. Inspect both task results rather than equating a file's existence with successful validation.
 
@@ -97,6 +97,25 @@ The target must be empty or contain only rows that are already byte/value-equiva
 Each table is reconciled in both directions after its MERGE. A receipt at `_PMO_initial_migration_<catalog>.json` tracks completion. A failed multi-table import is not atomic: some earlier tables may be committed. Keep the app in a maintenance window and rerun the SAME snapshot/hash; matching partial rows are preserved and only missing IDs are inserted. A different snapshot or edits to imported rows are refused. Restore the same receipt from backup if it was damaged; do not delete the marker to bypass a guard.
 
 Run this only once per catalog. D and T share `automation_d` and therefore the same data and receipt. Do not run the D and T migration jobs concurrently. Stop application writes and do not perform manual table/DDL changes during validation/apply. After success, verify UI/API totals and project samples before consumer onboarding.
+
+## Refresh An Imported Environment
+
+When the original source gains new or edited records after an environment already completed an import, export a NEW snapshot and resync against the completed one. Leave both parameters empty for a first-time import; filling them in switches the job to a resync:
+
+```yaml
+snapshot: <new snapshot>
+manifest_sha256: <new approved hash>
+supersedes_snapshot: <snapshot named in the environment's receipt>
+supersedes_sha256: <that snapshot's approved hash>
+```
+
+The superseded package must still be readable in the same volume, so keep it as a `<snapshot>` subfolder under `pmo_app` and upload the new ZIP at the `pmo_app` root. The receipt file must stay in place; the resync rewrites it with the new snapshot plus `supersedes_snapshot` and `supersedes_manifest_sha256`.
+
+Before writing anything, a resync verifies that every target table still equals the superseded snapshot exactly, in both directions and by row count. If anyone edited, added or deleted rows through the application, the job stops and nothing is overwritten. That protection is the reason a resync cannot be used to merge application-side changes back into the source.
+
+The resync MERGE updates matched IDs and inserts new ones. It never deletes: rows that exist in the superseded snapshot but not in the new one are kept and reported as `retained_rows_absent_from_source`. Run `mode: validate` first to read the plan, including `target_rows_before` and the retained counts. A successful run reports `status: IMPORTED` with `operation: resync`.
+
+If a resync fails part way, rerun the SAME parameters. Already reconciled tables are matched against the new snapshot and the remaining ones against the superseded snapshot, so a resumed run does not confuse a completed table with target drift.
 
 ## Job Identity Permissions
 
